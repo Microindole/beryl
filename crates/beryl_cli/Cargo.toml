@@ -1,0 +1,8 @@
+[package]
+name = "beryl_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+beryl_driver = { workspace = true }
+clap = { workspace = true }

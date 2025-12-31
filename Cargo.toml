@@ -1,0 +1,45 @@
+[workspace]
+resolver = "2"
+
+# 注册所有子模块
+members = [
+    "crates/beryl_cli",
+    "crates/beryl_driver",
+    "crates/beryl_diagnostics",
+    "crates/beryl_syntax",
+    "crates/beryl_sema",
+    "crates/beryl_monomorph",
+    "crates/beryl_codegen",
+    "crates/beryl_runtime",
+]
+
+# 【关键】统一依赖版本管理
+# 子 crate 使用时只需要写 dependencies.xxx = { workspace = true }
+[workspace.dependencies]
+# --- 1. 命令行与工具 ---
+clap = { version = "4.5", features = ["derive"] }  # 命令行参数解析
+colored = "2.1"                                   # 终端颜色
+anyhow = "1.0"                                    # 错误处理
+thiserror = "1.0"                                 # 自定义错误派生
+bitflags = "2.4"                                  # 位掩码标志
+
+# --- 2. 编译器前端 (Lexer & Parser) ---
+logos = "0.14"         # 极速词法分析器 (基于状态机生成)
+chumsky = "0.9"        # 极其优雅的 Parser Combinator (容错性强)
+ariadne = "0.4"        # 漂亮的编译器报错 (Rust 风格)
+lasso = "0.7"          # 字符串驻留 (String Interning)，优化编译器性能
+
+# --- 3. 编译器后端 (LLVM) ---
+# 注意：inkwell 依赖系统安装的 LLVM。
+# 这里选择 llvm15 是因为它比较稳定。如果你的系统是 LLVM 16/17，请相应修改 feature
+inkwell = { version = "0.4", features = ["llvm15-0"] }
+
+# --- 4. 项目内相互依赖 (路径映射) ---
+beryl_cli = { path = "crates/beryl_cli" }
+beryl_driver = { path = "crates/beryl_driver" }
+beryl_diagnostics = { path = "crates/beryl_diagnostics" }
+beryl_syntax = { path = "crates/beryl_syntax" }
+beryl_sema = { path = "crates/beryl_sema" }
+beryl_monomorph = { path = "crates/beryl_monomorph" }
+beryl_codegen = { path = "crates/beryl_codegen" }
+beryl_runtime = { path = "crates/beryl_runtime" }

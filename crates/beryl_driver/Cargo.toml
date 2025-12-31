@@ -1,0 +1,13 @@
+[package]
+name = "beryl_driver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+beryl_syntax = { workspace = true }
+beryl_diagnostics = { workspace = true }
+# 暂时先把后面几个注释掉，等我们写到那里再开启，保证现在能编译通过
+# beryl_sema = { workspace = true }
+# beryl_codegen = { workspace = true }
+
+anyhow = { workspace = true }

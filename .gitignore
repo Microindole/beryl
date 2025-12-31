@@ -1,0 +1,17 @@
+# 1. 编译产物 (最重要)
+target/
+**/*.rs.bk
+
+# 2. IDE 配置 (不应该上传)
+.idea/
+.vscode/
+*.iml
+*.swp
+.DS_Store
+
+# 3. 依赖锁文件 (库项目通常提交，但作为 Workspace 应用，建议提交)
+# Cargo.lock
+
+# 4. 临时文件
+tmp/
+*.log
