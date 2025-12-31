@@ -82,10 +82,16 @@ impl<'ctx, 'a> ExprGenerator<'ctx, 'a> {
             .ok_or_else(|| CodegenError::UndefinedVariable(name.to_string()))?;
 
         // 加载变量值
-        let ptr_type = ptr.get_type();
+        // LLVM 15 的 build_load 需要指定加载的类型
+        // 我们直接从 alloca 的第一个参数获取类型
+        // 但由于我们无法从 PointerValue 直接获取元素类型，
+        // 我们需要在 alloca 时记住类型，或者用不同的方法
+
+        // 临时方案：假设所有变量都是 i64（后续需要改进）
+        let load_type = self.ctx.context.i64_type();
         self.ctx
             .builder
-            .build_load(ptr_type, *ptr, name)
+            .build_load(load_type, *ptr, name)
             .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))
     }
 

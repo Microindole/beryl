@@ -1,13 +1,13 @@
 pub mod ast;
 pub mod lexer;
-pub mod parser;
+pub mod parser; // Now points to parser/mod.rs
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use logos::Logos;
     use crate::lexer::Token;
-    use chumsky::Parser; // 修复: 引入 Parser trait
+    use chumsky::Parser;
+    use logos::Logos; // 修复: 引入 Parser trait
 
     #[test]
     fn test_lexer_basic() {
@@ -34,24 +34,28 @@ mod tests {
 
         let tokens: Vec<Token> = Token::lexer(code)
             .spanned()
-            .map(|(tok, _span)| tok.unwrap()) 
+            .map(|(tok, _span)| tok.unwrap())
             .collect();
 
         let parser = parser::program_parser();
         let result = parser.parse(tokens);
 
         assert!(result.is_ok(), "Parser failed: {:?}", result.err());
-        
+
         let program = result.unwrap();
         assert_eq!(program.decls.len(), 1);
-        
+
         match &program.decls[0] {
-            ast::Decl::Function { name, return_type, body, .. } => {
+            ast::Decl::Function {
+                name,
+                return_type,
+                body,
+                ..
+            } => {
                 assert_eq!(name, "main");
-                // 修复: 比较引用 &Type
-                assert_eq!(return_type, &ast::Type::Int);
-                assert_eq!(body.len(), 3); 
-            },
+                assert_eq!(return_type, &ast::types::Type::Int);
+                assert_eq!(body.len(), 3);
+            }
             _ => panic!("Expected function decl"),
         }
     }
