@@ -42,7 +42,7 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
             }
 
             // 类类型用指针表示
-            Type::Class(name) => {
+            Type::Class(_name) => {
                 // 暂时用 opaque pointer (i8*) 表示类实例
                 // 未来可以实现完整的类布局
                 Ok(context

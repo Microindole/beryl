@@ -2,6 +2,7 @@
 //!
 //! 封装 LLVM 的 Context、Module、Builder，简化代码生成过程
 
+use crate::error::CodegenError;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
@@ -38,7 +39,9 @@ impl<'ctx> CodegenContext<'ctx> {
     }
 
     /// 验证模块的正确性
-    pub fn verify(&self) -> Result<(), String> {
-        self.module.verify().map_err(|e| e.to_string())
+    pub fn verify(&self) -> Result<(), CodegenError> {
+        self.module
+            .verify()
+            .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))
     }
 }
