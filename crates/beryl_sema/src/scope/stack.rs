@@ -1,97 +1,42 @@
-//! Scope Management
-//!
-//! 作用域管理，处理嵌套作用域和符号查找。
-//! 采用栈式作用域设计，支持块级作用域。
-
+use super::{Scope, ScopeId, ScopeKind};
 use crate::error::SemanticError;
 use crate::symbol::{Symbol, SymbolId};
-use std::collections::HashMap;
-
-/// 作用域 ID
-pub type ScopeId = usize;
-
-/// 单个作用域
-#[derive(Debug, Clone)]
-pub struct Scope {
-    /// 作用域 ID
-    pub id: ScopeId,
-    /// 父作用域 ID（全局作用域为 None）
-    pub parent: Option<ScopeId>,
-    /// 作用域内的符号（名称 -> 符号 ID）
-    symbols: HashMap<String, SymbolId>,
-    /// 作用域类型
-    pub kind: ScopeKind,
-}
-
-/// 作用域类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScopeKind {
-    /// 全局作用域
-    Global,
-    /// 函数作用域
-    Function,
-    /// 类作用域
-    Class,
-    /// 块作用域 (if, while, {} 等)
-    Block,
-}
-
-impl Scope {
-    pub fn new(id: ScopeId, parent: Option<ScopeId>, kind: ScopeKind) -> Self {
-        Self {
-            id,
-            parent,
-            symbols: HashMap::new(),
-            kind,
-        }
-    }
-
-    /// 在当前作用域定义符号
-    pub fn define(&mut self, name: String, symbol_id: SymbolId) {
-        self.symbols.insert(name, symbol_id);
-    }
-
-    /// 在当前作用域查找符号（不向上查找）
-    pub fn lookup_local(&self, name: &str) -> Option<SymbolId> {
-        self.symbols.get(name).copied()
-    }
-}
 
 /// 作用域栈 - 管理嵌套作用域
 #[derive(Debug)]
 pub struct ScopeStack {
-    /// 所有作用域
     scopes: Vec<Scope>,
-    /// 所有符号（由 SymbolId 索引）
-    symbols: Vec<Symbol>,
-    /// 当前作用域 ID
     current: ScopeId,
+    // 存储所有的符号
+    symbols: Vec<Symbol>,
 }
 
 impl ScopeStack {
     /// 创建新的作用域栈，初始化全局作用域
     pub fn new() -> Self {
-        let global = Scope::new(0, None, ScopeKind::Global);
+        let global_scope = Scope::new(0, None, ScopeKind::Global);
         Self {
-            scopes: vec![global],
-            symbols: Vec::new(),
+            scopes: vec![global_scope],
             current: 0,
+            symbols: Vec::new(),
         }
     }
 
     /// 进入新作用域
     pub fn enter_scope(&mut self, kind: ScopeKind) -> ScopeId {
-        let new_id = self.scopes.len();
-        let new_scope = Scope::new(new_id, Some(self.current), kind);
+        let id = self.scopes.len();
+        let new_scope = Scope::new(id, Some(self.current), kind);
         self.scopes.push(new_scope);
-        self.current = new_id;
-        new_id
+        self.current = id;
+        id
     }
 
     /// 退出当前作用域，返回到父作用域
     pub fn exit_scope(&mut self) {
         if let Some(parent) = self.scopes[self.current].parent {
             self.current = parent;
+        } else {
+            // 已经是全局作用域，不操作或 panic
         }
     }
 
@@ -110,65 +55,66 @@ impl ScopeStack {
     /// 如果已存在同名符号，返回 DuplicateDefinition 错误
     pub fn define(&mut self, symbol: Symbol) -> Result<SymbolId, SemanticError> {
         let name = symbol.name().to_string();
-        let span = symbol.span().clone();
 
-        // 检查当前作用域是否已有同名定义
-        if let Some(existing_id) = self.scopes[self.current].lookup_local(&name) {
-            let existing = &self.symbols[existing_id];
+        // 检查当前作用域是否已经有同名符号
+        if let Some(prev_id) = self.scopes[self.current].lookup_local(&name) {
+            let prev_span = self.symbols[prev_id].span().clone();
             return Err(SemanticError::DuplicateDefinition {
                 name,
-                span,
-                previous_span: existing.span().clone(),
+                span: symbol.span().clone(),
+                previous_span: prev_span,
             });
         }
 
-        // 分配新的符号 ID
-        let symbol_id = self.symbols.len();
+        let id = self.symbols.len();
         self.symbols.push(symbol);
-
-        // 在当前作用域注册
-        self.scopes[self.current].define(name, symbol_id);
-
-        Ok(symbol_id)
+        self.scopes[self.current].define(name, id);
+        Ok(id)
     }
 
     /// 查找符号（从当前作用域向上查找）
     pub fn lookup(&self, name: &str) -> Option<&Symbol> {
-        self.lookup_from(name, self.current)
+        self.lookup_id(name).and_then(|id| self.symbols.get(id))
     }
 
     /// 从指定作用域开始查找符号（向上查找）
     pub fn lookup_from(&self, name: &str, start_scope: ScopeId) -> Option<&Symbol> {
-        let mut scope_id = Some(start_scope);
-
-        while let Some(id) = scope_id {
-            let scope = &self.scopes[id];
-            if let Some(symbol_id) = scope.lookup_local(name) {
-                return Some(&self.symbols[symbol_id]);
+        let mut current_id = start_scope;
+        loop {
+            if let Some(symbol_id) = self.scopes[current_id].lookup_local(name) {
+                return self.symbols.get(symbol_id);
             }
-            scope_id = scope.parent;
-        }
 
+            if let Some(parent) = self.scopes[current_id].parent {
+                current_id = parent;
+            } else {
+                break;
+            }
+        }
         None
     }
 
     /// 仅在全局作用域查找符号
     pub fn lookup_global(&self, name: &str) -> Option<&Symbol> {
-        self.lookup_from(name, 0)
+        self.scopes[0]
+            .lookup_local(name)
+            .and_then(|id| self.symbols.get(id))
     }
 
     /// 查找符号 ID（从当前作用域向上查找）
     pub fn lookup_id(&self, name: &str) -> Option<SymbolId> {
-        let mut scope_id = Some(self.current);
-
-        while let Some(id) = scope_id {
-            let scope = &self.scopes[id];
-            if let Some(symbol_id) = scope.lookup_local(name) {
+        let mut current_id = self.current;
+        loop {
+            if let Some(symbol_id) = self.scopes[current_id].lookup_local(name) {
                 return Some(symbol_id);
             }
-            scope_id = scope.parent;
-        }
 
+            if let Some(parent) = self.scopes[current_id].parent {
+                current_id = parent;
+            } else {
+                break;
+            }
+        }
         None
     }
 
@@ -176,7 +122,7 @@ impl ScopeStack {
     pub fn lookup_local(&self, name: &str) -> Option<&Symbol> {
         self.scopes[self.current]
             .lookup_local(name)
-            .map(|id| &self.symbols[id])
+            .and_then(|id| self.symbols.get(id))
     }
 
     /// 设置当前作用域（用于在分析 Pass 中跳转）
@@ -193,6 +139,8 @@ impl ScopeStack {
 
     /// 获取子作用域列表（用于遍历）
     pub fn get_child_scopes(&self, parent_id: ScopeId) -> Vec<ScopeId> {
+        // 这效率不高，但对于 ScopeStack 结构来说是最简单的实现
+        // 优化方案：Scope 结构存储 children 列表
         self.scopes
             .iter()
             .filter(|s| s.parent == Some(parent_id))
@@ -212,34 +160,37 @@ impl ScopeStack {
 
     /// 检查是否在函数作用域内
     pub fn is_in_function(&self) -> bool {
-        let mut scope_id = Some(self.current);
-        while let Some(id) = scope_id {
-            if self.scopes[id].kind == ScopeKind::Function {
+        let mut current_id = self.current;
+        loop {
+            if self.scopes[current_id].kind == ScopeKind::Function {
                 return true;
             }
-            scope_id = self.scopes[id].parent;
+            if let Some(parent) = self.scopes[current_id].parent {
+                current_id = parent;
+            } else {
+                break;
+            }
         }
         false
     }
 
     /// 获取当前所在的函数名（如果在函数内）
     pub fn current_function(&self) -> Option<&str> {
-        let mut scope_id = Some(self.current);
-        while let Some(id) = scope_id {
-            let scope = &self.scopes[id];
-            if scope.kind == ScopeKind::Function {
-                // 函数作用域的第一个符号通常是函数本身
-                // 但更好的方式是在进入函数时记录函数名
-                // 这里简化处理，查找父作用域的函数定义
-                if let Some(parent_id) = scope.parent {
-                    for name in self.scopes[parent_id].symbols.keys() {
-                        if let Some(Symbol::Function(_)) = self.lookup(name) {
-                            return Some(name);
-                        }
-                    }
-                }
+        let mut current_id = self.current;
+        loop {
+            if self.scopes[current_id].kind == ScopeKind::Function {
+                // Find symbol that created this scope?
+                // Scope doesn't link back to symbol directly.
+                // But usually Function scope is created after Function declaration.
+                // This might need better linkage in future.
+                // For now, return None or rely on traversal context.
+                return None;
             }
-            scope_id = scope.parent;
+            if let Some(parent) = self.scopes[current_id].parent {
+                current_id = parent;
+            } else {
+                break;
+            }
         }
         None
     }

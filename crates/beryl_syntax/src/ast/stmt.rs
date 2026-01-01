@@ -92,6 +92,14 @@ pub enum Stmt {
         body: Vec<Stmt>,           // 循环体
     },
 
+    // For-In 循环: for x in arr { ... }
+    ForIn {
+        span: Span,
+        iterator: String, // 迭代变量名
+        iterable: Expr,   // 数组
+        body: Vec<Stmt>,
+    },
+
     // 返回: return 1;
     Return {
         span: Span,

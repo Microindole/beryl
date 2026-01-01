@@ -81,6 +81,12 @@ impl<'ctx, 'a> StmtGenerator<'ctx, 'a> {
                 expr_gen.generate(expr)?;
                 Ok(())
             }
+            Stmt::ForIn {
+                iterator,
+                iterable,
+                body,
+                ..
+            } => control_flow::gen_for_in(self, iterator, iterable, body),
             Stmt::Block(stmts) => self.generate_block(stmts),
         }
     }

@@ -147,6 +147,30 @@ impl BinaryOpRegistry {
             }
         }
 
+        // 处理 Nullable 类型的相等性检查
+        if *op == BinaryOp::Eq || *op == BinaryOp::Neq {
+            let is_lhs_null_lit =
+                matches!(lhs, Type::Nullable(inner) if matches!(**inner, Type::Error));
+            let is_rhs_null_lit =
+                matches!(rhs, Type::Nullable(inner) if matches!(**inner, Type::Error));
+
+            // null == x 或 x == null
+            if is_lhs_null_lit && matches!(rhs, Type::Nullable(_)) {
+                return Ok(Type::Bool);
+            }
+            if is_rhs_null_lit && matches!(lhs, Type::Nullable(_)) {
+                return Ok(Type::Bool);
+            }
+
+            // x? == y?
+            if matches!(lhs, Type::Nullable(_)) && matches!(rhs, Type::Nullable(_)) {
+                // 还需要检查内部类型是否兼容吗？暂且允许，只要都是 nullable
+                // 或者是检查 base type 是否可比较？
+                // 为了简单，允许所有 nullable 比较 (null == null case covered above technically)
+                return Ok(Type::Bool);
+            }
+        }
+
         // 未找到匹配的运算符签名
         Err(SemanticError::InvalidBinaryOp {
             op: format!("{:?}", op),

@@ -81,11 +81,21 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
                 body,
             });
 
-        // For 循环: for init; condition; update { body }
-        let for_stmt = just(Token::For)
-            .ignore_then(
-                // 初始化部分（可选）: var i = 0; 或直接 ;
-                just(Token::Var)
+        // For 循环: 支持 Classic For 和 For-In
+        let for_stmt = just(Token::For).ignore_then(
+            // 1. Try For-In first: for x in arr { ... }
+            ident_parser()
+                .then_ignore(just(Token::In))
+                .then(expr_parser())
+                .then(raw_block.clone())
+                .map_with_span(|((iterator, iterable), body), span| Stmt::ForIn {
+                    span,
+                    iterator,
+                    iterable,
+                    body,
+                })
+                // 2. Fallback to Classic For: for var i = 0; ...
+                .or(just(Token::Var)
                     .ignore_then(ident_parser())
                     .then(just(Token::Colon).ignore_then(type_parser()).or_not())
                     .then_ignore(just(Token::Eq))
@@ -99,40 +109,45 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
                             value,
                         }))
                     })
-                    .or(just(Token::Semicolon).to(None)),
-            )
-            .then(
-                // 条件部分（可选）: i < 10;
-                expr_parser().then_ignore(just(Token::Semicolon)).or_not(),
-            )
-            .then(
-                // 更新部分（可选，无分号）: i = i + 1
-                ident_parser()
-                    .then_ignore(just(Token::Eq))
-                    .then(expr_parser())
-                    .map_with_span(|(name, value), span| {
-                        let target_span = span.clone();
-                        Stmt::Assignment {
-                            span,
-                            target: Expr {
-                                kind: ExprKind::Variable(name),
-                                span: target_span,
-                            },
-                            value,
-                        }
-                    })
-                    .map(|s| Some(Box::new(s)))
-                    .or_not()
-                    .map(|opt| opt.flatten()),
-            )
-            .then(raw_block.clone())
-            .map_with_span(|(((init, condition), update), body), span| Stmt::For {
-                span,
-                init,
-                condition,
-                update,
-                body,
-            });
+                    .or(just(Token::Semicolon).to(None))
+                    .then(
+                        // 分号不能丢，这里需要处理一下逻辑
+                        // 上面的 .or(..Semicolon) 吞掉了分号
+                        // Classic logic: init -> ; -> cond -> ; -> update
+                        // 现有的 parser 逻辑中 var decl 吞掉了分号
+                        // Semicolon 分支也吞掉了分号
+                        // 所以这里不管怎样分号都被吞掉了，接下来是 condition
+                        expr_parser().then_ignore(just(Token::Semicolon)).or_not(),
+                    )
+                    .then(
+                        // update
+                        ident_parser()
+                            .then_ignore(just(Token::Eq))
+                            .then(expr_parser())
+                            .map_with_span(|(name, value), span| {
+                                let target_span = span.clone();
+                                Stmt::Assignment {
+                                    span,
+                                    target: Expr {
+                                        kind: ExprKind::Variable(name),
+                                        span: target_span,
+                                    },
+                                    value,
+                                }
+                            })
+                            .map(|s| Some(Box::new(s)))
+                            .or_not()
+                            .map(|opt| opt.flatten()),
+                    )
+                    .then(raw_block.clone())
+                    .map_with_span(|(((init, condition), update), body), span| Stmt::For {
+                        span,
+                        init,
+                        condition,
+                        update,
+                        body,
+                    })),
+        );
 
         // Break
         let break_stmt = just(Token::Break)

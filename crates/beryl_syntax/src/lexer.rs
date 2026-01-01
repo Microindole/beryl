@@ -17,6 +17,8 @@ pub enum Token {
     While,
     #[token("for")]
     For,
+    #[token("in")]
+    In,
     #[token("break")]
     Break,
     #[token("continue")]
