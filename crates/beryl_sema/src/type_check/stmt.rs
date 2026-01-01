@@ -52,8 +52,10 @@ pub fn check_stmt(checker: &mut TypeChecker, stmt: &Stmt) {
             check_assignment(checker, target, value, span);
         }
         Stmt::Expression(expr) => {
-            // 表达式语句只需检查表达式是否有效
-            let _ = checker.infer_type(expr);
+            // 表达式语句需要检查表达式的类型正确性
+            if let Err(e) = checker.infer_type(expr) {
+                checker.errors.push(e);
+            }
         }
         Stmt::Block(stmts) => {
             check_block_with_scope(checker, stmts);

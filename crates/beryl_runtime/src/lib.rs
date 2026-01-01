@@ -1,1 +1,1 @@
-// Placeholder for lib.rs
+pub mod panic;

@@ -357,6 +357,10 @@ impl Resolver {
             ExprKind::Print(expr) => {
                 self.resolve_expr(expr);
             }
+            ExprKind::Index { array, index } => {
+                self.resolve_expr(array);
+                self.resolve_expr(index);
+            }
         }
     }
 

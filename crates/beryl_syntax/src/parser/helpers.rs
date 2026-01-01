@@ -15,21 +15,38 @@ pub fn ident_parser() -> impl Parser<Token, String, Error = ParserError> + Clone
 
 /// 解析类型
 pub fn type_parser() -> impl Parser<Token, Type, Error = ParserError> + Clone {
-    let basic = select! {
-        Token::TypeInt => Type::Int,
-        Token::TypeFloat => Type::Float,
-        Token::TypeString => Type::String,
-        Token::TypeBool => Type::Bool,
-        Token::TypeVoid => Type::Void,
-        Token::Ident(name) => Type::Class(name),
-    };
+    recursive(|ty| {
+        let basic = select! {
+            Token::TypeInt => Type::Int,
+            Token::TypeFloat => Type::Float,
+            Token::TypeString => Type::String,
+            Token::TypeBool => Type::Bool,
+            Token::TypeVoid => Type::Void,
+            Token::Ident(name) => Type::Class(name),
+        };
 
-    basic.then(just(Token::Question).or_not()).map(|(t, q)| {
-        if q.is_some() {
-            Type::Nullable(Box::new(t))
-        } else {
-            t
-        }
+        // 数组类型: [N]T (Go-style)
+        let array_type = just(Token::LBracket)
+            .ignore_then(select! { Token::Int(n) => n as usize })
+            .then_ignore(just(Token::RBracket))
+            .then(ty.clone())
+            .map(|(size, element_type)| Type::Array {
+                element_type: Box::new(element_type),
+                size,
+            });
+
+        let base_type = array_type.or(basic);
+
+        // 可空类型: T?
+        base_type
+            .then(just(Token::Question).or_not())
+            .map(|(t, q)| {
+                if q.is_some() {
+                    Type::Nullable(Box::new(t))
+                } else {
+                    t
+                }
+            })
     })
 }
 

@@ -127,6 +127,13 @@ pub enum SemanticError {
     /// continue 语句不在循环内
     #[error("'continue' outside loop")]
     ContinueOutsideLoop { span: Span },
+
+    // ============ 数组相关错误 ============
+    /// 数组索引编译期越界
+    #[error(
+        "array index out of bounds: index {index} is out of bounds for array of length {size}"
+    )]
+    ArrayIndexOutOfBounds { index: i64, size: usize, span: Span },
 }
 
 impl SemanticError {
@@ -152,6 +159,7 @@ impl SemanticError {
             Self::NotCallable { span, .. } => span,
             Self::BreakOutsideLoop { span } => span,
             Self::ContinueOutsideLoop { span } => span,
+            Self::ArrayIndexOutOfBounds { span, .. } => span,
         }
     }
 }

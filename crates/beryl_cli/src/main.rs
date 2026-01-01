@@ -139,7 +139,7 @@ fn cmd_build(input: &str, output: &str) -> Result<()> {
     // 3. 使用 gcc 链接
     println!("  🔗 链接可执行文件...");
     let gcc_status = std::process::Command::new("gcc")
-        .args([temp_obj, "-o", output])
+        .args([temp_obj, "-o", output, "-no-pie"])
         .status()?;
 
     if !gcc_status.success() {

@@ -9,6 +9,12 @@ use chumsky::prelude::*;
 
 pub type ParserError = Simple<Token>;
 
+#[derive(Clone)]
+enum PostfixOp {
+    Index(Expr),
+    Member(String, Span),
+}
+
 /// 解析表达式 (公共接口)
 pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
     recursive(|expr| {
@@ -112,21 +118,69 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 span,
             });
 
+        // Array literal: [1, 2, 3]
+        let array_literal = expr
+            .clone()
+            .separated_by(just(Token::Comma))
+            .allow_trailing()
+            .delimited_by(just(Token::LBracket), just(Token::RBracket))
+            .map_with_span(|elements, span| Expr {
+                kind: ExprKind::Array(elements),
+                span,
+            });
+
         // let atom = val.or(call).or(ident).or(paren);
         // Integrate match_expr. Should be high precedence.
         let atom = match_expr
             .or(print_expr)
+            .or(array_literal)
             .or(val)
             .or(call)
             .or(ident)
             .or(paren);
+
+        // 后缀操作符: 索引 arr[i]
+        // 后缀操作符: 索引 arr[i] 或 成员 obj.field
+        let postfix = atom
+            .clone()
+            .then(
+                expr.clone()
+                    .delimited_by(just(Token::LBracket), just(Token::RBracket))
+                    .map(PostfixOp::Index)
+                    .or(just(Token::Dot)
+                        .ignore_then(ident_parser().map_with_span(|n, s| (n, s)))
+                        .map(|(n, s)| PostfixOp::Member(n, s)))
+                    .repeated(),
+            )
+            .foldl(|lhs, op| match op {
+                PostfixOp::Index(index) => {
+                    let span = lhs.span.start..index.span.end;
+                    Expr {
+                        kind: ExprKind::Index {
+                            array: Box::new(lhs),
+                            index: Box::new(index),
+                        },
+                        span,
+                    }
+                }
+                PostfixOp::Member(name, name_span) => {
+                    let span = lhs.span.start..name_span.end;
+                    Expr {
+                        kind: ExprKind::Get {
+                            object: Box::new(lhs),
+                            name,
+                        },
+                        span,
+                    }
+                }
+            });
 
         // 一元运算符 (!, -)
         let unary = just(Token::Bang)
             .to(UnaryOp::Not)
             .or(just(Token::Minus).to(UnaryOp::Neg))
             .repeated()
-            .then(atom.clone())
+            .then(postfix.clone())
             .foldr(|op, rhs| {
                 let span = rhs.span.clone();
                 Expr {
@@ -134,7 +188,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                     span,
                 }
             })
-            .or(atom);
+            .or(postfix);
 
         // 乘除模
         let product = unary

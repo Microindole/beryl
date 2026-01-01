@@ -20,6 +20,13 @@ pub enum Type {
     // 只有包了一层 Nullable 的才能是 null，其他默认非空
     Nullable(Box<Type>),
 
+    // 数组类型: [int; 5]
+    // 固定大小数组，长度是类型的一部分
+    Array {
+        element_type: Box<Type>,
+        size: usize,
+    },
+
     // 错误占位符 (当用户写错类型时，编译器用这个占位，防止崩溃)
     Error,
 }
@@ -45,6 +52,7 @@ impl Display for Type {
                 write!(f, ">")
             }
             Type::Nullable(inner) => write!(f, "{}?", inner),
+            Type::Array { element_type, size } => write!(f, "[{}]{}", size, element_type),
             Type::Error => write!(f, "<?>"),
         }
     }

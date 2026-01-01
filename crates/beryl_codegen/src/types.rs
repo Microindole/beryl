@@ -51,6 +51,12 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                     .as_basic_type_enum())
             }
 
+            // 数组类型: [T; N] -> [N x T]
+            Type::Array { element_type, size } => {
+                let elem_type = element_type.to_llvm_type(context)?;
+                Ok(elem_type.array_type(*size as u32).as_basic_type_enum())
+            }
+
             // 泛型类型（如 List<int>）暂不支持
             Type::Generic(name, _) => Err(CodegenError::UnsupportedType(format!(
                 "generic type {} not yet supported",

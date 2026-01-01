@@ -55,6 +55,12 @@ pub enum ExprKind {
 
     // Intrinsic Print
     Print(Box<Expr>),
+
+    // 数组索引: arr[i]
+    Index {
+        array: Box<Expr>,
+        index: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

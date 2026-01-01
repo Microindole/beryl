@@ -84,6 +84,7 @@ impl<'a> TypeInferer<'a> {
                 self.infer(expr)?;
                 Ok(Type::Void)
             }
+            ExprKind::Index { array, index } => self.infer_index(array, index, &expr.span),
         }
     }
 
@@ -278,6 +279,17 @@ impl<'a> TypeInferer<'a> {
                     }),
                 }
             }
+            Type::Array { .. } => {
+                if field_name == "length" {
+                    Ok(Type::Int)
+                } else {
+                    Err(SemanticError::UndefinedField {
+                        class: "Array".to_string(), // Array is not technicaly a class, but error msg fits
+                        field: field_name.to_string(),
+                        span: span.clone(),
+                    })
+                }
+            }
             Type::Nullable(inner) => {
                 // 可空类型需要先检查 null
                 Err(SemanticError::PossibleNullAccess {
@@ -344,8 +356,69 @@ impl<'a> TypeInferer<'a> {
             }
         }
 
-        // 返回数组类型（用 Generic 表示 List<T>）
-        Ok(Type::Generic("List".to_string(), vec![first_ty]))
+        // 返回固定大小数组类型: [T; N]
+        Ok(Type::Array {
+            element_type: Box::new(first_ty),
+            size: elements.len(),
+        })
+    }
+
+    /// 推导数组索引类型
+    fn infer_index(
+        &self,
+        array: &Expr,
+        index: &Expr,
+        span: &std::ops::Range<usize>,
+    ) -> Result<Type, SemanticError> {
+        let array_ty = self.infer(array)?;
+        let index_ty = self.infer(index)?;
+
+        // 索引必须是 int 类型
+        if index_ty != Type::Int {
+            return Err(SemanticError::TypeMismatch {
+                expected: "int".to_string(),
+                found: index_ty.to_string(),
+                span: index.span.clone(),
+            });
+        }
+
+        // 🆕 编译期边界检查：如果索引是常量，检查是否越界
+        if let ExprKind::Literal(Literal::Int(idx_val)) = &index.kind {
+            if let Type::Array { size, .. } = &array_ty {
+                // 检查负数索引
+                if *idx_val < 0 {
+                    return Err(SemanticError::ArrayIndexOutOfBounds {
+                        index: *idx_val,
+                        size: *size,
+                        span: index.span.clone(),
+                    });
+                }
+
+                // 检查越界
+                let idx_usize = *idx_val as usize;
+                if idx_usize >= *size {
+                    return Err(SemanticError::ArrayIndexOutOfBounds {
+                        index: *idx_val,
+                        size: *size,
+                        span: index.span.clone(),
+                    });
+                }
+            }
+        }
+
+        // 数组类型检查
+        match &array_ty {
+            Type::Array { element_type, .. } => Ok((**element_type).clone()),
+            Type::Generic(name, args) if name == "List" && !args.is_empty() => {
+                // 动态数组 List<T>
+                Ok(args[0].clone())
+            }
+            _ => Err(SemanticError::TypeMismatch {
+                expected: "array or list".to_string(),
+                found: array_ty.to_string(),
+                span: span.clone(),
+            }),
+        }
     }
 }
 

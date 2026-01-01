@@ -2,6 +2,7 @@
 //!
 //! 表达式代码生成的主入口，将职责分散到各个子模块
 
+mod array;
 mod binary;
 mod call;
 mod intrinsic;
@@ -78,6 +79,9 @@ fn generate_expr<'ctx>(
             default,
         } => match_expr::gen_match(ctx, locals, value, cases, default.as_deref()),
         ExprKind::Print(arg) => intrinsic::gen_print(ctx, locals, arg),
+        ExprKind::Array(elements) => array::gen_array_literal(ctx, locals, elements),
+        ExprKind::Index { array, index } => array::gen_index_access(ctx, locals, array, index),
+        ExprKind::Get { object, name } => array::gen_get_property(ctx, locals, object, name),
         _ => Err(CodegenError::UnsupportedExpression),
     }
 }
