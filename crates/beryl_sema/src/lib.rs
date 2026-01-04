@@ -101,6 +101,7 @@ mod tests {
             decls: vec![Decl::Function {
                 span: 0..50,
                 name: "main".to_string(),
+                generic_params: vec![],
                 params: vec![],
                 return_type: Type::Int,
                 body: vec![
@@ -143,6 +144,7 @@ mod tests {
             decls: vec![Decl::Function {
                 span: 0..30,
                 name: "main".to_string(),
+                generic_params: vec![],
                 params: vec![],
                 return_type: Type::Int,
                 body: vec![Stmt::Return {
@@ -171,6 +173,7 @@ mod tests {
             decls: vec![Decl::Function {
                 span: 0..50,
                 name: "main".to_string(),
+                generic_params: vec![],
                 params: vec![],
                 return_type: Type::Int,
                 body: vec![
@@ -210,6 +213,7 @@ mod tests {
             decls: vec![Decl::Function {
                 span: 0..50,
                 name: "test".to_string(),
+                generic_params: vec![],
                 params: vec![],
                 return_type: Type::Void,
                 body: vec![Stmt::VarDecl {

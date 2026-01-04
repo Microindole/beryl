@@ -12,6 +12,9 @@ pub enum Type {
     // --- 复杂类型 ---
     // 类引用: User, MyClass
 
+    // 泛型参数: T, U (出现在泛型定义中，如 struct Box<T>)
+    GenericParam(String),
+
     // 泛型实例化: List<int>, Map<string, int>
     Generic(String, Vec<Type>),
 
@@ -46,6 +49,7 @@ impl Display for Type {
             Type::String => write!(f, "string"),
             Type::Void => write!(f, "void"),
 
+            Type::GenericParam(name) => write!(f, "{}", name),
             Type::Generic(name, args) => {
                 write!(f, "{}<", name)?;
                 for (i, arg) in args.iter().enumerate() {

@@ -1,0 +1,12 @@
+struct Box<T> {
+    T value;
+}
+
+struct Pair<K, V> {
+    K first;
+    V second;
+}
+
+int main() {
+    return 0;
+}

@@ -66,6 +66,12 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                 .ptr_type(AddressSpace::default())
                 .as_basic_type_enum()),
 
+            // 泛型参数: T, U
+            // 在单态化之前不应该遇到这种类型
+            Type::GenericParam(_) => Err(CodegenError::UnsupportedType(
+                "generic parameters should be resolved before codegen".to_string(),
+            )),
+
             // 泛型类型
             Type::Generic(_, _) => Err(CodegenError::UnsupportedType(
                 "generics not yet supported".to_string(),

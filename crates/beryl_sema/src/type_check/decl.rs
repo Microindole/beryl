@@ -11,6 +11,7 @@ pub fn check_decl(checker: &mut TypeChecker, decl: &Decl) {
             return_type,
             body,
             span,
+            ..
         } => {
             check_function(checker, name, params, return_type, body, span);
         }

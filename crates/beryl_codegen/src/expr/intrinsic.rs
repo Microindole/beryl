@@ -25,6 +25,7 @@ pub fn gen_print<'ctx>(
         Type::Struct(_) => "[Struct]\n",   // Placeholder
         Type::Vec(_) => "[Vec]\n",         // Placeholder
 
+        Type::GenericParam(_) => "[GenericParam]\n", // 不应该在运行时遇到
         Type::Generic(_, _) => "[Generic]\n",
         Type::Void => "\n",
         Type::Nullable(_) => "[Nullable]\n",

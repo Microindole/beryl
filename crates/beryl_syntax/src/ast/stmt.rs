@@ -5,9 +5,11 @@ use crate::ast::types::Type;
 #[derive(Debug, Clone)]
 pub enum Decl {
     // 函数定义: int add(int a, int b) { ... }
+    // 泛型函数: T identity<T>(T x) { ... }
     Function {
         span: Span,
         name: String,
+        generic_params: Vec<String>, // 泛型参数: ["T", "U"]
         params: Vec<Param>,
         return_type: Type,
         body: Vec<Stmt>,
@@ -17,22 +19,27 @@ pub enum Decl {
     ExternFunction {
         span: Span,
         name: String,
+        generic_params: Vec<String>, // 外部函数也可以有泛型
         params: Vec<Param>,
         return_type: Type,
     },
 
     // 结构体定义: struct Point { int x int y }
+    // 泛型结构体: struct Box<T> { T value }
     Struct {
         span: Span,
         name: String,
+        generic_params: Vec<String>, // 泛型参数: ["T", "U"]
         fields: Vec<Field>,
     },
 
     // impl 块: impl Point { ... }
+    // 泛型impl: impl<T> Box<T> { ... }
     Impl {
         span: Span,
-        type_name: String,  // 实现的类型名称
-        methods: Vec<Decl>, // 方法列表（都是 Function）
+        type_name: String,           // 实现的类型名称
+        generic_params: Vec<String>, // 泛型参数
+        methods: Vec<Decl>,          // 方法列表（都是 Function）
     },
 }
 

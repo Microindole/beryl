@@ -1,0 +1,17 @@
+T identity<T>(T x) {
+    return x;
+}
+
+struct Container<T> {
+    T value;
+}
+
+impl<T> Container {
+    T get_value() {
+        return this.value;
+    }
+}
+
+int main() {
+    return 0;
+}

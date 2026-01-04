@@ -34,6 +34,7 @@ pub fn collect_decl(resolver: &mut Resolver, decl: &Decl) {
             params,
             return_type,
             span,
+            ..
         } => {
             let func_symbol = FunctionSymbol::new(
                 name.clone(),
@@ -49,7 +50,9 @@ pub fn collect_decl(resolver: &mut Resolver, decl: &Decl) {
                 resolver.errors.push(e);
             }
         }
-        Decl::Struct { name, fields, span } => {
+        Decl::Struct {
+            name, fields, span, ..
+        } => {
             let mut struct_symbol = crate::symbol::StructSymbol::new(name.clone(), span.clone());
 
             // 收集字段
@@ -65,6 +68,7 @@ pub fn collect_decl(resolver: &mut Resolver, decl: &Decl) {
             type_name,
             methods,
             span,
+            ..
         } => {
             // 查找对应的 Struct
             let struct_id = resolver.scopes.lookup_id(type_name);
@@ -149,6 +153,7 @@ pub fn resolve_decl(resolver: &mut Resolver, decl: &Decl) {
             name: _,
             fields,
             span,
+            ..
         } => {
             // 验证字段类型是否存在（特别是自定义 Struct 类型）
             for field in fields {
@@ -168,6 +173,7 @@ pub fn resolve_decl(resolver: &mut Resolver, decl: &Decl) {
             type_name,
             methods,
             span,
+            ..
         } => {
             // 验证 Struct 存在
             let struct_id = resolver.scopes.lookup_id(type_name);
