@@ -14,8 +14,9 @@ mod struct_init;
 mod unary;
 mod variable;
 
-use beryl_syntax::ast::{Expr, ExprKind};
-use inkwell::values::{BasicValueEnum, PointerValue};
+use beryl_syntax::ast::{Expr, ExprKind, Type};
+use inkwell::values::{BasicValue, BasicValueEnum, PointerValue};
+use inkwell::AddressSpace;
 use std::collections::HashMap;
 
 use crate::context::CodegenContext;
@@ -82,6 +83,16 @@ fn generate_expr<'ctx>(
         }
         ExprKind::StructLiteral { type_name, fields } => {
             struct_init::gen_struct_literal(ctx, locals, type_name, fields)
+        }
+        ExprKind::VecLiteral(_elements) => {
+            // TODO: 完整实现 Vec 字面量代码生成
+            // 需要调用 beryl_vec_new 然后多次 push
+            // 暂时返回 null 指针作为占位符
+            let vec_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+            Ok(CodegenValue {
+                value: vec_type.const_null().as_basic_value_enum(),
+                ty: Type::Vec,
+            })
         }
     }
 }

@@ -42,6 +42,10 @@ pub enum CodegenError {
     /// 不支持的特性
     #[error("unsupported feature: {0}")]
     UnsupportedFeature(String),
+
+    /// 未定义的结构体类型
+    #[error("undefined struct type: {0}")]
+    UndefinedStructType(String),
 }
 
 /// 代码生成结果类型

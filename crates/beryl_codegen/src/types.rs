@@ -48,37 +48,30 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                 Ok(elem_type.array_type(*size as u32).as_basic_type_enum())
             }
 
-            // 结构体类型
+            // 结构体类型: struct Point -> %Point*
             Type::Struct(name) => {
-                // 查找已注册的结构体类型
                 if let Some(struct_type) = context.struct_types.get(name) {
-                    // 结构体通过指针传递
                     Ok(struct_type
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum())
                 } else {
-                    // 如果找不到（可能是因为前向引用或者尚未定义），暂时先返回 i8*
-                    // 在 Pass 1 应该已经全部定义了，所以这里找不到通常是错误
-                    // 但为了鲁棒性，或者支持某些边缘情况，我们也可以报错
-                    // 鉴于我们是按顺序生成的，如果找不到，说明是声明顺序问题或逻辑错误。
-                    // 但考虑到 module 生成分两遍，body 生成时应该都能找到了。
-                    Err(CodegenError::UnsupportedType(format!(
-                        "Struct type '{}' not found in context",
-                        name
-                    )))
+                    Err(CodegenError::UndefinedStructType(name.clone()))
                 }
             }
 
-            // 泛型类型（如 List<int>）暂不支持
-            Type::Generic(name, _) => Err(CodegenError::UnsupportedType(format!(
-                "generic type {} not yet supported",
-                name
-            ))),
+            // Vec 类型: Vec -> %BerylVec* (运行时指针)
+            Type::Vec => Ok(context
+                .context
+                .i8_type()
+                .ptr_type(AddressSpace::default())
+                .as_basic_type_enum()),
 
-            // 错误类型不应出现在 codegen 阶段
-            Type::Error => Err(CodegenError::UnsupportedType(
-                "error type should not reach codegen".to_string(),
+            // 泛型类型
+            Type::Generic(_, _) => Err(CodegenError::UnsupportedType(
+                "generics not yet supported".to_string(),
             )),
+
+            Type::Error => Err(CodegenError::UnsupportedType("error type".to_string())),
         }
     }
 }

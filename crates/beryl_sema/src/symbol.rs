@@ -150,6 +150,7 @@ impl ParameterSymbol {
 pub struct StructSymbol {
     pub name: String,
     pub fields: HashMap<String, FieldInfo>,
+    pub methods: HashMap<String, FunctionSymbol>, // 方法列表
     pub span: Span,
 }
 
@@ -158,6 +159,7 @@ impl StructSymbol {
         Self {
             name,
             fields: HashMap::new(),
+            methods: HashMap::new(),
             span,
         }
     }
@@ -170,5 +172,15 @@ impl StructSymbol {
     /// 查找字段
     pub fn get_field(&self, name: &str) -> Option<&FieldInfo> {
         self.fields.get(name)
+    }
+
+    /// 添加方法
+    pub fn add_method(&mut self, name: String, method: FunctionSymbol) {
+        self.methods.insert(name, method);
+    }
+
+    /// 查找方法
+    pub fn get_method(&self, name: &str) -> Option<&FunctionSymbol> {
+        self.methods.get(name)
     }
 }

@@ -57,6 +57,9 @@ pub enum ExprKind {
         type_name: String,
         fields: Vec<(String, Expr)>, // (field_name, value)
     },
+
+    // Vec 字面量: vec![1, 2, 3]
+    VecLiteral(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

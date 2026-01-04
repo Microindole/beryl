@@ -116,6 +116,10 @@ pub enum SemanticError {
     #[error("'{ty}' is not a class type, cannot access members")]
     NotAClass { ty: String, span: Span },
 
+    /// 不是 Struct 类型
+    #[error("'{name}' is not a struct type, cannot use in impl block")]
+    NotAStruct { name: String, span: Span },
+
     /// 不可调用
     #[error("'{ty}' is not callable")]
     NotCallable { ty: String, span: Span },
@@ -156,6 +160,7 @@ impl SemanticError {
             Self::UndefinedField { span, .. } => span,
             Self::UndefinedMethod { span, .. } => span,
             Self::NotAClass { span, .. } => span,
+            Self::NotAStruct { span, .. } => span,
             Self::NotCallable { span, .. } => span,
             Self::BreakOutsideLoop { span } => span,
             Self::ContinueOutsideLoop { span } => span,

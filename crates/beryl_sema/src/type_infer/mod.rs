@@ -118,6 +118,20 @@ impl<'a> TypeInferer<'a> {
                     })
                 }
             }
+            ExprKind::VecLiteral(elements) => {
+                // Vec 字面量：所有元素必须是 int 类型（暂时只支持 Vec<int>）
+                for elem in elements {
+                    let elem_ty = self.infer(elem)?;
+                    if elem_ty != Type::Int {
+                        return Err(SemanticError::TypeMismatch {
+                            expected: "int".to_string(),
+                            found: elem_ty.to_string(),
+                            span: elem.span.clone(),
+                        });
+                    }
+                }
+                Ok(Type::Vec)
+            }
         }
     }
 }

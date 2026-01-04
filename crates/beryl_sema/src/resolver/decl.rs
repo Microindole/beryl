@@ -1,6 +1,7 @@
-use super::Resolver;
+use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
-use crate::symbol::{FunctionSymbol, ParameterSymbol, Symbol};
+use crate::symbol::{FunctionSymbol, ParameterSymbol};
+use crate::{SemanticError, Symbol};
 use beryl_syntax::ast::Decl;
 
 /// 收集顶层声明（Pass 1）
@@ -61,10 +62,51 @@ pub fn collect_decl(resolver: &mut Resolver, decl: &Decl) {
             }
         }
         Decl::Impl {
-            type_name, methods, ..
+            type_name,
+            methods,
+            span,
         } => {
-            // TODO: Register methods (Phase 2)
-            let _ = (type_name, methods);
+            // 查找对应的 Struct
+            let struct_id = resolver.scopes.lookup_id(type_name);
+            if struct_id.is_none() {
+                resolver.errors.push(SemanticError::UndefinedType {
+                    name: type_name.clone(),
+                    span: span.clone(),
+                });
+                return;
+            }
+
+            // 获取 StructSymbol 的可变引用
+            let struct_id = struct_id.unwrap();
+            if let Some(Symbol::Struct(struct_sym)) = resolver.scopes.get_symbol_mut(struct_id) {
+                // 为每个方法创建 FunctionSymbol 并注册
+                for method in methods {
+                    if let Decl::Function {
+                        name,
+                        params,
+                        return_type,
+                        span,
+                        ..
+                    } = method
+                    {
+                        let func_symbol = FunctionSymbol::new(
+                            name.clone(),
+                            params
+                                .iter()
+                                .map(|p| (p.name.clone(), p.ty.clone()))
+                                .collect(),
+                            return_type.clone(),
+                            span.clone(),
+                        );
+                        struct_sym.add_method(name.clone(), func_symbol);
+                    }
+                }
+            } else {
+                resolver.errors.push(SemanticError::NotAStruct {
+                    name: type_name.clone(),
+                    span: span.clone(),
+                });
+            }
         }
     }
 }
@@ -106,8 +148,34 @@ pub fn resolve_decl(resolver: &mut Resolver, decl: &Decl) {
         Decl::Struct { .. } => {
             // TODO: Resolve struct fields (Phase 2)
         }
-        Decl::Impl { methods, .. } => {
-            // TODO: Resolve impl methods (Phase 2)
+        Decl::Impl {
+            type_name,
+            methods,
+            span,
+        } => {
+            // 验证 Struct 存在
+            let struct_id = resolver.scopes.lookup_id(type_name);
+            if struct_id.is_none() {
+                resolver.errors.push(SemanticError::UndefinedType {
+                    name: type_name.clone(),
+                    span: span.clone(),
+                });
+                return;
+            }
+
+            let struct_id = struct_id.unwrap();
+            if !matches!(
+                resolver.scopes.get_symbol(struct_id),
+                Some(Symbol::Struct(_))
+            ) {
+                resolver.errors.push(SemanticError::NotAStruct {
+                    name: type_name.clone(),
+                    span: span.clone(),
+                });
+                return;
+            }
+
+            // 解析每个方法
             for method in methods {
                 resolve_decl(resolver, method);
             }

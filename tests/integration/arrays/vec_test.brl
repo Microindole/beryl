@@ -1,0 +1,4 @@
+void main() {
+    var v = vec![1, 2, 3];
+    print(42);
+}

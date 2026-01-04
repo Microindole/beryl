@@ -35,6 +35,8 @@ pub enum Token {
     Struct,
     #[token("impl")]
     Impl,
+    #[token("vec")]
+    Vec,
 
     // 字面量关键字
     #[token("null")]

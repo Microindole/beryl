@@ -129,6 +129,20 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 span,
             });
 
+        // Vec 字面量: vec![1, 2, 3]
+        let vec_literal = just(Token::Vec)
+            .ignore_then(just(Token::Bang))
+            .ignore_then(
+                expr.clone()
+                    .separated_by(just(Token::Comma))
+                    .allow_trailing()
+                    .delimited_by(just(Token::LBracket), just(Token::RBracket)),
+            )
+            .map_with_span(|elements, span| Expr {
+                kind: ExprKind::VecLiteral(elements),
+                span,
+            });
+
         // Struct literal: Point { x: 10, y: 20 }
         let struct_literal = ident_parser()
             .then(
@@ -148,6 +162,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
         // Integrate match_expr. Should be high precedence.
         let atom = match_expr
             .or(print_expr)
+            .or(vec_literal)
             .or(array_literal)
             .or(struct_literal)
             .or(val)

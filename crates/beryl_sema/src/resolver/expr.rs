@@ -36,6 +36,12 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &Expr) {
                 resolver.resolve_expr(elem);
             }
         }
+        ExprKind::VecLiteral(elements) => {
+            // 解析 Vec 字面量中的每个元素
+            for elem in elements {
+                resolver.resolve_expr(elem);
+            }
+        }
         ExprKind::Literal(_) => {
             // 字面量不需要解析
         }
