@@ -66,9 +66,9 @@ impl<'a> TypeChecker<'a> {
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         // 获取函数符号
-        let func = match &callee.kind {
+        let (func, is_method) = match &callee.kind {
             ExprKind::Variable(name) => match self.scopes.lookup(name) {
-                Some(Symbol::Function(f)) => f.clone(),
+                Some(Symbol::Function(f)) => (f.clone(), false),
                 Some(_) => {
                     return Err(SemanticError::NotCallable {
                         ty: name.clone(),
@@ -82,6 +82,29 @@ impl<'a> TypeChecker<'a> {
                     });
                 }
             },
+            ExprKind::Get { object, name } => {
+                // 方法调用处理
+                let obj_type = self.infer_type(object)?;
+                if let Type::Struct(struct_name) = obj_type {
+                    // 构建 mangled name: StructName_methodName
+                    let mangled_name = format!("{}_{}", struct_name, name);
+                    match self.scopes.lookup(&mangled_name) {
+                        Some(Symbol::Function(f)) => (f.clone(), true),
+                        _ => {
+                            return Err(SemanticError::UndefinedMethod {
+                                class: struct_name,
+                                method: name.clone(),
+                                span: span.clone(),
+                            });
+                        }
+                    }
+                } else {
+                    return Err(SemanticError::NotAStruct {
+                        name: obj_type.to_string(),
+                        span: object.span.clone(),
+                    });
+                }
+            }
             _ => {
                 // 复杂调用表达式暂不支持
                 return Ok(Type::Error);
@@ -89,17 +112,28 @@ impl<'a> TypeChecker<'a> {
         };
 
         // 检查参数数量
-        if args.len() != func.params.len() {
+        // 如果是方法调用，定义中有隐式 this 参数，所以 args.len() + 1 应该等于 params.len()
+        let expected_args = if is_method {
+            func.params.len() - 1
+        } else {
+            func.params.len()
+        };
+
+        if args.len() != expected_args {
             return Err(SemanticError::ArgumentCountMismatch {
                 name: func.name.clone(),
-                expected: func.params.len(),
+                expected: expected_args,
                 found: args.len(),
                 span: span.clone(),
             });
         }
 
         // 检查每个参数类型
-        for (arg, (_, expected_ty)) in args.iter().zip(func.params.iter()) {
+        // 检查每个参数类型
+        let skip_count = if is_method { 1 } else { 0 };
+        let params_iter = func.params.iter().skip(skip_count);
+
+        for (arg, (_, expected_ty)) in args.iter().zip(params_iter) {
             let arg_ty = self.infer_type(arg)?;
             if !is_compatible(expected_ty, &arg_ty) {
                 self.errors.push(SemanticError::TypeMismatch {

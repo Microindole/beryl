@@ -1,0 +1,22 @@
+// 简单的字段访问测试（不调用方法）
+struct Point {
+    int x;
+    int y;
+}
+
+impl Point {
+    int getX() {
+        return this.x;
+    }
+    
+    int getY() {
+        return this.y;
+    }
+}
+
+int main() {
+    var p = Point { x: 10, y: 20 };
+    print(p.x);  // 应输出 10
+    print(p.y);  // 应输出 20
+    return 0;
+}

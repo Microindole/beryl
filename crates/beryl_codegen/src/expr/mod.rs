@@ -8,15 +8,16 @@ mod call;
 mod intrinsic;
 mod literal;
 mod match_expr;
+mod method_call;
 mod string_ops;
 mod struct_access;
 mod struct_init;
 mod unary;
 mod variable;
+mod vec;
 
-use beryl_syntax::ast::{Expr, ExprKind, Type};
-use inkwell::values::{BasicValue, BasicValueEnum, PointerValue};
-use inkwell::AddressSpace;
+use beryl_syntax::ast::{Expr, ExprKind};
+use inkwell::values::{BasicValueEnum, PointerValue};
 use std::collections::HashMap;
 
 use crate::context::CodegenContext;
@@ -69,7 +70,16 @@ fn generate_expr<'ctx>(
         ExprKind::Variable(name) => variable::gen_variable(ctx, locals, name),
         ExprKind::Binary(left, op, right) => binary::gen_binary(ctx, locals, left, op, right),
         ExprKind::Unary(op, operand) => unary::gen_unary(ctx, locals, op, operand),
-        ExprKind::Call { callee, args } => call::gen_call(ctx, locals, callee, args),
+        ExprKind::Call { callee, args } => {
+            // 检查是否为方法调用 object.method(...)
+            if let ExprKind::Get { object, name } = &callee.kind {
+                // 尝试作为方法调用处理
+                // gen_method_call 内部会验证 object 是否为 Struct
+                method_call::gen_method_call(ctx, locals, object, name, args)
+            } else {
+                call::gen_call(ctx, locals, callee, args)
+            }
+        }
         ExprKind::Match {
             value,
             cases,
@@ -84,16 +94,7 @@ fn generate_expr<'ctx>(
         ExprKind::StructLiteral { type_name, fields } => {
             struct_init::gen_struct_literal(ctx, locals, type_name, fields)
         }
-        ExprKind::VecLiteral(_elements) => {
-            // TODO: 完整实现 Vec 字面量代码生成
-            // 需要调用 beryl_vec_new 然后多次 push
-            // 暂时返回 null 指针作为占位符
-            let vec_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
-            Ok(CodegenValue {
-                value: vec_type.const_null().as_basic_value_enum(),
-                ty: Type::Vec,
-            })
-        }
+        ExprKind::VecLiteral(elements) => vec::gen_vec_literal(ctx, locals, elements),
     }
 }
 

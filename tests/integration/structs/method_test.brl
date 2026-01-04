@@ -5,11 +5,11 @@ struct Point {
 
 impl Point {
     int getX() {
-        return x;
+        return this.x;
     }
     
     int getY() {
-        return y;
+        return this.y;
     }
 }
 

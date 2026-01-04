@@ -13,6 +13,7 @@ pub type ParserError = Simple<Token>;
 enum PostfixOp {
     Index(Expr),
     Member(String, Span),
+    Call(Vec<Expr>, Span),
 }
 
 /// 解析表达式 (公共接口)
@@ -44,25 +45,6 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
         let paren = expr
             .clone()
             .delimited_by(just(Token::LParen), just(Token::RParen));
-
-        // 函数调用: func(arg1, arg2)
-        let call = ident_parser()
-            .then(
-                expr.clone()
-                    .separated_by(just(Token::Comma))
-                    .allow_trailing()
-                    .delimited_by(just(Token::LParen), just(Token::RParen)),
-            )
-            .map_with_span(|(name, args), span| Expr {
-                kind: ExprKind::Call {
-                    callee: Box::new(Expr {
-                        kind: ExprKind::Variable(name),
-                        span: span.clone(),
-                    }),
-                    args,
-                },
-                span,
-            });
 
         let match_expr = just(Token::Match)
             .ignore_then(expr.clone())
@@ -166,7 +148,6 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
             .or(array_literal)
             .or(struct_literal)
             .or(val)
-            .or(call)
             .or(ident)
             .or(paren);
 
@@ -181,6 +162,12 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                     .or(just(Token::Dot)
                         .ignore_then(ident_parser().map_with_span(|n, s| (n, s)))
                         .map(|(n, s)| PostfixOp::Member(n, s)))
+                    .or(expr
+                        .clone()
+                        .separated_by(just(Token::Comma))
+                        .allow_trailing()
+                        .delimited_by(just(Token::LParen), just(Token::RParen))
+                        .map_with_span(PostfixOp::Call))
                     .repeated(),
             )
             .foldl(|lhs, op| match op {
@@ -200,6 +187,16 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                         kind: ExprKind::Get {
                             object: Box::new(lhs),
                             name,
+                        },
+                        span,
+                    }
+                }
+                PostfixOp::Call(args, call_span) => {
+                    let span = lhs.span.start..call_span.end;
+                    Expr {
+                        kind: ExprKind::Call {
+                            callee: Box::new(lhs),
+                            args,
                         },
                         span,
                     }

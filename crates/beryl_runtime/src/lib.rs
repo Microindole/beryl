@@ -77,6 +77,12 @@ impl BerylVec {
         self.len
     }
 
+    /// 检查是否为空
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     /// 获取元素
     pub fn get(&self, index: i64) -> i64 {
         if index < 0 || index >= self.len {
@@ -108,13 +114,19 @@ impl Drop for BerylVec {
 }
 
 // C-compatible FFI functions
+
+/// Create a new Vec
 #[no_mangle]
 pub extern "C" fn beryl_vec_new(initial_capacity: i64) -> *mut BerylVec {
     Box::into_raw(BerylVec::new(initial_capacity))
 }
 
+/// Push an element to the Vec
+///
+/// # Safety
+/// `vec` must be a valid pointer returned by `beryl_vec_new`
 #[no_mangle]
-pub extern "C" fn beryl_vec_push(vec: *mut BerylVec, element: i64) {
+pub unsafe extern "C" fn beryl_vec_push(vec: *mut BerylVec, element: i64) {
     unsafe {
         if !vec.is_null() {
             (*vec).push(element);
@@ -122,8 +134,12 @@ pub extern "C" fn beryl_vec_push(vec: *mut BerylVec, element: i64) {
     }
 }
 
+/// Pop an element from the Vec
+///
+/// # Safety  
+/// `vec` must be a valid pointer returned by `beryl_vec_new`
 #[no_mangle]
-pub extern "C" fn beryl_vec_pop(vec: *mut BerylVec) -> i64 {
+pub unsafe extern "C" fn beryl_vec_pop(vec: *mut BerylVec) -> i64 {
     unsafe {
         if vec.is_null() {
             return 0;
@@ -132,8 +148,12 @@ pub extern "C" fn beryl_vec_pop(vec: *mut BerylVec) -> i64 {
     }
 }
 
+/// Get the length of the Vec
+///
+/// # Safety
+/// `vec` must be a valid pointer returned by `beryl_vec_new`
 #[no_mangle]
-pub extern "C" fn beryl_vec_len(vec: *const BerylVec) -> i64 {
+pub unsafe extern "C" fn beryl_vec_len(vec: *const BerylVec) -> i64 {
     unsafe {
         if vec.is_null() {
             return 0;
@@ -142,8 +162,12 @@ pub extern "C" fn beryl_vec_len(vec: *const BerylVec) -> i64 {
     }
 }
 
+/// Get an element from the Vec
+///
+/// # Safety
+/// `vec` must be a valid pointer returned by `beryl_vec_new`
 #[no_mangle]
-pub extern "C" fn beryl_vec_get(vec: *const BerylVec, index: i64) -> i64 {
+pub unsafe extern "C" fn beryl_vec_get(vec: *const BerylVec, index: i64) -> i64 {
     unsafe {
         if vec.is_null() {
             return 0;
@@ -152,8 +176,12 @@ pub extern "C" fn beryl_vec_get(vec: *const BerylVec, index: i64) -> i64 {
     }
 }
 
+/// Set an element in the Vec
+///
+/// # Safety
+/// `vec` must be a valid pointer returned by `beryl_vec_new`
 #[no_mangle]
-pub extern "C" fn beryl_vec_set(vec: *mut BerylVec, index: i64, value: i64) {
+pub unsafe extern "C" fn beryl_vec_set(vec: *mut BerylVec, index: i64, value: i64) {
     unsafe {
         if !vec.is_null() {
             (*vec).set(index, value);
@@ -161,8 +189,12 @@ pub extern "C" fn beryl_vec_set(vec: *mut BerylVec, index: i64, value: i64) {
     }
 }
 
+/// Free a Vec
+///
+/// # Safety
+/// `vec` must be a valid pointer returned by `beryl_vec_new` and not already freed
 #[no_mangle]
-pub extern "C" fn beryl_vec_free(vec: *mut BerylVec) {
+pub unsafe extern "C" fn beryl_vec_free(vec: *mut BerylVec) {
     if !vec.is_null() {
         unsafe {
             let _ = Box::from_raw(vec);

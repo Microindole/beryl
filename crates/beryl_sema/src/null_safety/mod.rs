@@ -104,10 +104,10 @@ impl<'a> NullSafetyChecker<'a> {
                 // Extern function does not have a body/scope
             }
             Decl::Struct { .. } => {
-                // TODO: Check struct (Phase 2)
+                // Struct 字段的空安全在 resolver 阶段已验证
             }
             Decl::Impl { methods, .. } => {
-                // TODO: Check impl methods (Phase 2)
+                // 递归检查每个方法的空安全
                 for method in methods {
                     self.check_decl(method);
                 }

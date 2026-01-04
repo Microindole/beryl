@@ -2,7 +2,7 @@
 //!
 //! 模块代码生成器，负责生成整个程序
 
-use beryl_syntax::ast::{Decl, Program};
+use beryl_syntax::ast::{Decl, Program, Type};
 
 use crate::context::CodegenContext;
 use crate::error::CodegenResult;
@@ -104,8 +104,40 @@ impl<'ctx, 'a> ModuleGenerator<'ctx, 'a> {
                 Decl::Struct { .. } => {
                     // 已处理
                 }
-                Decl::Impl { .. } => {
-                    // TODO: Impl codegen (Phase 2)
+                Decl::Impl {
+                    type_name, methods, ..
+                } => {
+                    // 声明所有方法（添加隐式 this 参数）
+                    for method in methods {
+                        if let Decl::Function {
+                            name,
+                            params,
+                            return_type,
+                            ..
+                        } = method
+                        {
+                            // 生成 mangled 名称：StructName_methodName
+                            let mangled_name = format!("{}_{}", type_name, name);
+
+                            // 构建带 this 指针的参数列表
+                            let this_type = Type::Struct(type_name.clone());
+                            let this_param = beryl_syntax::ast::Param {
+                                name: "this".to_string(),
+                                ty: this_type,
+                            };
+
+                            let mut method_params = vec![this_param];
+                            method_params.extend_from_slice(params);
+
+                            let func_gen = FunctionGenerator::new(&*self.ctx);
+                            func_gen.declare(&mangled_name, &method_params, return_type)?;
+
+                            // 注册函数签名
+                            self.ctx
+                                .function_signatures
+                                .insert(mangled_name.clone(), return_type.clone());
+                        }
+                    }
                 }
             }
         }
@@ -124,8 +156,16 @@ impl<'ctx, 'a> ModuleGenerator<'ctx, 'a> {
                 Decl::ExternFunction { .. } | Decl::Struct { .. } => {
                     continue;
                 }
-                Decl::Impl { .. } => {
-                    // TODO: Impl codegen (Phase 2)
+                Decl::Impl {
+                    type_name, methods, ..
+                } => {
+                    // 生成所有方法的函数体
+                    for method in methods {
+                        if let Decl::Function { name, .. } = method {
+                            let mangled_name = format!("{}_{}", type_name, name);
+                            func_gen.generate(method, Some(&mangled_name))?;
+                        }
+                    }
                 }
             }
         }

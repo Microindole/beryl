@@ -1,0 +1,27 @@
+struct Counter {
+    int count;
+}
+
+impl Counter {
+    void inc() {
+        this.count = this.count + 1;
+    }
+    
+    int getCount() {
+        return this.count;
+    }
+    
+    void reset() {
+        this.count = 0;
+    }
+}
+
+int main() {
+    var c = Counter { count: 0 };
+    c.inc();
+    c.inc();
+    print(c.getCount());
+    c.reset();
+    print(c.getCount());
+    return 0;
+}

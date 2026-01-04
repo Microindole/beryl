@@ -61,10 +61,43 @@ impl<'ctx, 'a> FunctionGenerator<'ctx, 'a> {
         let mut locals: HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)> =
             HashMap::new();
 
-        // 为参数分配空间并存储
+        // 检测是否是方法（通过 mangled name 格式: StructName_methodName，且不以__开头）
+        let is_method = llvm_name_override.is_some()
+            && llvm_name.contains('_')
+            && !llvm_name.starts_with("__")
+            && llvm_name != name;
+        let mut param_offset = 0;
+
+        // 如果是方法，先处理 this 参数
+        if is_method {
+            // 从函数名推断 struct 名称：StructName_methodName
+            if let Some(struct_name) = llvm_name.split('_').next() {
+                let this_value = function.get_nth_param(0).ok_or_else(|| {
+                    CodegenError::LLVMBuildError("missing this parameter".to_string())
+                })?;
+
+                let this_type = Type::Struct(struct_name.to_string());
+                let this_llvm_type = this_type.to_llvm_type(self.ctx)?;
+                let this_alloca = self
+                    .ctx
+                    .builder
+                    .build_alloca(this_llvm_type, "this")
+                    .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+                self.ctx
+                    .builder
+                    .build_store(this_alloca, this_value)
+                    .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+                locals.insert("this".to_string(), (this_alloca, this_type));
+                param_offset = 1; // 后续参数从索引 1 开始
+            }
+        }
+
+        // 为其他参数分配空间并存储
         for (i, param) in params.iter().enumerate() {
             let param_value = function
-                .get_nth_param(i as u32)
+                .get_nth_param((i + param_offset) as u32)
                 .ok_or_else(|| CodegenError::LLVMBuildError(format!("missing parameter {}", i)))?;
 
             let param_type = param.ty.to_llvm_type(self.ctx)?;

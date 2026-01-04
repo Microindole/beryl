@@ -66,8 +66,15 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &Expr) {
             resolver.resolve_expr(index);
         }
         ExprKind::StructLiteral { type_name, fields } => {
-            // TODO: Check struct type exists (Phase 2)
-            let _ = type_name;
+            // 检查 Struct 类型是否存在
+            if resolver.scopes.lookup(type_name).is_none() {
+                resolver.errors.push(SemanticError::UndefinedType {
+                    name: type_name.clone(),
+                    span: expr.span.clone(),
+                });
+            }
+
+            // 解析每个字段的值表达式
             for (_, value) in fields {
                 resolver.resolve_expr(value);
             }

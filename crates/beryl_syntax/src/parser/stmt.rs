@@ -34,20 +34,23 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
             });
 
         // 赋值语句: x = 10;
-        let assignment = ident_parser()
-            .then_ignore(just(Token::Eq))
-            .then(expr_parser())
-            .then_ignore(just(Token::Semicolon).or_not())
-            .map_with_span(|(name, value), span| {
-                let target_span = span.clone();
-                Stmt::Assignment {
+        // 赋值语句 & 表达式语句
+        // 合并处理以避免前缀冲突，并支持复杂的左值赋值 (e.g. this.count = 1)
+        let expr_based_stmt = expr_parser()
+            .then(
+                just(Token::Eq)
+                    .ignore_then(expr_parser())
+                    .then_ignore(just(Token::Semicolon).or_not())
+                    .map(Some)
+                    .or(just(Token::Semicolon).or_not().to(None)),
+            )
+            .map_with_span(|(lhs, rhs_opt), span| match rhs_opt {
+                Some(rhs) => Stmt::Assignment {
                     span,
-                    target: Expr {
-                        kind: ExprKind::Variable(name),
-                        span: target_span,
-                    },
-                    value,
-                }
+                    target: lhs,
+                    value: rhs,
+                },
+                None => Stmt::Expression(lhs),
             });
 
         // 块语句: { ... }
@@ -160,12 +163,8 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
             .map_with_span(|_, span| Stmt::Continue { span });
 
         // 表达式语句
-        let expr_stmt = expr_parser()
-            .then_ignore(just(Token::Semicolon).or_not())
-            .map(Stmt::Expression);
 
         var_decl
-            .or(assignment)
             .or(block_stmt)
             .or(ret)
             .or(if_stmt)
@@ -173,6 +172,7 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
             .or(for_stmt)
             .or(break_stmt)
             .or(continue_stmt)
-            .or(expr_stmt)
+            // 必须放在最后，作为兜底
+            .or(expr_based_stmt)
     })
 }

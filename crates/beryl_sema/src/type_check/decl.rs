@@ -19,10 +19,10 @@ pub fn check_decl(checker: &mut TypeChecker, decl: &Decl) {
             // Nothing to check for extern declarations (types checked at parser/resolver level implicitly)
         }
         Decl::Struct { .. } => {
-            // TODO: Check struct fields (Phase 2)
+            // Struct 字段类型在 resolver 阶段已验证
         }
         Decl::Impl { methods, .. } => {
-            // TODO: Check impl methods (Phase 2)
+            // 递归检查每个方法
             for method in methods {
                 check_decl(checker, method);
             }
