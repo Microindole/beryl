@@ -292,32 +292,13 @@ impl Specializer {
             },
             ExprKind::Print(e) => ExprKind::Print(Box::new(self.specialize_expr(e))),
 
-            ExprKind::StructLiteral { type_name, fields } => {
-                // StructLiteral 的 type_name 只是 String。
-                // 如果这是一个泛型 Struct 的实例化（在代码中如何表示？）
-                // Parser 可能会把 `Box<int> { ... }` 解析为...
-                // 现有的 Parser 只支持 Ident 作为 type_name。
-                // 这意味着目前只支持 `Box { ... }` (依赖推导?) 或者我们之前的测试代码有问题？
-                // 确实，Beryl 语法对于 Struct Literal 似乎只支持简单名。
-                // 这是一个潜在的限制。如果 Parser 不支持 `Box<int> { ... }`，那我们无法显式实例化。
-                // 但如果 `type_name` 引用的是已经在上文中被特化过的名字（例如通过 typedef?），那没问题。
-                // 对于 Phase 3，我们暂时保留这个名字。后续 Rewriter 会将 Generic Usage 改名。
-                // 如果 `type_name` 原本是 "Box"，在这里我们不知道它是不是 "Box<int>"。
-                // TypeChecker 知道。但在 AST 变换阶段我们只有 AST。
-
-                // 这是一个难点：如果 AST 中没有存储类型参数信息，我们就无法特化 StructLiteral。
-                // 除非 TypeChecker 填充了信息。
-                // 不过，我们的目标是支持 `var b: Box<int>;` 这样的定义。
-                // 至于 Literal，如果支持 `new Box<int>()` 或者是 Constructor Function，那是在 Call 里。
-
-                ExprKind::StructLiteral {
-                    type_name: type_name.clone(),
-                    fields: fields
-                        .iter()
-                        .map(|(n, e)| (n.clone(), self.specialize_expr(e)))
-                        .collect(),
-                }
-            }
+            ExprKind::StructLiteral { type_, fields } => ExprKind::StructLiteral {
+                type_: self.specialize_type(type_),
+                fields: fields
+                    .iter()
+                    .map(|(n, e)| (n.clone(), self.specialize_expr(e)))
+                    .collect(),
+            },
 
             ExprKind::VecLiteral(elements) => {
                 ExprKind::VecLiteral(elements.iter().map(|e| self.specialize_expr(e)).collect())

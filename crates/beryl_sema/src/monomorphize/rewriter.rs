@@ -241,47 +241,13 @@ impl Rewriter {
             },
             ExprKind::Print(e) => ExprKind::Print(Box::new(self.rewrite_expr(*e))),
 
-            ExprKind::StructLiteral { type_name, fields } => {
-                // If type_name corresponds to a generic instantiation name?
-                // AST type_name is String.
-                // If the user wrote `var b: Box<int> = new Box { ... }` (implicit)
-                // Parser has `Box`.
-                // Rewriter doesn't know context.
-                // But Rewriter only rewrites `Type::Generic`.
-                // StructLiteral usually refers to the struct name.
-                // If we Monomorphized `Box<int>` to `Box__int`.
-                // The constructor call should use `Box__int`.
-                // But StructLiteral here uses `type_name`.
-                // This is TRICKY.
-                // If parser produced `Box`, and we renamed struct to `Box__int`.
-
-                // Option A: Rewriter relies on semantic analysis resolution? No.
-                // Option B: CodeGen handles it?
-                // If Beryl requires explicit type arguments in constructor `new Box<int>...`, then Parser would have `type_name` as complex type. But Parser has String.
-                // This implies Beryl uses type inference for constructors or separate method.
-                // Assuming type_name matches the mangled name if we were consistent?
-                // But we are not changing `type_name` here because we don't know the types.
-
-                // Let's assume for now that simple Struct Literals work or don't use generics directly in valid Beryl code we test (we use factory functions maybe?).
-                // Or maybe StructLiteral in AST allows Generic?
-                // `ExprKind::StructLiteral { type_name: String, ... }`.
-                // It IS a string. So we cannot rewrite it without more info.
-
-                // We will leave StructLiteral name AS IS.
-                // If CodeGen finds `Box`, it won't find `Box` struct (it's gone).
-                // It will error.
-
-                // This suggests our Monomorphizer needs to be smarter or Beryl AST needs to support Generic in StructLiteral.
-                // For Sprint 7, let's focus on `var x: Box<int>` type rewriting.
-
-                ExprKind::StructLiteral {
-                    type_name,
-                    fields: fields
-                        .into_iter()
-                        .map(|(n, e)| (n, self.rewrite_expr(e)))
-                        .collect(),
-                }
-            }
+            ExprKind::StructLiteral { type_, fields } => ExprKind::StructLiteral {
+                type_: self.rewrite_type(&type_),
+                fields: fields
+                    .into_iter()
+                    .map(|(n, e)| (n, self.rewrite_expr(e)))
+                    .collect(),
+            },
 
             ExprKind::VecLiteral(elements) => {
                 ExprKind::VecLiteral(elements.into_iter().map(|e| self.rewrite_expr(e)).collect())

@@ -68,7 +68,6 @@ impl<'a> TypeInferer<'a> {
             // 结构体成员访问
             Type::Struct(struct_name) => {
                 // 查找结构体定义并获取字段
-                // 查找结构体定义并获取字段
                 if let Some(crate::symbol::Symbol::Struct(struct_sym)) =
                     self.scopes.lookup_from(struct_name, self.current_scope)
                 {
@@ -84,6 +83,42 @@ impl<'a> TypeInferer<'a> {
                     }
                 }
 
+                Err(SemanticError::NotAClass {
+                    ty: struct_name.clone(),
+                    span: span.clone(),
+                })
+            }
+
+            // 泛型结构体成员访问
+            Type::Generic(struct_name, args) => {
+                if let Some(crate::symbol::Symbol::Struct(struct_sym)) =
+                    self.scopes.lookup_from(struct_name, self.current_scope)
+                {
+                    if let Some(field_info) = struct_sym.get_field(field_name) {
+                        // 构建泛型替换表
+                        if struct_sym.generic_params.len() != args.len() {
+                            return Err(SemanticError::GenericArityMismatch {
+                                name: struct_name.clone(),
+                                expected: struct_sym.generic_params.len(),
+                                found: args.len(),
+                                span: span.clone(),
+                            });
+                        }
+
+                        let mut subst_map = std::collections::HashMap::new();
+                        for (param, arg) in struct_sym.generic_params.iter().zip(args.iter()) {
+                            subst_map.insert(param.name.clone(), arg.clone());
+                        }
+
+                        return Ok(self.substitute_type(&field_info.ty, &subst_map));
+                    } else {
+                        return Err(SemanticError::UndefinedField {
+                            class: struct_name.clone(),
+                            field: field_name.to_string(),
+                            span: span.clone(),
+                        });
+                    }
+                }
                 Err(SemanticError::NotAClass {
                     ty: struct_name.clone(),
                     span: span.clone(),

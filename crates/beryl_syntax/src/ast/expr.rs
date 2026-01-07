@@ -66,7 +66,7 @@ pub enum ExprKind {
 
     // 结构体字面量: Point { x: 10, y: 20 }
     StructLiteral {
-        type_name: String,
+        type_: crate::ast::Type,
         fields: Vec<(String, Expr)>, // (field_name, value)
     },
 

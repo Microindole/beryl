@@ -179,9 +179,8 @@ impl Collector {
                 self.collect_expr(index);
             }
             ExprKind::Print(e) => self.collect_expr(e),
-            ExprKind::StructLiteral { fields, .. } => {
-                // struct name might be generic but parser only parses string currently
-                // assuming name resolution happens elsewhere
+            ExprKind::StructLiteral { type_, fields } => {
+                self.collect_type(type_);
                 for (_, e) in fields {
                     self.collect_expr(e);
                 }

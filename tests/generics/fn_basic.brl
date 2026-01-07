@@ -1,0 +1,15 @@
+// 泛型函数测试
+
+T identity<T>(T x) {
+    return x
+}
+
+int main() {
+    var x = identity::<int>(10)
+    var y = identity::<bool>(true)
+    
+    if y {
+        return x
+    }
+    return 0
+}

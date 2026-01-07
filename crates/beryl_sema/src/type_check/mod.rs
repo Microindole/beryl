@@ -82,6 +82,13 @@ impl<'a> TypeChecker<'a> {
                 size: *size,
             },
             Type::Nullable(inner) => Type::Nullable(Box::new(self.substitute_type(inner, mapping))),
+            Type::Struct(name) => {
+                if let Some(concrete) = mapping.get(name) {
+                    concrete.clone()
+                } else {
+                    ty.clone()
+                }
+            }
             _ => ty.clone(),
         }
     }

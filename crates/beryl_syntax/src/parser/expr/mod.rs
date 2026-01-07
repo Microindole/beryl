@@ -113,8 +113,8 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 span,
             });
 
-        // Struct literal: Point { x: 10, y: 20 }
-        let struct_literal = ident_parser()
+        // Struct literal: Point { x: 10, y: 20 } or Box<int> { value: 10 }
+        let struct_literal = type_parser()
             .then(
                 ident_parser()
                     .then_ignore(just(Token::Colon))
@@ -123,8 +123,8 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                     .allow_trailing()
                     .delimited_by(just(Token::LBrace), just(Token::RBrace)),
             )
-            .map_with_span(|(type_name, fields), span| Expr {
-                kind: ExprKind::StructLiteral { type_name, fields },
+            .map_with_span(|(type_, fields), span| Expr {
+                kind: ExprKind::StructLiteral { type_, fields },
                 span,
             });
 

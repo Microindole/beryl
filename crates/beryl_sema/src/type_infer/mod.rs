@@ -59,6 +59,44 @@ impl<'a> TypeInferer<'a> {
         self.current_scope = scope_id;
     }
 
+    /// 替换类型中的泛型参数 (简单的局部实现)
+    pub(crate) fn substitute_type(
+        &self,
+        ty: &Type,
+        mapping: &std::collections::HashMap<String, Type>,
+    ) -> Type {
+        match ty {
+            Type::GenericParam(name) => {
+                if let Some(concrete) = mapping.get(name) {
+                    concrete.clone()
+                } else {
+                    ty.clone()
+                }
+            }
+            Type::Generic(name, args) => {
+                let new_args = args
+                    .iter()
+                    .map(|arg| self.substitute_type(arg, mapping))
+                    .collect();
+                Type::Generic(name.clone(), new_args)
+            }
+            Type::Vec(inner) => Type::Vec(Box::new(self.substitute_type(inner, mapping))),
+            Type::Array { element_type, size } => Type::Array {
+                element_type: Box::new(self.substitute_type(element_type, mapping)),
+                size: *size,
+            },
+            Type::Nullable(inner) => Type::Nullable(Box::new(self.substitute_type(inner, mapping))),
+            Type::Struct(name) => {
+                if let Some(concrete) = mapping.get(name) {
+                    concrete.clone()
+                } else {
+                    ty.clone()
+                }
+            }
+            _ => ty.clone(),
+        }
+    }
+
     /// 查找符号（从当前作用域向上）
     fn lookup(&self, name: &str) -> Option<&Symbol> {
         self.scopes.lookup_from(name, self.current_scope)
@@ -96,23 +134,63 @@ impl<'a> TypeInferer<'a> {
                 Ok(Type::Void)
             }
 
-            ExprKind::StructLiteral { type_name, fields } => {
-                // 查找结构体类型并检查字段
+            ExprKind::StructLiteral { type_, fields } => {
+                // 解构类型名称和泛型参数
+                let (type_name, generic_args) = match type_ {
+                    Type::Struct(name) => (name, Vec::new()),
+                    Type::Generic(name, args) => (name, args.clone()),
+                    _ => {
+                        return Err(SemanticError::UndefinedType {
+                            name: type_.to_string(),
+                            span: expr.span.clone(),
+                        });
+                    }
+                };
+
+                // 查找结构体符号
                 if let Some(crate::symbol::Symbol::Struct(struct_sym)) = self.lookup(type_name) {
+                    // 检查泛型参数数量
+                    if struct_sym.generic_params.len() != generic_args.len() {
+                        return Err(SemanticError::GenericArityMismatch {
+                            name: type_name.clone(),
+                            expected: struct_sym.generic_params.len(),
+                            found: generic_args.len(),
+                            span: expr.span.clone(),
+                        });
+                    }
+
+                    // 构建泛型替换表
+                    let mut subst_map = std::collections::HashMap::new();
+                    for (param, arg) in struct_sym.generic_params.iter().zip(generic_args.iter()) {
+                        subst_map.insert(param.name.clone(), arg.clone());
+                    }
+
                     // 检查所有字段
                     for (field_name, field_expr) in fields {
                         // 验证字段存在
-                        if struct_sym.get_field(field_name).is_none() {
+                        if let Some(field_info) = struct_sym.get_field(field_name) {
+                            // 推导字段值的类型
+                            let expr_ty = self.infer(field_expr)?;
+
+                            // 获取期望类型并应用泛型替换
+                            let expected_ty = self.substitute_type(&field_info.ty, &subst_map);
+
+                            if !is_compatible(&expected_ty, &expr_ty) {
+                                return Err(SemanticError::TypeMismatch {
+                                    expected: expected_ty.to_string(),
+                                    found: expr_ty.to_string(),
+                                    span: field_expr.span.clone(),
+                                });
+                            }
+                        } else {
                             return Err(SemanticError::UndefinedField {
                                 class: type_name.clone(),
                                 field: field_name.clone(),
                                 span: field_expr.span.clone(),
                             });
                         }
-                        // 推导字段值的类型
-                        self.infer(field_expr)?;
                     }
-                    Ok(Type::Struct(type_name.clone()))
+                    Ok(type_.clone())
                 } else {
                     Err(SemanticError::UndefinedType {
                         name: type_name.clone(),

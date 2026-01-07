@@ -77,14 +77,9 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
             resolver.resolve_expr(array);
             resolver.resolve_expr(index);
         }
-        ExprKind::StructLiteral { type_name, fields } => {
-            // 检查 Struct 类型是否存在
-            if resolver.scopes.lookup(type_name).is_none() {
-                resolver.errors.push(SemanticError::UndefinedType {
-                    name: type_name.clone(),
-                    span: expr.span.clone(),
-                });
-            }
+        ExprKind::StructLiteral { type_, fields } => {
+            // Check Struct type (handles generics)
+            resolver.resolve_type(type_, &expr.span);
 
             // 解析每个字段的值表达式
             for (_, value) in fields {

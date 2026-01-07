@@ -19,8 +19,12 @@ pub fn check_decl(checker: &mut TypeChecker, decl: &mut Decl) {
         Decl::ExternFunction { .. } => {
             // Nothing to check for extern declarations (types checked at parser/resolver level implicitly)
         }
-        Decl::Struct { .. } => {
+        Decl::Struct { generic_params, .. } => {
             // Struct 字段类型在 resolver 阶段已验证
+            // 但如果 Resolver 为泛型参数创建了作用域，我们需要跳过它以保持索引同步
+            if !generic_params.is_empty() {
+                checker.next_child_index += 1;
+            }
         }
         Decl::Impl { methods, .. } => {
             // 递归检查每个方法

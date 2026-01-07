@@ -100,7 +100,17 @@ fn generate_expr<'ctx>(
             let line = ctx.get_line(expr.span.start);
             struct_access::gen_safe_member_access(ctx, locals, object, name, line)
         }
-        ExprKind::StructLiteral { type_name, fields } => {
+        ExprKind::StructLiteral { type_, fields } => {
+            let type_name = match type_ {
+                beryl_syntax::ast::Type::Struct(name) => name,
+                beryl_syntax::ast::Type::Generic(name, _) => name,
+                _ => {
+                    return Err(CodegenError::UnsupportedType(format!(
+                        "Invalid struct literal type: {:?}",
+                        type_
+                    )))
+                }
+            };
             struct_init::gen_struct_literal(ctx, locals, type_name, fields)
         }
         ExprKind::VecLiteral(elements) => vec::gen_vec_literal(ctx, locals, elements),
