@@ -57,10 +57,11 @@ fn parse_source(source: &str) -> CompileResult<Program> {
 /// ```
 pub fn compile(source: &str) -> CompileResult<CompilationOutput> {
     // 1. 词法 + 语法分析
-    let ast = parse_source(source)?;
+    let mut ast = parse_source(source)?;
+    eprintln!("Parsed ast");
 
     // 2. 语义分析
-    let _analysis_result = analyze(&ast).map_err(CompileError::SemanticErrors)?;
+    let _analysis_result = analyze(&mut ast).map_err(CompileError::SemanticErrors)?;
 
     // 3. 单态化 (Generic Monomorphization)
     let mut monomorphizer = beryl_sema::monomorphize::Monomorphizer::new();

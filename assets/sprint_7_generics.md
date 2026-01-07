@@ -180,10 +180,11 @@ int main() {
 -   [x] Method specialization (`Box__int_get`)
 -   [x] Integration Test: `generic_method.brl` (`Box<T>.get()`)
 
-### Phase 5: Generic Free Functions & Inference - 🚧 Pending
--   [ ] Generic Function Calls (`identity<int>(10)`)
--   [ ] Argument Type Inference (`identity(10)` -> `T=int`)
--   [ ] Turbo-fish syntax support in Parser? (Already supported `ident<args>`)
+### Phase 5: Generic Free Functions & Inference [In Progress]
+- [x] Generic Function Definitions (`func identity<T>(x: T) -> T`)
+- [x] Explicit Instantiation (`identity::<int>(10)`)
+- [ ] Argument Type Inference (`identity(10)` -> `T=int`) [Pending]
+- [ ] Turbo-fish syntax support in Parser? (Already supported `ident<args>`)
 
 ## 自举 (Self-Hosting) 差距分析
 要实现 Beryl 自举，当前语言还需要以下关键特性：

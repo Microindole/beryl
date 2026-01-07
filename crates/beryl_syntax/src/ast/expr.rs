@@ -58,6 +58,12 @@ pub enum ExprKind {
         index: Box<Expr>,
     },
 
+    // 泛型实例化: func::<int>
+    GenericInstantiation {
+        base: Box<Expr>,
+        args: Vec<crate::ast::Type>,
+    },
+
     // 结构体字面量: Point { x: 10, y: 20 }
     StructLiteral {
         type_name: String,

@@ -5,9 +5,10 @@
 
 use crate::error::SemanticError;
 use crate::scope::ScopeStack;
-use crate::symbol::Symbol;
+use crate::symbol::{FunctionSymbol, Symbol};
 use crate::type_infer::{is_compatible, TypeInferer};
 use beryl_syntax::ast::{Decl, Expr, ExprKind, Program, Stmt, Type};
+use std::collections::HashMap;
 
 pub mod decl;
 pub mod stmt;
@@ -36,8 +37,8 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// 检查整个程序
-    pub fn check(&mut self, program: &Program) -> Result<(), Vec<SemanticError>> {
-        for decl in &program.decls {
+    pub fn check(&mut self, program: &mut Program) -> Result<(), Vec<SemanticError>> {
+        for decl in &mut program.decls {
             self.check_decl(decl);
         }
 
@@ -49,39 +50,122 @@ impl<'a> TypeChecker<'a> {
     }
 
     /// 检查声明 (delegate to module)
-    pub fn check_decl(&mut self, decl: &Decl) {
+    pub fn check_decl(&mut self, decl: &mut Decl) {
         decl::check_decl(self, decl);
     }
 
     /// 检查语句 (delegate to module)
-    pub fn check_stmt(&mut self, stmt: &Stmt) {
+    pub fn check_stmt(&mut self, stmt: &mut Stmt) {
         stmt::check_stmt(self, stmt);
+    }
+
+    /// 替换类型中的泛型参数
+    fn substitute_type(&self, ty: &Type, mapping: &HashMap<String, Type>) -> Type {
+        match ty {
+            Type::GenericParam(name) => {
+                if let Some(concrete) = mapping.get(name) {
+                    concrete.clone()
+                } else {
+                    ty.clone()
+                }
+            }
+            Type::Generic(name, args) => {
+                let new_args = args
+                    .iter()
+                    .map(|arg| self.substitute_type(arg, mapping))
+                    .collect();
+                Type::Generic(name.clone(), new_args)
+            }
+            Type::Vec(inner) => Type::Vec(Box::new(self.substitute_type(inner, mapping))),
+            Type::Array { element_type, size } => Type::Array {
+                element_type: Box::new(self.substitute_type(element_type, mapping)),
+                size: *size,
+            },
+            Type::Nullable(inner) => Type::Nullable(Box::new(self.substitute_type(inner, mapping))),
+            _ => ty.clone(),
+        }
     }
 
     /// 检查函数调用
     pub fn check_call(
         &mut self,
-        callee: &Expr,
-        args: &[Expr],
+        callee: &mut Expr,
+        args: &mut [Expr],
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
-        // 获取函数符号
-        let (func, is_method) = match &callee.kind {
-            ExprKind::Variable(name) => match self.scopes.lookup(name) {
-                Some(Symbol::Function(f)) => (f.clone(), false),
-                Some(_) => {
-                    return Err(SemanticError::NotCallable {
-                        ty: name.clone(),
-                        span: span.clone(),
-                    });
+        // 解析被调用者 (包括泛型实例化)
+        let (func, is_method, subst_map) = match &mut callee.kind {
+            ExprKind::GenericInstantiation {
+                base,
+                args: type_args,
+            } => {
+                // 泛型函数调用: func::<T>(...)
+                match &mut base.kind {
+                    ExprKind::Variable(name) => {
+                        match self.scopes.lookup(name) {
+                            Some(Symbol::Function(f)) => {
+                                // Check generic arg count
+                                if f.generic_params.len() != type_args.len() {
+                                    return Err(SemanticError::ArgumentCountMismatch {
+                                        name: format!("{} generic args", name),
+                                        expected: f.generic_params.len(),
+                                        found: type_args.len(),
+                                        span: span.clone(),
+                                    });
+                                }
+
+                                // Build substitution map
+                                let mut map = HashMap::new();
+                                for (param, arg_ty) in f.generic_params.iter().zip(type_args.iter())
+                                {
+                                    map.insert(param.name.as_str().to_string(), arg_ty.clone());
+                                }
+                                (f.clone(), false, map)
+                            }
+                            _ => {
+                                return Err(SemanticError::NotCallable {
+                                    ty: name.clone(),
+                                    span: span.clone(),
+                                })
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(SemanticError::NotCallable {
+                            ty: "complex generic expression".to_string(),
+                            span: span.clone(),
+                        })
+                    }
                 }
-                None => {
-                    return Err(SemanticError::UndefinedFunction {
-                        name: name.clone(),
-                        span: span.clone(),
-                    });
+            }
+            ExprKind::Variable(name) => {
+                // 普通函数调用
+                match self.scopes.lookup(name) {
+                    Some(Symbol::Function(f)) => (f.clone(), false, HashMap::new()),
+                    Some(Symbol::Struct(s)) => {
+                        // 构造函数
+                        let func_sym = FunctionSymbol {
+                            name: name.clone(),
+                            params: s
+                                .fields
+                                .iter()
+                                .map(|(fname, finfo)| (fname.clone(), finfo.ty.clone()))
+                                .collect(),
+                            return_type: Type::Struct(name.clone()),
+                            generic_params: s.generic_params.clone(), // Struct generic params
+                            span: s.span.clone(),
+                            is_public: true, // Constructors are usually public or match struct visibility
+                        };
+                        (func_sym, false, HashMap::new())
+                    }
+                    _ => {
+                        return Err(SemanticError::NotCallable {
+                            ty: name.clone(),
+                            span: span.clone(),
+                        });
+                    }
                 }
-            },
+            }
             ExprKind::Get { object, name } => {
                 // 方法调用处理
                 let obj_type = self.infer_type(object)?;
@@ -90,7 +174,7 @@ impl<'a> TypeChecker<'a> {
                         // 构建 mangled name: StructName_methodName
                         let mangled_name = format!("{}_{}", struct_name, name);
                         match self.scopes.lookup(&mangled_name) {
-                            Some(Symbol::Function(f)) => (f.clone(), true),
+                            Some(Symbol::Function(f)) => (f.clone(), true, HashMap::new()),
                             _ => {
                                 return Err(SemanticError::UndefinedMethod {
                                     class: struct_name,
@@ -113,7 +197,7 @@ impl<'a> TypeChecker<'a> {
                                         span: span.clone(),
                                     });
                                 }
-                                let arg_ty = self.infer_type(&args[0])?;
+                                let arg_ty = self.infer_type(&mut args[0])?;
                                 if !is_compatible(&inner_type, &arg_ty) {
                                     return Err(SemanticError::TypeMismatch {
                                         expected: inner_type.to_string(),
@@ -157,7 +241,7 @@ impl<'a> TypeChecker<'a> {
                                         span: span.clone(),
                                     });
                                 }
-                                let arg_ty = self.infer_type(&args[0])?;
+                                let arg_ty = self.infer_type(&mut args[0])?;
                                 if !is_compatible(&Type::Int, &arg_ty) {
                                     return Err(SemanticError::TypeMismatch {
                                         expected: "int".to_string(),
@@ -177,7 +261,7 @@ impl<'a> TypeChecker<'a> {
                                         span: span.clone(),
                                     });
                                 }
-                                let index_ty = self.infer_type(&args[0])?;
+                                let index_ty = self.infer_type(&mut args[0])?;
                                 if !is_compatible(&Type::Int, &index_ty) {
                                     return Err(SemanticError::TypeMismatch {
                                         expected: "int".to_string(),
@@ -185,7 +269,7 @@ impl<'a> TypeChecker<'a> {
                                         span: args[0].span.clone(),
                                     });
                                 }
-                                let val_ty = self.infer_type(&args[1])?;
+                                let val_ty = self.infer_type(&mut args[1])?;
                                 if !is_compatible(&inner_type, &val_ty) {
                                     return Err(SemanticError::TypeMismatch {
                                         expected: inner_type.to_string(),
@@ -236,26 +320,29 @@ impl<'a> TypeChecker<'a> {
         }
 
         // 检查每个参数类型
-        // 检查每个参数类型
         let skip_count = if is_method { 1 } else { 0 };
         let params_iter = func.params.iter().skip(skip_count);
 
-        for (arg, (_, expected_ty)) in args.iter().zip(params_iter) {
+        for (arg, (_, param_ty)) in args.iter_mut().zip(params_iter) {
             let arg_ty = self.infer_type(arg)?;
-            if !is_compatible(expected_ty, &arg_ty) {
+            // 关键：检查参数前先替换其中的泛型参数
+            let expected_ty = self.substitute_type(param_ty, &subst_map);
+
+            if !is_compatible(&expected_ty, &arg_ty) {
                 self.errors.push(SemanticError::TypeMismatch {
                     expected: expected_ty.to_string(),
                     found: arg_ty.to_string(),
-                    span: arg.span.clone(),
+                    span: arg.span.clone(), // Use arg.span
                 });
             }
         }
 
-        Ok(func.return_type.clone())
+        // 返回类型的泛型替换
+        Ok(self.substitute_type(&func.return_type, &subst_map))
     }
 
     /// 推导表达式类型（封装 TypeInferer）
-    pub(crate) fn infer_type(&self, expr: &Expr) -> Result<Type, SemanticError> {
+    pub(crate) fn infer_type(&self, expr: &mut Expr) -> Result<Type, SemanticError> {
         let inferer = TypeInferer::new(self.scopes);
         inferer.infer(expr)
     }

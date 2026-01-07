@@ -60,7 +60,7 @@ pub struct AnalysisResult {
 /// # Errors
 ///
 /// 返回所有收集到的语义错误
-pub fn analyze(program: &Program) -> Result<AnalysisResult, Vec<SemanticError>> {
+pub fn analyze(program: &mut Program) -> Result<AnalysisResult, Vec<SemanticError>> {
     let mut all_errors: Vec<SemanticError> = Vec::new();
 
     // Pass 1: 名称解析
@@ -130,8 +130,8 @@ mod tests {
 
     #[test]
     fn test_analyze_simple_program() {
-        let program = make_simple_program();
-        let result = analyze(&program);
+        let mut program = make_simple_program();
+        let result = analyze(&mut program);
         assert!(
             result.is_ok(),
             "Analysis should succeed: {:?}",
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn test_undefined_variable_error() {
         // int main() { return y; }  -- y 未定义
-        let program = Program {
+        let mut program = Program {
             decls: vec![Decl::Function {
                 span: 0..30,
                 name: "main".to_string(),
@@ -159,7 +159,7 @@ mod tests {
             }],
         };
 
-        let result = analyze(&program);
+        let result = analyze(&mut program);
         assert!(result.is_err());
 
         let errors = result.unwrap_err();
@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn test_type_mismatch_error() {
         // int main() { var x: int = "hello"; return x; }
-        let program = Program {
+        let mut program = Program {
             decls: vec![Decl::Function {
                 span: 0..50,
                 name: "main".to_string(),
@@ -199,7 +199,7 @@ mod tests {
             }],
         };
 
-        let result = analyze(&program);
+        let result = analyze(&mut program);
         assert!(result.is_err());
 
         let errors = result.unwrap_err();
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     fn test_null_safety_error() {
         // void test() { var s: string = null; }  -- null 赋给非空类型
-        let program = Program {
+        let mut program = Program {
             decls: vec![Decl::Function {
                 span: 0..50,
                 name: "test".to_string(),
@@ -230,7 +230,7 @@ mod tests {
             }],
         };
 
-        let result = analyze(&program);
+        let result = analyze(&mut program);
         assert!(result.is_err());
 
         let errors = result.unwrap_err();

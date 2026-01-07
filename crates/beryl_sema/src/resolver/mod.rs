@@ -31,14 +31,15 @@ impl Resolver {
     /// 采用两遍扫描：
     /// 1. 第一遍：收集所有顶层声明（函数、类）
     /// 2. 第二遍：解析函数体内的引用
-    pub fn resolve(&mut self, program: &Program) -> Result<(), Vec<SemanticError>> {
+    pub fn resolve(&mut self, program: &mut Program) -> Result<(), Vec<SemanticError>> {
+        eprintln!("Resolver::resolve started");
         // Pass 1: 收集顶层声明
-        for decl in &program.decls {
+        for decl in &mut program.decls {
             self.collect_decl(decl);
         }
 
         // Pass 2: 解析函数体
-        for decl in &program.decls {
+        for decl in &mut program.decls {
             self.resolve_decl(decl);
         }
 
@@ -55,15 +56,15 @@ impl Resolver {
         decl::collect_decl(self, decl);
     }
 
-    pub(crate) fn resolve_decl(&mut self, decl: &Decl) {
+    pub(crate) fn resolve_decl(&mut self, decl: &mut Decl) {
         decl::resolve_decl(self, decl);
     }
 
-    pub(crate) fn resolve_stmt(&mut self, stmt: &Stmt) {
+    pub(crate) fn resolve_stmt(&mut self, stmt: &mut Stmt) {
         stmt::resolve_stmt(self, stmt);
     }
 
-    pub(crate) fn resolve_expr(&mut self, expr: &Expr) {
+    pub(crate) fn resolve_expr(&mut self, expr: &mut Expr) {
         expr::resolve_expr(self, expr);
     }
 

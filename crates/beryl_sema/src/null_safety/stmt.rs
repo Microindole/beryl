@@ -3,7 +3,8 @@ use crate::error::SemanticError;
 use crate::type_infer::TypeInferer;
 use beryl_syntax::ast::{Expr, Stmt, Type};
 
-pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &Stmt) {
+pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &mut Stmt) {
+    eprintln!("Checking stmt: {:?}", stmt);
     match stmt {
         Stmt::VarDecl {
             name,
@@ -24,7 +25,7 @@ pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &Stmt) {
             checker.check_expr(expr);
         }
         Stmt::Block(stmts) => {
-            checker.with_child_scope(|checker| {
+            checker.with_child_scope(|checker: &mut NullSafetyChecker| {
                 for stmt in stmts {
                     checker.check_stmt(stmt);
                 }
@@ -36,14 +37,14 @@ pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &Stmt) {
             else_block,
             ..
         } => {
-            check_if(checker, condition, then_block, else_block.as_deref());
+            check_if(checker, condition, then_block, else_block.as_deref_mut());
         }
         Stmt::While {
             condition, body, ..
         } => {
             checker.check_expr(condition);
             // While loop has scope
-            checker.with_child_scope(|checker| {
+            checker.with_child_scope(|checker: &mut NullSafetyChecker| {
                 for stmt in body {
                     checker.check_stmt(stmt);
                 }
@@ -57,7 +58,7 @@ pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &Stmt) {
             ..
         } => {
             // For loop has scope
-            checker.with_child_scope(|checker| {
+            checker.with_child_scope(|checker: &mut NullSafetyChecker| {
                 // 检查初始化语句
                 if let Some(init_stmt) = init {
                     checker.check_stmt(init_stmt);
@@ -81,7 +82,7 @@ pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &Stmt) {
         Stmt::ForIn { iterable, body, .. } => {
             checker.check_expr(iterable);
             // ForIn has scope
-            checker.with_child_scope(|checker| {
+            checker.with_child_scope(|checker: &mut NullSafetyChecker| {
                 for stmt in body {
                     checker.check_stmt(stmt);
                 }
@@ -103,7 +104,7 @@ fn check_var_decl(
     checker: &mut NullSafetyChecker,
     _name: &str,
     declared_ty: Option<&Type>,
-    value: &Expr,
+    value: &mut Expr,
     span: &std::ops::Range<usize>,
 ) {
     // 检查是否将 null 赋给非空类型
@@ -126,8 +127,8 @@ fn check_var_decl(
 /// 检查赋值的 null 安全性
 fn check_assignment(
     checker: &mut NullSafetyChecker,
-    target: &Expr,
-    value: &Expr,
+    target: &mut Expr,
+    value: &mut Expr,
     span: &std::ops::Range<usize>,
 ) {
     // 获取目标类型
@@ -150,9 +151,9 @@ fn check_assignment(
 /// 检查 if 语句（处理智能转换）
 fn check_if(
     checker: &mut NullSafetyChecker,
-    condition: &Expr,
-    then_block: &[Stmt],
-    else_block: Option<&[Stmt]>,
+    condition: &mut Expr,
+    then_block: &mut [Stmt],
+    else_block: Option<&mut [Stmt]>,
 ) {
     // 检查是否是 `x != null` 形式
     let narrowed_var = checker.extract_null_check(condition);

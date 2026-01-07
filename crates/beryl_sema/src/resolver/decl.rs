@@ -143,7 +143,7 @@ pub fn collect_decl(resolver: &mut Resolver, decl: &Decl) {
 }
 
 /// 解析声明（Pass 2）
-pub fn resolve_decl(resolver: &mut Resolver, decl: &Decl) {
+pub fn resolve_decl(resolver: &mut Resolver, decl: &mut Decl) {
     match decl {
         Decl::Function {
             name: _,
@@ -262,7 +262,7 @@ pub fn resolve_decl(resolver: &mut Resolver, decl: &Decl) {
 
                     // 注册impl块的泛型参数到作用域
                     // 这样方法可以使用 impl<T> 声明的类型参数
-                    for gp in generic_params {
+                    for gp in generic_params.iter() {
                         let gp_symbol = GenericParamSymbol::new(gp.clone(), span.clone());
                         if let Err(e) = resolver.scopes.define(Symbol::GenericParam(gp_symbol)) {
                             resolver.errors.push(e);

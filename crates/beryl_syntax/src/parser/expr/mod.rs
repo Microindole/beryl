@@ -2,7 +2,7 @@
 //!
 //! 表达式解析：字面量、变量、运算符、函数调用等
 
-use super::helpers::ident_parser;
+use super::helpers::{ident_parser, type_parser};
 pub mod literal;
 use crate::ast::*;
 use crate::lexer::Token;
@@ -16,6 +16,7 @@ enum PostfixOp {
     Member(String, Span),
     SafeMember(String, Span),
     Call(Vec<Expr>, Span),
+    GenericInstantiation(Vec<Type>, Span),
 }
 
 /// 解析表达式 (公共接口)
@@ -23,7 +24,6 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
     recursive(|expr| {
         // 字面量
         let val = literal::literal_parser();
-
         // 基本原子表达式
         let ident = ident_parser().map_with_span(|name, span| Expr {
             kind: ExprKind::Variable(name),
@@ -140,8 +140,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
             .or(paren);
 
         // 后缀操作符: 索引 arr[i] 或 成员 obj.field 或 安全访问 obj?.field
-        let postfix = atom
-            .clone()
+        let postfix = atom.clone()
             .then(
                 expr.clone()
                     .delimited_by(just(Token::LBracket), just(Token::RBracket))
@@ -152,6 +151,16 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                     .or(just(Token::QuestionDot)
                         .ignore_then(ident_parser().map_with_span(|n, s| (n, s)))
                         .map(|(n, s)| PostfixOp::SafeMember(n, s)))
+                    .or(just(Token::Colon)
+                        .then(just(Token::Colon))
+                        .ignore_then(just(Token::Lt))
+                        .ignore_then(
+                            type_parser()
+                                .separated_by(just(Token::Comma))
+                                .allow_trailing(),
+                        )
+                        .then_ignore(just(Token::Gt))
+                        .map_with_span(PostfixOp::GenericInstantiation))
                     .or(expr
                         .clone()
                         .separated_by(just(Token::Comma))
@@ -201,24 +210,36 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                         span,
                     }
                 }
-            });
-
-        // 一元运算符 (!, -)
-        let unary = just(Token::Bang)
-            .to(UnaryOp::Not)
-            .or(just(Token::Minus).to(UnaryOp::Neg))
-            .repeated()
-            .then(postfix.clone())
-            .foldr(|op, rhs| {
-                let span = rhs.span.clone();
-                Expr {
-                    kind: ExprKind::Unary(op, Box::new(rhs)),
-                    span,
+                PostfixOp::GenericInstantiation(args, args_span) => {
+                    let span = lhs.span.start..args_span.end;
+                    Expr {
+                        kind: ExprKind::GenericInstantiation {
+                            base: Box::new(lhs),
+                            args,
+                        },
+                        span,
+                    }
                 }
             })
-            .or(postfix);
+            // .boxed() // If needed for complexity
+            ;
 
-        // 乘除模
+        // Unary: -x, !x
+        let unary = just(Token::Minus)
+            .to(UnaryOp::Neg)
+            .or(just(Token::Bang).to(UnaryOp::Not))
+            .map_with_span(|op, span| (op, span))
+            .repeated()
+            .then(postfix)
+            .foldr(|(op, span), rhs| {
+                let new_span = span.start..rhs.span.end;
+                Expr {
+                    kind: ExprKind::Unary(op, Box::new(rhs)),
+                    span: new_span,
+                }
+            });
+
+        // Product: *, /, %
         let product = unary
             .clone()
             .then(
@@ -237,7 +258,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 }
             });
 
-        // 加减
+        // Sum: +, -
         let sum = product
             .clone()
             .then(
@@ -255,17 +276,17 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 }
             });
 
-        // 比较运算符
+        // Comparison: <, >, <=, >=, ==, !=
         let comparison = sum
             .clone()
             .then(
-                just(Token::Lt)
-                    .to(BinaryOp::Lt)
-                    .or(just(Token::Gt).to(BinaryOp::Gt))
+                just(Token::EqEq)
+                    .to(BinaryOp::Eq)
+                    .or(just(Token::NotEq).to(BinaryOp::Neq))
                     .or(just(Token::Leq).to(BinaryOp::Leq))
                     .or(just(Token::Geq).to(BinaryOp::Geq))
-                    .or(just(Token::EqEq).to(BinaryOp::Eq))
-                    .or(just(Token::NotEq).to(BinaryOp::Neq))
+                    .or(just(Token::Lt).to(BinaryOp::Lt))
+                    .or(just(Token::Gt).to(BinaryOp::Gt))
                     .then(sum)
                     .repeated(),
             )
@@ -277,7 +298,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 }
             });
 
-        // 逻辑与 (&&)
+        // Logical And: &&
         let logical_and = comparison
             .clone()
             .then(
@@ -294,7 +315,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 }
             });
 
-        // 逻辑或 (||)
+        // Logical Or: ||
         let logical_or = logical_and
             .clone()
             .then(
@@ -311,19 +332,16 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 }
             });
 
-        // Elvis 操作符 (??) - 优先级低于 ||
+        // Elvis: ?? (Right associative)
         logical_or
             .clone()
-            .then(
-                just(Token::QuestionQuestion)
-                    .to(BinaryOp::Elvis)
-                    .then(logical_or)
-                    .repeated(),
-            )
-            .foldl(|lhs, (op, rhs)| {
+            .then_ignore(just(Token::QuestionQuestion))
+            .repeated()
+            .then(logical_or)
+            .foldr(|lhs, rhs| {
                 let span = lhs.span.start..rhs.span.end;
                 Expr {
-                    kind: ExprKind::Binary(Box::new(lhs), op, Box::new(rhs)),
+                    kind: ExprKind::Binary(Box::new(lhs), BinaryOp::Elvis, Box::new(rhs)),
                     span,
                 }
             })

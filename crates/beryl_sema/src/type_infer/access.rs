@@ -57,7 +57,7 @@ impl<'a> TypeInferer<'a> {
     /// 推导成员访问类型
     pub(crate) fn infer_get(
         &self,
-        object: &Expr,
+        object: &mut Expr,
         field_name: &str,
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
@@ -119,7 +119,7 @@ impl<'a> TypeInferer<'a> {
     /// 推导安全成员访问类型 (?. )
     pub(crate) fn infer_safe_get(
         &self,
-        object: &Expr,
+        object: &mut Expr,
         field_name: &str,
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
@@ -178,7 +178,7 @@ impl<'a> TypeInferer<'a> {
     /// 推导数组字面量类型
     pub(crate) fn infer_array(
         &self,
-        elements: &[Expr],
+        elements: &mut [Expr],
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         if elements.is_empty() {
@@ -190,10 +190,10 @@ impl<'a> TypeInferer<'a> {
         }
 
         // 推导第一个元素的类型作为数组元素类型
-        let first_ty = self.infer(&elements[0])?;
+        let first_ty = self.infer(&mut elements[0])?;
 
         // 检查所有元素类型一致
-        for elem in elements.iter().skip(1) {
+        for elem in elements.iter_mut().skip(1) {
             let elem_ty = self.infer(elem)?;
             if elem_ty != first_ty {
                 return Err(SemanticError::TypeMismatch {
@@ -214,8 +214,8 @@ impl<'a> TypeInferer<'a> {
     /// 推导数组索引类型
     pub(crate) fn infer_index(
         &self,
-        array: &Expr,
-        index: &Expr,
+        array: &mut Expr,
+        index: &mut Expr,
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         let array_ty = self.infer(array)?;

@@ -6,9 +6,9 @@ use beryl_syntax::ast::{BinaryOp, Expr, ExprKind, Literal, Stmt, Type};
 
 pub fn check_if(
     checker: &mut TypeChecker,
-    condition: &Expr,
-    then_block: &[Stmt],
-    else_block: Option<&[Stmt]>,
+    condition: &mut Expr,
+    then_block: &mut [Stmt],
+    else_block: Option<&mut [Stmt]>,
     span: &std::ops::Range<usize>,
 ) {
     // 条件必须是 bool
@@ -87,8 +87,8 @@ fn extract_smart_cast_var(condition: &Expr) -> Option<String> {
 
 pub fn check_while(
     checker: &mut TypeChecker,
-    condition: &Expr,
-    body: &[Stmt],
+    condition: &mut Expr,
+    body: &mut [Stmt],
     span: &std::ops::Range<usize>,
 ) {
     // 条件必须是 bool
@@ -112,10 +112,10 @@ pub fn check_while(
 
 pub fn check_for(
     checker: &mut TypeChecker,
-    init: Option<&Stmt>,
-    condition: Option<&Expr>,
-    update: Option<&Stmt>,
-    body: &[Stmt],
+    init: Option<&mut Stmt>,
+    condition: Option<&mut Expr>,
+    update: Option<&mut Stmt>,
+    body: &mut [Stmt],
     span: &std::ops::Range<usize>,
 ) {
     // 保存当前作用域
@@ -158,7 +158,7 @@ pub fn check_for(
 
         // 4. 检查循环体
         checker.loop_depth += 1;
-        for stmt in body {
+        for stmt in body.iter_mut() {
             check_stmt(checker, stmt);
         }
         checker.loop_depth -= 1;
@@ -179,7 +179,7 @@ pub fn check_for(
             check_stmt(checker, upd);
         }
         checker.loop_depth += 1;
-        for stmt in body {
+        for stmt in body.iter_mut() {
             check_stmt(checker, stmt);
         }
         checker.loop_depth -= 1;
@@ -189,8 +189,8 @@ pub fn check_for(
 pub fn check_for_in(
     checker: &mut TypeChecker,
     iterator: &str,
-    iterable: &Expr,
-    body: &[Stmt],
+    iterable: &mut Expr,
+    body: &mut [Stmt],
     _span: &std::ops::Range<usize>,
 ) {
     // 1. check iterable (outside of loop scope)
@@ -232,7 +232,7 @@ pub fn check_for_in(
 
         // 4. Check body
         checker.loop_depth += 1;
-        for stmt in body {
+        for stmt in body.iter_mut() {
             check_stmt(checker, stmt);
         }
         checker.loop_depth -= 1;
@@ -243,7 +243,7 @@ pub fn check_for_in(
     } else {
         // Fallback
         checker.loop_depth += 1;
-        for stmt in body {
+        for stmt in body.iter_mut() {
             check_stmt(checker, stmt);
         }
         checker.loop_depth -= 1;

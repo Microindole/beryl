@@ -12,6 +12,10 @@ pub type ParserError = Simple<Token>;
 
 /// 解析语句 (公共接口)
 pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
+    let expr = expr_parser();
+    let type_p = type_parser();
+    let ident = ident_parser();
+
     recursive(|stmt| {
         // Block 逻辑 (返回 Vec<Stmt>)
         let raw_block = stmt
@@ -21,10 +25,10 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
 
         // 变量声明: var x: int = 1;
         let var_decl = just(Token::Var)
-            .ignore_then(ident_parser())
-            .then(just(Token::Colon).ignore_then(type_parser()).or_not())
+            .ignore_then(ident.clone())
+            .then(just(Token::Colon).ignore_then(type_p.clone()).or_not())
             .then_ignore(just(Token::Eq))
-            .then(expr_parser())
+            .then(expr.clone())
             .then_ignore(just(Token::Semicolon).or_not())
             .map_with_span(|((name, ty), value), span| Stmt::VarDecl {
                 span,
@@ -36,10 +40,11 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
         // 赋值语句: x = 10;
         // 赋值语句 & 表达式语句
         // 合并处理以避免前缀冲突，并支持复杂的左值赋值 (e.g. this.count = 1)
-        let expr_based_stmt = expr_parser()
+        let expr_based_stmt = expr
+            .clone()
             .then(
                 just(Token::Eq)
-                    .ignore_then(expr_parser())
+                    .ignore_then(expr.clone())
                     .then_ignore(just(Token::Semicolon).or_not())
                     .map(Some)
                     .or(just(Token::Semicolon).or_not().to(None)),
@@ -58,13 +63,13 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
 
         // Return
         let ret = just(Token::Return)
-            .ignore_then(expr_parser().or_not())
+            .ignore_then(expr.clone().or_not())
             .then_ignore(just(Token::Semicolon).or_not())
             .map_with_span(|value, span| Stmt::Return { span, value });
 
         // If
         let if_stmt = just(Token::If)
-            .ignore_then(expr_parser())
+            .ignore_then(expr.clone())
             .then(raw_block.clone())
             .then(just(Token::Else).ignore_then(raw_block.clone()).or_not())
             .map_with_span(|((condition, then_block), else_block), span| Stmt::If {
@@ -76,7 +81,7 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
 
         // While
         let while_stmt = just(Token::While)
-            .ignore_then(expr_parser())
+            .ignore_then(expr.clone())
             .then(raw_block.clone())
             .map_with_span(|(condition, body), span| Stmt::While {
                 span,
@@ -87,9 +92,10 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
         // For 循环: 支持 Classic For 和 For-In
         let for_stmt = just(Token::For).ignore_then(
             // 1. Try For-In first: for x in arr { ... }
-            ident_parser()
+            ident
+                .clone()
                 .then_ignore(just(Token::In))
-                .then(expr_parser())
+                .then(expr.clone())
                 .then(raw_block.clone())
                 .map_with_span(|((iterator, iterable), body), span| Stmt::ForIn {
                     span,
@@ -99,10 +105,10 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
                 })
                 // 2. Fallback to Classic For: for var i = 0; ...
                 .or(just(Token::Var)
-                    .ignore_then(ident_parser())
-                    .then(just(Token::Colon).ignore_then(type_parser()).or_not())
+                    .ignore_then(ident.clone())
+                    .then(just(Token::Colon).ignore_then(type_p.clone()).or_not())
                     .then_ignore(just(Token::Eq))
-                    .then(expr_parser())
+                    .then(expr.clone())
                     .then_ignore(just(Token::Semicolon))
                     .map_with_span(|((name, ty), value), span| {
                         Some(Box::new(Stmt::VarDecl {
@@ -114,19 +120,15 @@ pub fn stmt_parser() -> impl Parser<Token, Stmt, Error = ParserError> + Clone {
                     })
                     .or(just(Token::Semicolon).to(None))
                     .then(
-                        // 分号不能丢，这里需要处理一下逻辑
-                        // 上面的 .or(..Semicolon) 吞掉了分号
-                        // Classic logic: init -> ; -> cond -> ; -> update
-                        // 现有的 parser 逻辑中 var decl 吞掉了分号
-                        // Semicolon 分支也吞掉了分号
-                        // 所以这里不管怎样分号都被吞掉了，接下来是 condition
-                        expr_parser().then_ignore(just(Token::Semicolon)).or_not(),
+                        // Condition
+                        expr.clone().then_ignore(just(Token::Semicolon)).or_not(),
                     )
                     .then(
                         // update
-                        ident_parser()
+                        ident
+                            .clone()
                             .then_ignore(just(Token::Eq))
-                            .then(expr_parser())
+                            .then(expr.clone())
                             .map_with_span(|(name, value), span| {
                                 let target_span = span.clone();
                                 Stmt::Assignment {

@@ -39,11 +39,11 @@ impl<'a> NullSafetyChecker<'a> {
     }
 
     /// 检查整个程序
-    pub fn check(&mut self, program: &Program) -> Result<(), Vec<SemanticError>> {
+    pub fn check(&mut self, program: &mut Program) -> Result<(), Vec<SemanticError>> {
         // 全局作用域
         self.next_child_index = 0;
 
-        for decl in &program.decls {
+        for decl in &mut program.decls {
             self.check_decl(decl);
         }
 
@@ -54,40 +54,39 @@ impl<'a> NullSafetyChecker<'a> {
         }
     }
 
-    /// 辅助函数：进入新的作用域并运行闭包
-    pub(crate) fn with_child_scope<F>(&mut self, f: F)
+    /// 进入子作用域，并在闭包执行完后恢复
+    pub fn with_child_scope<F>(&mut self, f: F)
     where
-        F: FnOnce(&mut Self),
+        F: FnOnce(&mut NullSafetyChecker),
     {
-        let parent_scope = self.current_scope;
-        let children = self.scopes.get_child_scopes(parent_scope);
+        let prev_scope = self.current_scope;
+        // 使用 ScopeStack 计算子作用域 ID (假设已经构建好作用域树)
+        // NullSafetyChecker 复用 Resolver构建的作用域栈
+        // 我们假设作用域是按先序遍历顺序创建的，可以通过 next_child_index 找到
 
-        let child_scope = children.get(self.next_child_index).copied();
+        // 注意：这里需要 ScopeStack 提供查找子作用域的功能
+        // ScopeStack::get_child_scopes 返回 Vec<ScopeId>
+        // 我们通过索引获取对应的子作用域
+        let children = self.scopes.get_child_scopes(prev_scope);
+        if self.next_child_index < children.len() {
+            self.current_scope = children[self.next_child_index];
+            self.next_child_index = 0; // 重置子作用域计数器（针对下一层）
 
-        if let Some(scope_id) = child_scope {
-            // Update pointers
-            self.current_scope = scope_id;
-            self.next_child_index += 1;
-
-            // Save prev index (for recursion)
-            let prev_child_index = self.next_child_index;
-            // Reset for new scope
-            self.next_child_index = 0;
-
-            // Run
             f(self);
 
-            // Restore
-            self.next_child_index = prev_child_index;
-            self.current_scope = parent_scope;
+            // 恢复
+            self.current_scope = prev_scope;
+            self.next_child_index += 1; // 移动到下一个兄弟作用域 (在父作用域视角)
         } else {
-            // Fallback if scope missing (shouldn't happen if Resolver is consistent)
+            // 如果找不到子作用域（理论上不应发生，如果 AST 结构一致），
+            // 我们就在当前作用域继续（为了健壮性）
+            // 或者这可能意味着 decls 没有对应的 scope (如 extern func)
             f(self);
         }
     }
 
     /// 检查声明
-    fn check_decl(&mut self, decl: &Decl) {
+    fn check_decl(&mut self, decl: &mut Decl) {
         match decl {
             Decl::Function { body, .. } => {
                 // Enter function scope
@@ -117,11 +116,11 @@ impl<'a> NullSafetyChecker<'a> {
 
     // --- Delegation methods ---
 
-    pub(crate) fn check_stmt(&mut self, stmt: &Stmt) {
+    pub(crate) fn check_stmt(&mut self, stmt: &mut Stmt) {
         stmt::check_stmt(self, stmt);
     }
 
-    pub(crate) fn check_expr(&mut self, expr: &Expr) {
+    pub(crate) fn check_expr(&mut self, expr: &mut Expr) {
         expr::check_expr(self, expr);
     }
 

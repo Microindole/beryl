@@ -104,6 +104,9 @@ fn generate_expr<'ctx>(
             struct_init::gen_struct_literal(ctx, locals, type_name, fields)
         }
         ExprKind::VecLiteral(elements) => vec::gen_vec_literal(ctx, locals, elements),
+        ExprKind::GenericInstantiation { .. } => {
+            unreachable!("GenericInstantiation (turbo-fish) should be monomorphized before codegen")
+        }
     }
 }
 
@@ -114,6 +117,9 @@ fn generate_lvalue_addr<'ctx>(
     expr: &Expr,
 ) -> CodegenResult<(PointerValue<'ctx>, beryl_syntax::ast::Type)> {
     match &expr.kind {
+        ExprKind::GenericInstantiation { .. } => {
+            unreachable!("GenericInstantiation (turbo-fish) should be monomorphized before codegen")
+        }
         ExprKind::Variable(name) => {
             let (ptr, ty) = locals
                 .get(name)

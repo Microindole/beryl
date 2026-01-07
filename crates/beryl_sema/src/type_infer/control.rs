@@ -5,9 +5,9 @@ use beryl_syntax::ast::{Expr, MatchCase, MatchPattern, Type};
 impl<'a> TypeInferer<'a> {
     pub(crate) fn infer_match(
         &self,
-        value: &Expr,
-        cases: &[MatchCase],
-        default: Option<&Expr>,
+        value: &mut Expr,
+        cases: &mut [MatchCase],
+        default: Option<&mut Expr>,
         _span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         let value_ty = self.infer(value)?;
@@ -37,7 +37,7 @@ impl<'a> TypeInferer<'a> {
                 }
             }
 
-            let body_ty = self.infer(&case.body)?;
+            let body_ty = self.infer(case.body.as_mut())?;
             if first {
                 ret_ty = body_ty;
                 first = false;
@@ -62,7 +62,6 @@ impl<'a> TypeInferer<'a> {
                 });
             }
         }
-
         Ok(ret_ty)
     }
 }

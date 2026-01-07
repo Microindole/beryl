@@ -1,0 +1,9 @@
+
+T identity<T>(T x) {
+    return x;
+}
+
+int main() {
+    var x = identity::<int>(10);
+    return x;
+}

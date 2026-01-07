@@ -65,8 +65,8 @@ impl<'a> TypeInferer<'a> {
     }
 
     /// 推导表达式的类型
-    pub fn infer(&self, expr: &Expr) -> Result<Type, SemanticError> {
-        match &expr.kind {
+    pub fn infer(&self, expr: &mut Expr) -> Result<Type, SemanticError> {
+        match &mut expr.kind {
             ExprKind::Literal(lit) => Ok(self.infer_literal(lit)),
 
             ExprKind::Variable(name) => self.infer_variable(name, &expr.span),
@@ -75,7 +75,7 @@ impl<'a> TypeInferer<'a> {
 
             ExprKind::Unary(op, operand) => self.infer_unary(op, operand, &expr.span),
 
-            ExprKind::Call { callee, args: _ } => self.infer_call(callee, &expr.span),
+            ExprKind::Call { callee, args } => self.infer_call(callee, args, &expr.span),
 
             ExprKind::Get { object, name } => self.infer_get(object, name, &expr.span),
 
@@ -89,10 +89,10 @@ impl<'a> TypeInferer<'a> {
                 value,
                 cases,
                 default,
-            } => self.infer_match(value, cases, default.as_deref(), &expr.span),
+            } => self.infer_match(value, cases, default.as_deref_mut(), &expr.span),
 
-            ExprKind::Print(expr) => {
-                self.infer(expr)?;
+            ExprKind::Print(print_expr) => {
+                self.infer(print_expr)?;
                 Ok(Type::Void)
             }
 
@@ -129,9 +129,9 @@ impl<'a> TypeInferer<'a> {
                     return Ok(Type::Vec(Box::new(Type::Void)));
                 }
 
-                let mut common_type = self.infer(&elements[0])?;
+                let mut common_type = self.infer(&mut elements[0])?;
 
-                for elem in elements.iter().skip(1) {
+                for elem in elements.iter_mut().skip(1) {
                     let elem_ty = self.infer(elem)?;
 
                     if common_type == elem_ty {
@@ -152,6 +152,16 @@ impl<'a> TypeInferer<'a> {
                     }
                 }
                 Ok(Type::Vec(Box::new(common_type)))
+            }
+            ExprKind::GenericInstantiation { base: _, args: _ } => {
+                // To support `var f = func::<int>`, we need function types.
+                // Since we don't have first-class function types yet, we return Error or a placeholder.
+                // However, generic instantiations are usually part of a call.
+                // If we encounter one detached, it's invalid unless we support func pointers.
+                Err(SemanticError::NotCallable {
+                    ty: "Generic function usage as value not supported".into(),
+                    span: expr.span.clone(),
+                })
             }
         }
     }

@@ -10,6 +10,9 @@ pub struct Collector {
     /// 收集到的泛型类型实例化
     /// 例如: Type::Generic("Box", [int])
     pub instantiations: HashSet<Type>,
+    /// 收集到的泛型函数实例化
+    /// 例如: ("identity", [int])
+    pub function_instantiations: HashSet<(String, Vec<Type>)>,
 }
 
 impl Default for Collector {
@@ -22,6 +25,7 @@ impl Collector {
     pub fn new() -> Self {
         Self {
             instantiations: HashSet::new(),
+            function_instantiations: HashSet::new(),
         }
     }
 
@@ -198,6 +202,17 @@ impl Collector {
                 }
                 if let Some(d) = default {
                     self.collect_expr(d);
+                }
+            }
+            ExprKind::GenericInstantiation { base, args } => {
+                // 如果 base 是 simple variable，则收集为函数实例化
+                if let ExprKind::Variable(name) = &base.kind {
+                    self.function_instantiations
+                        .insert((name.clone(), args.clone()));
+                }
+                self.collect_expr(base);
+                for arg in args {
+                    self.collect_type(arg);
                 }
             }
         }

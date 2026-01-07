@@ -7,7 +7,7 @@ pub mod control_flow;
 use control_flow::{check_for, check_for_in, check_if, check_while};
 
 /// 辅助函数：进入新的作用域并检查代码块
-pub(crate) fn check_block_with_scope(checker: &mut TypeChecker, stmts: &[Stmt]) {
+pub(crate) fn check_block_with_scope(checker: &mut TypeChecker, stmts: &mut [Stmt]) {
     // 保存当前作用域
     let parent_scope = checker.scopes.current_scope();
     let children = checker.scopes.get_child_scopes(parent_scope);
@@ -37,7 +37,7 @@ pub(crate) fn check_block_with_scope(checker: &mut TypeChecker, stmts: &[Stmt]) 
     }
 }
 
-pub fn check_stmt(checker: &mut TypeChecker, stmt: &Stmt) {
+pub fn check_stmt(checker: &mut TypeChecker, stmt: &mut Stmt) {
     match stmt {
         Stmt::VarDecl {
             name,
@@ -69,7 +69,13 @@ pub fn check_stmt(checker: &mut TypeChecker, stmt: &Stmt) {
             else_block,
             span,
         } => {
-            check_if(checker, condition, then_block, else_block.as_deref(), span);
+            check_if(
+                checker,
+                condition,
+                then_block,
+                else_block.as_deref_mut(),
+                span,
+            );
         }
         Stmt::While {
             condition,
@@ -87,15 +93,15 @@ pub fn check_stmt(checker: &mut TypeChecker, stmt: &Stmt) {
         } => {
             check_for(
                 checker,
-                init.as_deref(),
-                condition.as_ref(),
-                update.as_deref(),
+                init.as_deref_mut(),
+                condition.as_mut(),
+                update.as_deref_mut(),
                 body,
                 span,
             );
         }
         Stmt::Return { value, span } => {
-            check_return(checker, value.as_ref(), span);
+            check_return(checker, value.as_mut(), span);
         }
         Stmt::Break { span } => {
             if checker.loop_depth == 0 {
@@ -126,7 +132,7 @@ fn check_var_decl(
     checker: &mut TypeChecker,
     name: &str,
     declared_ty: Option<&Type>,
-    value: &Expr,
+    value: &mut Expr,
     span: &std::ops::Range<usize>,
 ) {
     // 推导初始化表达式的类型
@@ -169,8 +175,8 @@ fn check_var_decl(
 
 fn check_assignment(
     checker: &mut TypeChecker,
-    target: &Expr,
-    value: &Expr,
+    target: &mut Expr,
+    value: &mut Expr,
     span: &std::ops::Range<usize>,
 ) {
     let target_ty = match checker.infer_type(target) {
@@ -198,7 +204,11 @@ fn check_assignment(
     }
 }
 
-fn check_return(checker: &mut TypeChecker, value: Option<&Expr>, span: &std::ops::Range<usize>) {
+fn check_return(
+    checker: &mut TypeChecker,
+    value: Option<&mut Expr>,
+    span: &std::ops::Range<usize>,
+) {
     let expected = match &checker.current_return_type {
         Some(ty) => ty.clone(),
         None => {

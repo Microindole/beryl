@@ -304,6 +304,26 @@ impl Rewriter {
                 default: default.map(|e| Box::new(self.rewrite_expr(*e))),
             },
 
+            ExprKind::GenericInstantiation { base, args } => {
+                // Rewriting `func::<int>` -> `func__int` (Variable)
+                // Assuming base is Variable.
+                if let ExprKind::Variable(name) = base.kind {
+                    // Rewrite args first (nested generics: func::<Box<int>>)
+                    let new_args: Vec<Type> =
+                        args.into_iter().map(|t| self.rewrite_type(&t)).collect();
+                    // Use mangling logic
+                    let dummy_type = Type::Generic(name, new_args);
+                    let mangled = mangle_type(&dummy_type);
+                    ExprKind::Variable(mangled)
+                } else {
+                    // Fallback for complex base (should create semantic error earlier)
+                    ExprKind::GenericInstantiation {
+                        base: Box::new(self.rewrite_expr(*base)),
+                        args: args.into_iter().map(|t| self.rewrite_type(&t)).collect(),
+                    }
+                }
+            }
+
             // Literal, Variable unchanged
             _ => expr.kind,
         };

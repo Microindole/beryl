@@ -96,58 +96,109 @@ impl Monomorphizer {
         }
 
         // 3. Worklist Algorithm: 持续生成，直到没有新的实例化为止
-        let mut worklist: Vec<Type> = collector.instantiations.into_iter().collect();
+        let mut type_worklist: Vec<Type> = collector.instantiations.into_iter().collect();
+        let mut func_worklist: Vec<(String, Vec<Type>)> =
+            collector.function_instantiations.into_iter().collect();
 
-        while let Some(ty) = worklist.pop() {
-            let mangled_name = mangle_type(&ty);
+        while !type_worklist.is_empty() || !func_worklist.is_empty() {
+            // Process Types
+            while let Some(ty) = type_worklist.pop() {
+                let mangled_name = mangle_type(&ty);
 
-            // 如果已经处理过（生成的集合中已有），则跳过
-            if self.generated_types.contains(&mangled_name) {
-                continue;
-            }
-            self.generated_types.insert(mangled_name.clone());
+                // 如果已经处理过（生成的集合中已有），则跳过
+                if self.generated_types.contains(&mangled_name) {
+                    continue;
+                }
+                self.generated_types.insert(mangled_name.clone());
 
-            // 尝试特化
-            if let Type::Generic(name, args) = &ty {
-                // 处理结构体特化
-                if let Some(template) = self.generic_definitions.get(name) {
-                    let new_decl = self.specialize_template(template, args, &mangled_name);
+                // 尝试特化
+                if let Type::Generic(name, args) = &ty {
+                    // 处理结构体特化
+                    if let Some(template) = self.generic_definitions.get(name) {
+                        let new_decl = self.specialize_template(template, args, &mangled_name);
 
-                    // 从新生成的代码中收集新的实例化需求
-                    // e.g. Box<int> 里的字段是 Vec<int>
-                    let mut sub_collector = Collector::new();
-                    sub_collector.collect_decl(&new_decl);
-                    for new_ty in sub_collector.instantiations {
-                        // 如果是新的，加入 worklist
-                        let new_mangled = mangle_type(&new_ty);
-                        if !self.generated_types.contains(&new_mangled) {
-                            worklist.push(new_ty);
-                        }
-                    }
-
-                    self.new_decls.push(new_decl);
-
-                    // Also generate corresponding Impl blocks
-                    if let Some(impls) = self.generic_impls.get(name) {
-                        for impl_decl in impls {
-                            let new_impl = self.specialize_template(impl_decl, args, &mangled_name);
-
-                            let mut sub_collector = Collector::new();
-                            sub_collector.collect_decl(&new_impl);
-                            for new_ty in sub_collector.instantiations {
-                                let new_mangled = mangle_type(&new_ty);
-                                if !self.generated_types.contains(&new_mangled) {
-                                    worklist.push(new_ty);
-                                }
+                        // 从新生成的代码中收集新的实例化需求
+                        let mut sub_collector = Collector::new();
+                        sub_collector.collect_decl(&new_decl);
+                        for new_ty in sub_collector.instantiations {
+                            let new_mangled = mangle_type(&new_ty);
+                            if !self.generated_types.contains(&new_mangled) {
+                                type_worklist.push(new_ty);
                             }
-                            self.new_decls.push(new_impl);
+                        }
+                        for new_func in sub_collector.function_instantiations {
+                            // Function mangling logic (same as type for now)
+                            let dummy_ty = Type::Generic(new_func.0.clone(), new_func.1.clone());
+                            let new_mangled = mangle_type(&dummy_ty);
+                            if !self.generated_types.contains(&new_mangled) {
+                                func_worklist.push(new_func);
+                            }
+                        }
+
+                        self.new_decls.push(new_decl);
+
+                        // Also generate corresponding Impl blocks
+                        if let Some(impls) = self.generic_impls.get(name) {
+                            for impl_decl in impls {
+                                let new_impl =
+                                    self.specialize_template(impl_decl, args, &mangled_name);
+
+                                let mut sub_collector = Collector::new();
+                                sub_collector.collect_decl(&new_impl);
+                                for new_ty in sub_collector.instantiations {
+                                    let new_mangled = mangle_type(&new_ty);
+                                    if !self.generated_types.contains(&new_mangled) {
+                                        type_worklist.push(new_ty);
+                                    }
+                                }
+                                for new_func in sub_collector.function_instantiations {
+                                    let dummy_ty =
+                                        Type::Generic(new_func.0.clone(), new_func.1.clone());
+                                    let new_mangled = mangle_type(&dummy_ty);
+                                    if !self.generated_types.contains(&new_mangled) {
+                                        func_worklist.push(new_func);
+                                    }
+                                }
+                                self.new_decls.push(new_impl);
+                            }
                         }
                     }
                 }
             }
-            // Vec, Array etc handled by mangling but no decl generation needed (if built-in).
-            // But if we encounter Vec<Box<T>> in mangling, we recursively collect.
-            // Collector already recurses.
+
+            // Process Functions
+            while let Some((func_name, args)) = func_worklist.pop() {
+                // Reuse mangle_type logic for function name
+                let dummy_ty = Type::Generic(func_name.clone(), args.clone());
+                let mangled_name = mangle_type(&dummy_ty);
+
+                if self.generated_types.contains(&mangled_name) {
+                    continue;
+                }
+                self.generated_types.insert(mangled_name.clone());
+
+                if let Some(template) = self.generic_definitions.get(&func_name) {
+                    let new_decl = self.specialize_template(template, &args, &mangled_name);
+
+                    let mut sub_collector = Collector::new();
+                    sub_collector.collect_decl(&new_decl);
+
+                    for new_ty in sub_collector.instantiations {
+                        let new_mangled = mangle_type(&new_ty);
+                        if !self.generated_types.contains(&new_mangled) {
+                            type_worklist.push(new_ty);
+                        }
+                    }
+                    for new_func in sub_collector.function_instantiations {
+                        let dummy_ty = Type::Generic(new_func.0.clone(), new_func.1.clone());
+                        let new_mangled = mangle_type(&dummy_ty);
+                        if !self.generated_types.contains(&new_mangled) {
+                            func_worklist.push(new_func);
+                        }
+                    }
+                    self.new_decls.push(new_decl);
+                }
+            }
         }
 
         // 4. 重写原始代码中的泛型引用 (Box<int> -> Box__int)

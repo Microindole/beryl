@@ -6,9 +6,9 @@ impl<'a> TypeInferer<'a> {
     /// 推导二元表达式类型
     pub(crate) fn infer_binary(
         &self,
-        left: &Expr,
+        left: &mut Expr,
         op: &beryl_syntax::ast::BinaryOp,
-        right: &Expr,
+        right: &mut Expr,
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         let left_ty = self.infer(left)?;
@@ -47,7 +47,7 @@ impl<'a> TypeInferer<'a> {
     pub(crate) fn infer_unary(
         &self,
         op: &UnaryOp,
-        operand: &Expr,
+        operand: &mut Expr,
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         let operand_ty = self.infer(operand)?;

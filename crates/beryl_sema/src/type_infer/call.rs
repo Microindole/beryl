@@ -5,9 +5,11 @@ use beryl_syntax::ast::{Expr, ExprKind, Type};
 
 impl<'a> TypeInferer<'a> {
     /// 推导函数调用类型
+    /// 推导函数调用类型
     pub(crate) fn infer_call(
         &self,
-        callee: &Expr,
+        callee: &mut Expr,
+        _args: &mut [Expr],
         span: &std::ops::Range<usize>,
     ) -> Result<Type, SemanticError> {
         // 获取被调用者的名称

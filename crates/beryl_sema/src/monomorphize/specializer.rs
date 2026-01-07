@@ -323,6 +323,11 @@ impl Specializer {
                 ExprKind::VecLiteral(elements.iter().map(|e| self.specialize_expr(e)).collect())
             }
 
+            ExprKind::GenericInstantiation { base, args } => ExprKind::GenericInstantiation {
+                base: Box::new(self.specialize_expr(base)),
+                args: args.iter().map(|t| self.specialize_type(t)).collect(),
+            },
+
             ExprKind::Match {
                 value,
                 cases,

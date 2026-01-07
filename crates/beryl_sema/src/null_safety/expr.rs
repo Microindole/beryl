@@ -3,8 +3,8 @@ use crate::error::SemanticError;
 use crate::type_infer::TypeInferer;
 use beryl_syntax::ast::{Expr, ExprKind, Type};
 
-pub fn check_expr(checker: &mut NullSafetyChecker, expr: &Expr) {
-    match &expr.kind {
+pub fn check_expr(checker: &mut NullSafetyChecker, expr: &mut Expr) {
+    match &mut expr.kind {
         ExprKind::Get { object, .. } => {
             // 检查是否在可空类型上访问成员
             let inferer = TypeInferer::with_scope(checker.scopes, checker.current_scope);
@@ -73,7 +73,7 @@ pub fn check_expr(checker: &mut NullSafetyChecker, expr: &Expr) {
         } => {
             checker.check_expr(value);
             for case in cases {
-                checker.check_expr(&case.body);
+                checker.check_expr(&mut case.body);
             }
             if let Some(def) = default {
                 checker.check_expr(def);
@@ -89,6 +89,17 @@ pub fn check_expr(checker: &mut NullSafetyChecker, expr: &Expr) {
                 checker.check_expr(value);
             }
         }
+
+        ExprKind::GenericInstantiation { base, .. } => {
+            checker.check_expr(base);
+        }
+
+        ExprKind::VecLiteral(elements) => {
+            for elem in elements {
+                checker.check_expr(elem);
+            }
+        }
+
         // Variable 和 Literal 不需要递归检查
         _ => {}
     }

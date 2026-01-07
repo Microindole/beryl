@@ -2,8 +2,8 @@ use super::Resolver;
 use crate::error::SemanticError;
 use beryl_syntax::ast::{Expr, ExprKind};
 
-pub fn resolve_expr(resolver: &mut Resolver, expr: &Expr) {
-    match &expr.kind {
+pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
+    match &mut expr.kind {
         ExprKind::Variable(name) => {
             // 检查变量是否已定义
             if resolver.scopes.lookup(name).is_none() {
@@ -45,6 +45,15 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &Expr) {
                 resolver.resolve_expr(elem);
             }
         }
+        ExprKind::GenericInstantiation { base, args: _ } => {
+            // Resolve the base expression (the function being called)
+            resolver.resolve_expr(base);
+            // We don't resolve types here as they are Type nodes, handled during TypeCheck validation?
+            // Actually, if they refer to types, we should check them?
+            // But existing Resolver focuses on name binding.
+            // Types in `Box<T>` are validated by `resolve_type` elsewhere?
+            // For now, resolving base is sufficient to bind `identity` to symbol.
+        }
         ExprKind::Literal(_) => {
             // 字面量不需要解析
         }
@@ -55,7 +64,7 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &Expr) {
         } => {
             resolver.resolve_expr(value);
             for case in cases {
-                resolver.resolve_expr(&case.body);
+                resolver.resolve_expr(&mut case.body);
             }
             if let Some(default_expr) = default {
                 resolver.resolve_expr(default_expr);

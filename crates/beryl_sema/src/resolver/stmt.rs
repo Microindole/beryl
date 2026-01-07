@@ -3,7 +3,8 @@ use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, VariableSymbol};
 use beryl_syntax::ast::{Stmt, Type};
 
-pub fn resolve_stmt(resolver: &mut Resolver, stmt: &Stmt) {
+pub fn resolve_stmt(resolver: &mut Resolver, stmt: &mut Stmt) {
+    eprintln!("Resolving stmt: {:?}", stmt);
     match stmt {
         Stmt::VarDecl {
             name,
@@ -103,7 +104,7 @@ pub fn resolve_stmt(resolver: &mut Resolver, stmt: &Stmt) {
 
             // 解析初始化语句
             if let Some(init_stmt) = init {
-                resolver.resolve_stmt(init_stmt);
+                resolver.resolve_stmt(init_stmt.as_mut());
             }
 
             // 解析条件表达式
@@ -113,7 +114,7 @@ pub fn resolve_stmt(resolver: &mut Resolver, stmt: &Stmt) {
 
             // 解析更新语句
             if let Some(upd) = update {
-                resolver.resolve_stmt(upd);
+                resolver.resolve_stmt(upd.as_mut());
             }
 
             // 解析循环体

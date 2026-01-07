@@ -13,6 +13,7 @@ pub type ParserError = Simple<Token>;
 
 /// 解析声明 (公共接口)
 pub fn decl_parser() -> impl Parser<Token, Decl, Error = ParserError> {
+    let stmt = stmt_parser().boxed();
     recursive(|_decl| {
         // 函数声明: int add(int a, int b) { ... }
         // 泛型函数: T identity<T>(T x) { ... }
@@ -28,7 +29,7 @@ pub fn decl_parser() -> impl Parser<Token, Decl, Error = ParserError> {
                     .delimited_by(just(Token::LParen), just(Token::RParen)),
             )
             .then(
-                stmt_parser()
+                stmt.clone()
                     .repeated()
                     .delimited_by(just(Token::LBrace), just(Token::RBrace)),
             )

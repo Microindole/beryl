@@ -3,7 +3,7 @@ use crate::error::SemanticError;
 
 use beryl_syntax::ast::{Decl, Stmt, Type};
 
-pub fn check_decl(checker: &mut TypeChecker, decl: &Decl) {
+pub fn check_decl(checker: &mut TypeChecker, decl: &mut Decl) {
     match decl {
         Decl::Function {
             name,
@@ -36,7 +36,7 @@ pub fn check_function(
     name: &str,
     _params: &[beryl_syntax::ast::Param],
     return_type: &Type,
-    body: &[Stmt],
+    body: &mut [Stmt],
     span: &std::ops::Range<usize>,
 ) {
     // 保存当前作用域
@@ -59,7 +59,7 @@ pub fn check_function(
     let prev_return = checker.current_return_type.replace(return_type.clone());
 
     // 检查函数体中的每个语句
-    for stmt in body {
+    for stmt in body.iter_mut() {
         checker.check_stmt(stmt);
     }
 

@@ -23,13 +23,13 @@ fn test_infer_array_literal() {
     let inferer = TypeInferer::new(&scopes);
 
     // [1, 2, 3]
-    let elements = vec![
+    let mut elements = vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::Int(2))),
         make_expr(ExprKind::Literal(Literal::Int(3))),
     ];
 
-    let result = inferer.infer_array(&elements, &(0..10));
+    let result = inferer.infer_array(&mut elements, &(0..10));
     assert!(result.is_ok());
 
     let arr_type = result.unwrap();
@@ -48,13 +48,13 @@ fn test_infer_array_literal_float() {
     let inferer = TypeInferer::new(&scopes);
 
     // [1.0, 2.5, 3.15]
-    let elements = vec![
+    let mut elements = vec![
         make_expr(ExprKind::Literal(Literal::Float(1.0))),
         make_expr(ExprKind::Literal(Literal::Float(2.5))),
         make_expr(ExprKind::Literal(Literal::Float(3.15))),
     ];
 
-    let result = inferer.infer_array(&elements, &(0..10));
+    let result = inferer.infer_array(&mut elements, &(0..10));
     assert!(result.is_ok());
 
     let arr_type = result.unwrap();
@@ -73,8 +73,8 @@ fn test_infer_empty_array_error() {
     let inferer = TypeInferer::new(&scopes);
 
     // [] - Empty array should error
-    let elements = vec![];
-    let result = inferer.infer_array(&elements, &(0..2));
+    let mut elements = vec![];
+    let result = inferer.infer_array(&mut elements, &(0..2));
 
     assert!(result.is_err());
     assert!(matches!(
@@ -89,12 +89,12 @@ fn test_infer_array_mixed_types_error() {
     let inferer = TypeInferer::new(&scopes);
 
     // [1, "hello"] - Mixed types should error
-    let elements = vec![
+    let mut elements = vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::String("hello".to_string()))),
     ];
 
-    let result = inferer.infer_array(&elements, &(0..15));
+    let result = inferer.infer_array(&mut elements, &(0..15));
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -108,16 +108,16 @@ fn test_infer_index_access_int_array() {
     let inferer = TypeInferer::new(&scopes);
 
     // Create array expression (using literals)
-    let array_expr = make_expr(ExprKind::Array(vec![
+    let mut array_expr = make_expr(ExprKind::Array(vec![
         make_expr(ExprKind::Literal(Literal::Int(10))),
         make_expr(ExprKind::Literal(Literal::Int(20))),
         make_expr(ExprKind::Literal(Literal::Int(30))),
     ]));
 
     // Index expression: arr[1]
-    let index_expr = make_expr(ExprKind::Literal(Literal::Int(1)));
+    let mut index_expr = make_expr(ExprKind::Literal(Literal::Int(1)));
 
-    let result = inferer.infer_index(&array_expr, &index_expr, &(0..10));
+    let result = inferer.infer_index(&mut array_expr, &mut index_expr, &(0..10));
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), Type::Int);
 }
@@ -128,16 +128,16 @@ fn test_infer_index_compile_time_bounds_check_negative() {
     let inferer = TypeInferer::new(&scopes);
 
     // arr: [3]int
-    let array_expr = make_expr(ExprKind::Array(vec![
+    let mut array_expr = make_expr(ExprKind::Array(vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::Int(2))),
         make_expr(ExprKind::Literal(Literal::Int(3))),
     ]));
 
     // arr[-1] - Negative index should error at compile time
-    let index_expr = make_expr(ExprKind::Literal(Literal::Int(-1)));
+    let mut index_expr = make_expr(ExprKind::Literal(Literal::Int(-1)));
 
-    let result = inferer.infer_index(&array_expr, &index_expr, &(0..10));
+    let result = inferer.infer_index(&mut array_expr, &mut index_expr, &(0..10));
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -155,16 +155,16 @@ fn test_infer_index_compile_time_bounds_check_overflow() {
     let inferer = TypeInferer::new(&scopes);
 
     // arr: [3]int
-    let array_expr = make_expr(ExprKind::Array(vec![
+    let mut array_expr = make_expr(ExprKind::Array(vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::Int(2))),
         make_expr(ExprKind::Literal(Literal::Int(3))),
     ]));
 
     // arr[5] - Out of bounds index should error at compile time
-    let index_expr = make_expr(ExprKind::Literal(Literal::Int(5)));
+    let mut index_expr = make_expr(ExprKind::Literal(Literal::Int(5)));
 
-    let result = inferer.infer_index(&array_expr, &index_expr, &(0..10));
+    let result = inferer.infer_index(&mut array_expr, &mut index_expr, &(0..10));
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -182,16 +182,16 @@ fn test_infer_index_non_int_index_error() {
     let inferer = TypeInferer::new(&scopes);
 
     // arr: [3]int
-    let array_expr = make_expr(ExprKind::Array(vec![
+    let mut array_expr = make_expr(ExprKind::Array(vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::Int(2))),
         make_expr(ExprKind::Literal(Literal::Int(3))),
     ]));
 
     // arr["hello"] - String index should error
-    let index_expr = make_expr(ExprKind::Literal(Literal::String("hello".to_string())));
+    let mut index_expr = make_expr(ExprKind::Literal(Literal::String("hello".to_string())));
 
-    let result = inferer.infer_index(&array_expr, &index_expr, &(0..10));
+    let result = inferer.infer_index(&mut array_expr, &mut index_expr, &(0..10));
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
@@ -205,13 +205,13 @@ fn test_infer_array_length_property() {
     let inferer = TypeInferer::new(&scopes);
 
     // arr.length
-    let array_expr = make_expr(ExprKind::Array(vec![
+    let mut array_expr = make_expr(ExprKind::Array(vec![
         make_expr(ExprKind::Literal(Literal::Int(1))),
         make_expr(ExprKind::Literal(Literal::Int(2))),
         make_expr(ExprKind::Literal(Literal::Int(3))),
     ]));
 
-    let result = inferer.infer_get(&array_expr, "length", &(0..10));
+    let result = inferer.infer_get(&mut array_expr, "length", &(0..10));
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), Type::Int);
 }
@@ -222,11 +222,11 @@ fn test_infer_array_invalid_property() {
     let inferer = TypeInferer::new(&scopes);
 
     // arr.foo - Array doesn't have foo property
-    let array_expr = make_expr(ExprKind::Array(vec![make_expr(ExprKind::Literal(
+    let mut array_expr = make_expr(ExprKind::Array(vec![make_expr(ExprKind::Literal(
         Literal::Int(1),
     ))]));
 
-    let result = inferer.infer_get(&array_expr, "foo", &(0..10));
+    let result = inferer.infer_get(&mut array_expr, "foo", &(0..10));
     assert!(result.is_err());
     assert!(matches!(
         result.unwrap_err(),
