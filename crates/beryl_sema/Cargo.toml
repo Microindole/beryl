@@ -1,8 +1,0 @@
-[package]
-name = "beryl_sema"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-beryl_syntax = { workspace = true }
-thiserror = { workspace = true }

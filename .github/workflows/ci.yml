@@ -1,4 +1,4 @@
-name: Beryl CI
+name: Lency CI
 
 on:
   push:

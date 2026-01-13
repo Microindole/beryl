@@ -1,0 +1,5 @@
+void get(string url) {
+    print("Fetching: ");
+    print(url);
+    print("\n");
+}

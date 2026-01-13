@@ -1,18 +1,18 @@
 # Float 类型
 
-**Beryl 浮点数类型文档**
+**Lency 浮点数类型文档**
 
 ---
 
 ## 概述
 
-`float` 是 Beryl 的浮点数类型，用于表示小数和实数运算。
+`float` 是 Lency 的浮点数类型，用于表示小数和实数运算。
 
 ---
 
 ## 字面量
 
-```beryl
+```lency
 var pi = 3.14159;
 var e = 2.71828;
 var zero = 0.0;
@@ -21,7 +21,7 @@ var negative = -5.5;
 
 **格式**: 必须包含小数点
 
-```beryl
+```lency
 var x = 3.0;    // ✅ float
 var y = 3;      // ✅ int (不是 float)
 ```
@@ -41,7 +41,7 @@ var y = 3;      // ✅ int (不是 float)
 | `-x` | 一元负号 | `-3.14` → `-3.14` |
 
 **示例**:
-```beryl
+```lency
 var a = 10.5 + 2.5;      // 13.0
 var b = 10.0 / 3.0;      // 3.333...
 var c = -5.5;            // -5.5
@@ -51,7 +51,7 @@ var c = -5.5;            // -5.5
 
 所有比较运算返回 `bool` 类型：
 
-```beryl
+```lency
 var x = 5.5 > 3.0;       // true
 var y = 10.0 == 10.0;    // true
 var z = 7.2 != 8.1;      // true
@@ -62,13 +62,13 @@ var w = 4.5 >= 4.5;      // true
 
 ## 类型提升
 
-Beryl **不允许隐式类型转换**，但支持**自动类型提升**：
+Lency **不允许隐式类型转换**，但支持**自动类型提升**：
 
 ### 规则
 
 当 `int` 和 `float` 混合运算时，结果自动提升为 `float`：
 
-```beryl
+```lency
 var result = 5 + 2.5;        // int + float → float (7.5)
 var product = 4 * 2.5;       // int * float → float (10.0)
 var division = 10 / 2.0;     // int / float → float (5.0)
@@ -89,7 +89,7 @@ var division = 10 / 2.0;     // int / float → float (5.0)
 
 ### 不允许的操作
 
-```beryl
+```lency
 // ❌ 错误：不允许隐式转换
 float x = 5;        // int 不能直接赋值给 float
 int y = 3.14;       // float 不能直接赋值给 int
@@ -97,7 +97,7 @@ int y = 3.14;       // float 不能直接赋值给 int
 
 ### 显式类型声明
 
-```beryl
+```lency
 // ✅ 正确：明确类型
 float x = 5.0;      // 使用浮点字面量
 int y = 3;          // 使用整数字面量
@@ -109,7 +109,7 @@ int y = 3;          // 使用整数字面量
 
 内部实现细节（供编译器开发者参考）：
 
-- Beryl `float` → LLVM `double` (f64)
+- Lency `float` → LLVM `double` (f64)
 - 64 位 IEEE 754 浮点数
 - 精度: 约 15-17 位有效数字
 
@@ -127,7 +127,7 @@ store double 3.140000e+00, ptr %x, align 8
 
 浮点数是近似表示，可能存在精度误差：
 
-```beryl
+```lency
 var x = 0.1 + 0.2;  // 可能不完全等于 0.3
 ```
 
@@ -135,7 +135,7 @@ var x = 0.1 + 0.2;  // 可能不完全等于 0.3
 
 ### 2. 特殊值
 
-```beryl
+```lency
 var zero = 0.0;
 var negative_zero = -0.0;  // -0 和 +0 在大多数运算中相同
 ```
@@ -145,7 +145,7 @@ var negative_zero = -0.0;  // -0 和 +0 在大多数运算中相同
 ## 示例程序
 
 ### 基础示例
-```beryl
+```lency
 int main() {
     var pi = 3.14159;
     var radius = 5.0;
@@ -155,7 +155,7 @@ int main() {
 ```
 
 ### 类型提升示例
-```beryl
+```lency
 int main() {
     var i = 10;      // int
     var f = 3.0;     // float
@@ -165,7 +165,7 @@ int main() {
 ```
 
 ### 比较运算示例
-```beryl
+```lency
 int check_range(float x, float min, float max) {
     if x >= min && x <= max {
         return 1;
@@ -184,13 +184,13 @@ int main() {
 ## 最佳实践
 
 1. **明确小数点**
-   ```beryl
+   ```lency
    var x = 5.0;    // ✅ 清晰
    var y = 5;      // ✅ 但是 int
    ```
 
 2. **避免精度敏感的相等比较**
-   ```beryl
+   ```lency
    // ❌ 不推荐
    if x == 0.3 { ... }
    
@@ -199,7 +199,7 @@ int main() {
    ```
 
 3. **利用类型提升**
-   ```beryl
+   ```lency
    var result = 5 / 2.0;  // 2.5 (float)
    var result2 = 5 / 2;   // 2 (int，整数除法)
    ```
@@ -217,4 +217,4 @@ int main() {
 
 ---
 
-**参考**: [Beryl Language Specification](../design_spec.md)
+**参考**: [Lency Language Specification](../design_spec.md)

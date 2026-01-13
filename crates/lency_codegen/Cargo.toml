@@ -1,0 +1,10 @@
+[package]
+name = "lency_codegen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lency_syntax = { workspace = true }
+lency_sema = { path = "../lency_sema" }
+inkwell = { workspace = true }
+thiserror = { workspace = true }

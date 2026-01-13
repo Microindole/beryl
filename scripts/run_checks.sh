@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Beryl Code Checks..."
+echo "🚀 Starting Lency Code Checks..."
 echo "==================================="
 
 # 1. Format Check

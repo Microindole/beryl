@@ -1,0 +1,13 @@
+[package]
+name = "lency_cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "lencyc"
+path = "src/main.rs"
+
+[dependencies]
+lency_driver = { path = "../lency_driver" }
+clap = { workspace = true }
+anyhow = { workspace = true }

@@ -1,9 +1,9 @@
-# Beryl 编译器功能清单
+# Lency 编译器功能清单
 
 > 最后更新: 2026-01-13
 > 版本: v0.12.0
 
-本文档完整记录 Beryl 编译器当前已实现的所有功能。
+本文档完整记录 Lency 编译器当前已实现的所有功能。
 
 ---
 
@@ -36,7 +36,7 @@
 ## 二、声明 (Declarations)
 
 ### 2.1 函数
-```beryl
+```lency
 // 普通函数
 int add(int a, int b) {
     return a + b
@@ -52,7 +52,7 @@ extern int print(int n);
 ```
 
 ### 2.2 结构体
-```beryl
+```lency
 // 普通结构体
 struct Point {
     int x
@@ -80,7 +80,7 @@ impl<T> Box<T> {
 ```
 
 ### 2.3 Trait
-```beryl
+```lency
 // Trait 定义
 trait Display {
     void show();
@@ -100,7 +100,7 @@ void print_it<T: Display>(T item) {
 ```
 
 ### 2.4 枚举
-```beryl
+```lency
 // Unit 变体
 enum Color { Red, Green, Blue }
 
@@ -138,7 +138,7 @@ match color {
 ## 四、表达式 (Expressions)
 
 ### 4.1 字面量
-```beryl
+```lency
 42          // int
 3.14        // float
 true        // bool
@@ -158,7 +158,7 @@ vec![1, 2]  // Vec
 | Try | `?` | ✅ |
 
 ### 4.3 调用与访问
-```beryl
+```lency
 add(1, 2)           // 函数调用
 point.getX()        // 方法调用
 point.x             // 字段访问
@@ -168,7 +168,7 @@ func::<int>(10)     // 泛型实例化
 ```
 
 ### 4.4 特殊表达式
-```beryl
+```lency
 // match 表达式
 match x { case 1 => "one", case _ => "other" }
 
@@ -201,27 +201,27 @@ Err(Error { message: "error" })
 
 | 文件 | 内容 |
 |------|------|
-| `core.brl` | Error 结构体、min/max/clamp 泛型函数、abs |
-| `io.brl` | 文件操作辅助函数文档 (部分待实现) |
-| `collections.brl` | Pair<K,V>、Box<T> 泛型类型 |
-| `string.brl` | is_empty、starts_with、ends_with、contains、repeat、pad_left、pad_right |
+| `core.lcy` | Error 结构体、min/max/clamp 泛型函数、abs |
+| `io.lcy` | 文件操作辅助函数文档 (部分待实现) |
+| `collections.lcy` | Pair<K,V>、Box<T> 泛型类型 |
+| `string.lcy` | is_empty、starts_with、ends_with、contains、repeat、pad_left、pad_right |
 
 ---
 
-## 七、运行时 (beryl_runtime/)
+## 七、运行时 (lency_runtime/)
 
 | 模块 | FFI 函数 |
 |------|----------|
-| `lib.rs` | `beryl_vec_new`, `beryl_vec_push`, `beryl_vec_pop`, `beryl_vec_len`, `beryl_vec_get`, `beryl_vec_set`, `beryl_vec_free` |
-| `file.rs` | `beryl_file_open`, `beryl_file_close`, `beryl_file_read_all`, `beryl_file_write`, `beryl_file_is_valid` |
-| `string.rs` | `beryl_string_len`, `beryl_string_trim`, `beryl_string_split`, `beryl_string_join`, `beryl_string_substr` |
+| `lib.rs` | `lency_vec_new`, `lency_vec_push`, `lency_vec_pop`, `lency_vec_len`, `lency_vec_get`, `lency_vec_set`, `lency_vec_free` |
+| `file.rs` | `lency_file_open`, `lency_file_close`, `lency_file_read_all`, `lency_file_write`, `lency_file_is_valid` |
+| `string.rs` | `lency_string_len`, `lency_string_trim`, `lency_string_split`, `lency_string_join`, `lency_string_substr` |
 
 ---
 
 ## 八、编译器架构
 
 ```
-源代码 (.brl)
+源代码 (.lcy)
     ↓
 [Lexer] → Token 流
     ↓
@@ -250,4 +250,4 @@ Err(Error { message: "error" })
 |------|------|------|
 | 单元测试 | `cargo test` | 64 |
 | 集成测试 | `tests/integration/` | 12 目录 |
-| 运行时测试 | `beryl_runtime` | 9 |
+| 运行时测试 | `lency_runtime` | 9 |

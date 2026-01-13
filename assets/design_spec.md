@@ -1,9 +1,9 @@
 // Placeholder for design_spec.md
-# Beryl 语言设计规范 (Ver 1.0)
+# Lency 语言设计规范 (Ver 1.0)
 
 ## 1. 核心哲学 (Philosophy)
 
-Beryl 是一门 **"实用主义的工业级语言"**。它的设计目标是在 C 语言的结构感与 Python 的开发效率之间找到黄金平衡点。
+Lency 是一门 **"实用主义的工业级语言"**。它的设计目标是在 C 语言的结构感与 Python 的开发效率之间找到黄金平衡点。
 
 - **Crystal Clear (清晰如晶)**: 代码意图一目了然。拒绝隐式转换，拒绝复杂的元编程魔法。
 - **Safety by Default (默认安全)**: 所有的引用默认不可为空 (Non-nullable)。空值必须显式处理。
@@ -20,7 +20,7 @@ Beryl 是一门 **"实用主义的工业级语言"**。它的设计目标是在 
 var count = 10 
 
 // 显式类型
-var name: string = "Beryl"
+var name: string = "Lency"
 
 // 常量
 const PI = 3.14159
@@ -31,7 +31,7 @@ const PI = 3.14159
 抛弃 `func/fn` 关键字，回归 C 系的直观，但去掉了繁琐的 public/private（默认模块私有，`pub` 导出）。
 
 ```
-// 返回值类型写在后面，符合现代直觉
+// 返回值类型写在前面，回归 C 系直观
 int add(int a, int b) {
     return a + b
 }
@@ -70,7 +70,7 @@ match status {
 
 ### 3.1 空安全 (Null Safety)
 
-这是 Beryl 最核心的特性之一。
+这是 Lency 最核心的特性之一。
 
 ```
 string s = "Hello" // 永远不可能是 null
@@ -88,7 +88,7 @@ if maybe != null {
 
 采用单态化泛型 (Monomorphization)，零运行时开销。坚持 **组合优于继承** (Composition over Inheritance)。
 
-```beryl
+```lency
 struct Box<T> {
     T value
 }
@@ -119,4 +119,4 @@ if res.is_err() {
 - **值类型**: 结构体默认为值语义。
 
 ## 6. 文件扩展名
-`.brl`
+`.lcy`

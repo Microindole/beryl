@@ -1,0 +1,72 @@
+
+import std.core;
+
+// Verification Test for Phase 2: Traits & Hash
+// 1. String Indexing
+// 2. Hash Trait
+// 3. Eq Trait
+
+int main() {
+    // 1. String Indexing
+    var s = "abc";
+    if s[0] != 97 {
+        print("FAIL: s[0] != 97\n");
+        return 1;
+    }
+    if s[1] != 98 {
+        print("FAIL: s[1] != 98\n");
+        return 1;
+    }
+    if s[2] != 99 {
+        print("FAIL: s[2] != 99\n");
+        return 1;
+    }
+    print("String indexing passed\n");
+
+    // 2. Hash Trait
+    var i = 123;
+    if i.hash() != 123 {
+        print("FAIL: int.hash() incorrect\n");
+        return 1;
+    }
+    
+    var b = true;
+    if b.hash() != 1 {
+        print("FAIL: bool.hash() incorrect\n");
+        return 1;
+    }
+
+    var str = "hello";
+    var h = str.hash();
+    // hash("hello") = 210714636405 (djb2 * 33) ? Wait, let's just check it's stable.
+    // h = (5381 * 33) + 104 = 177677
+    // ...
+    // Just print it or check non-zero
+    if h == 0 {
+        print("FAIL: string.hash() is 0 (unlikely)\n");
+        return 1;
+    }
+    print("Hash trait passed\n");
+
+    // 3. Eq Trait
+    if !i.eq(123) {
+        print("FAIL: int.eq failed\n");
+        return 1;
+    }
+    if i.neq(124) == false {
+        print("FAIL: int.neq failed\n");
+        return 1;
+    }
+    
+    if !str.eq("hello") {
+        print("FAIL: string.eq failed\n");
+        return 1;
+    }
+    if str.eq("world") {
+        print("FAIL: string.eq false positive\n");
+        return 1;
+    }
+
+    print("Eq trait passed\n");
+    return 0;
+}

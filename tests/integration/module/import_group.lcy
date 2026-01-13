@@ -1,0 +1,14 @@
+import {
+    std.io;
+    std.io as my_io;
+}
+
+// Nested module dummy
+// We expect lib/std/net/http.lcy to exist for this test?
+// Or we rely on std.io being sufficient for alias test.
+
+int main() {
+    println("Direct import works");
+    my_io.println("Aliased import works");
+    return 0;
+}

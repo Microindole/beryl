@@ -1,0 +1,8 @@
+[package]
+name = "lency_sema"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lency_syntax = { workspace = true }
+thiserror = { workspace = true }

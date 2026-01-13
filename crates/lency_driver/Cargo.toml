@@ -1,0 +1,12 @@
+[package]
+name = "lency_driver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lency_syntax = { workspace = true }
+lency_sema = { path = "../lency_sema" }
+lency_codegen = { path = "../lency_codegen" }
+thiserror = { workspace = true }
+logos = { workspace = true }
+chumsky = { workspace = true }

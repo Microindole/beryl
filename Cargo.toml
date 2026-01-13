@@ -3,14 +3,14 @@ resolver = "2"
 
 # 注册所有子模块
 members = [
-    "crates/beryl_cli",
-    "crates/beryl_driver",
-    "crates/beryl_diagnostics",
-    "crates/beryl_syntax",
-    "crates/beryl_sema",
-    "crates/beryl_monomorph",
-    "crates/beryl_codegen",
-    "crates/beryl_runtime",
+    "crates/lency_cli",
+    "crates/lency_driver",
+    "crates/lency_diagnostics",
+    "crates/lency_syntax",
+    "crates/lency_sema",
+    "crates/lency_monomorph",
+    "crates/lency_codegen",
+    "crates/lency_runtime",
 ]
 
 # 【关键】统一依赖版本管理
@@ -35,11 +35,11 @@ lasso = "0.7"          # 字符串驻留 (String Interning)，优化编译器性
 inkwell = { version = "0.4", features = ["llvm15-0"] }
 
 # --- 4. 项目内相互依赖 (路径映射) ---
-beryl_cli = { path = "crates/beryl_cli" }
-beryl_driver = { path = "crates/beryl_driver" }
-beryl_diagnostics = { path = "crates/beryl_diagnostics" }
-beryl_syntax = { path = "crates/beryl_syntax" }
-beryl_sema = { path = "crates/beryl_sema" }
-beryl_monomorph = { path = "crates/beryl_monomorph" }
-beryl_codegen = { path = "crates/beryl_codegen" }
-beryl_runtime = { path = "crates/beryl_runtime" }
+lency_cli = { path = "crates/lency_cli" }
+lency_driver = { path = "crates/lency_driver" }
+lency_diagnostics = { path = "crates/lency_diagnostics" }
+lency_syntax = { path = "crates/lency_syntax" }
+lency_sema = { path = "crates/lency_sema" }
+lency_monomorph = { path = "crates/lency_monomorph" }
+lency_codegen = { path = "crates/lency_codegen" }
+lency_runtime = { path = "crates/lency_runtime" }

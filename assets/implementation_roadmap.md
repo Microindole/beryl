@@ -1,4 +1,4 @@
-# Beryl 语言实现路线图 v3.1
+# Lency 语言实现路线图 v3.1
 
 > **当前状态**: Sprint 12 完成 (标准库与 I/O)
 > **设计哲学**: 简洁 (Concise) · 规范 (Standard) · 清晰 (Clear)
@@ -55,8 +55,8 @@
 ### Sprint 12: 标准库与 I/O ✅
 - ✅ **文件 I/O**: `read_file(path)` → `string!`, `write_file(path, content)` → `void!`
 - ✅ **字符串操作**: `len`, `trim`, `split`, `join`, `substr`
-- ✅ **标准库文件**: `lib/std/{core,io,collections,string}.brl`
-- ✅ **运行时 FFI**: `beryl_runtime/src/{file,string}.rs`
+- ✅ **标准库文件**: `lib/std/{core,io,collections,string}.lcy`
+- ✅ **运行时 FFI**: `lency_runtime/src/{file,string}.rs`
 
 ---
 
@@ -79,7 +79,7 @@
 ## 🎯 Sprint 13: 自举准备
 
 ### 核心目标
-让 Beryl 能够用自己写编译器的核心组件
+让 Lency 能够用自己写编译器的核心组件
 
 ### 13.1 Hash 支持 (自举必需)
 - [ ] `Hash` trait 定义

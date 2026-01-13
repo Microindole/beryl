@@ -1,0 +1,7 @@
+// Test basic import of std lib
+import std.io;
+
+int main() {
+    println("Hello from imported module!");
+    return 0;
+}

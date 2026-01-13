@@ -111,75 +111,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3a8241f3ebb85c056b509d4327ad0358fbbba6ffb340bf388f26350aeda225b1"
 
 [[package]]
-name = "beryl_cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "beryl_driver",
- "clap",
-]
-
-[[package]]
-name = "beryl_codegen"
-version = "0.1.0"
-dependencies = [
- "beryl_sema",
- "beryl_syntax",
- "inkwell",
- "thiserror",
-]
-
-[[package]]
-name = "beryl_diagnostics"
-version = "0.1.0"
-dependencies = [
- "ariadne",
- "colored",
- "thiserror",
-]
-
-[[package]]
-name = "beryl_driver"
-version = "0.1.0"
-dependencies = [
- "beryl_codegen",
- "beryl_sema",
- "beryl_syntax",
- "chumsky",
- "logos",
- "thiserror",
-]
-
-[[package]]
-name = "beryl_monomorph"
-version = "0.1.0"
-
-[[package]]
-name = "beryl_runtime"
-version = "0.1.0"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "beryl_sema"
-version = "0.1.0"
-dependencies = [
- "beryl_syntax",
- "thiserror",
-]
-
-[[package]]
-name = "beryl_syntax"
-version = "0.1.0"
-dependencies = [
- "beryl_diagnostics",
- "chumsky",
- "lasso",
- "logos",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -340,6 +271,75 @@ name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+
+[[package]]
+name = "lency_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "lency_driver",
+]
+
+[[package]]
+name = "lency_codegen"
+version = "0.1.0"
+dependencies = [
+ "inkwell",
+ "lency_sema",
+ "lency_syntax",
+ "thiserror",
+]
+
+[[package]]
+name = "lency_diagnostics"
+version = "0.1.0"
+dependencies = [
+ "ariadne",
+ "colored",
+ "thiserror",
+]
+
+[[package]]
+name = "lency_driver"
+version = "0.1.0"
+dependencies = [
+ "chumsky",
+ "lency_codegen",
+ "lency_sema",
+ "lency_syntax",
+ "logos",
+ "thiserror",
+]
+
+[[package]]
+name = "lency_monomorph"
+version = "0.1.0"
+
+[[package]]
+name = "lency_runtime"
+version = "0.1.0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "lency_sema"
+version = "0.1.0"
+dependencies = [
+ "lency_syntax",
+ "thiserror",
+]
+
+[[package]]
+name = "lency_syntax"
+version = "0.1.0"
+dependencies = [
+ "chumsky",
+ "lasso",
+ "lency_diagnostics",
+ "logos",
+]
 
 [[package]]
 name = "libc"
