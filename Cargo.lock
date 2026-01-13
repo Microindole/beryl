@@ -157,6 +157,9 @@ version = "0.1.0"
 [[package]]
 name = "beryl_runtime"
 version = "0.1.0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "beryl_sema"

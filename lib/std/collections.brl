@@ -1,1 +1,103 @@
-// Placeholder for collections.brl
+// Beryl 标准库 - 集合模块 (collections.brl)
+// 提供集合类型和泛型操作
+//
+// Vec<T> 是编译时内置类型，基本操作由运行时提供。
+// 本文件提供更高级的集合操作。
+
+// ============== Option 类型 (未来规划) ==============
+// TODO: 需要 enum 的泛型支持
+// enum Option<T> {
+//     Some(T),
+//     None
+// }
+
+// ============== Pair 类型 ==============
+
+// 泛型键值对
+struct Pair<K, V> {
+    K key
+    V value
+}
+
+// 创建 Pair
+Pair<K, V> make_pair<K, V>(K key, V value) {
+    return Pair<K, V> { key: key, value: value }
+}
+
+// ============== Box 类型 ==============
+
+// 简单的包装类型
+struct Box<T> {
+    T value
+}
+
+impl<T> Box<T> {
+    // 获取值
+    T get() {
+        return this.value
+    }
+
+    // 设置值
+    void set(T new_value) {
+        this.value = new_value
+    }
+}
+
+// 创建 Box
+Box<T> box<T>(T value) {
+    return Box<T> { value: value }
+}
+
+// ============== Vec 辅助函数 ==============
+// 注意: 这些函数假设 Vec 已有 len/get/set 方法支持
+
+// 查找元素的索引 (返回 -1 表示未找到)
+// TODO: 需要泛型相等比较支持
+// int find_index<T>(Vec<T> v, T target) {
+//     var i = 0
+//     while i < v.len() {
+//         if v.get(i) == target {
+//             return i
+//         }
+//         i = i + 1
+//     }
+//     return -1
+// }
+
+// 反转 Vec
+// TODO: 需要 Vec 方法调用支持
+// void reverse<T>(Vec<T> v) {
+//     var left = 0
+//     var right = v.len() - 1
+//     while left < right {
+//         var tmp = v.get(left)
+//         v.set(left, v.get(right))
+//         v.set(right, tmp)
+//         left = left + 1
+//         right = right - 1
+//     }
+// }
+
+// ============== 运行时 Vec FFI (供参考) ==============
+//
+// beryl_vec_new(capacity)          -> *mut BerylVec
+// beryl_vec_push(vec, element)     -> void
+// beryl_vec_pop(vec)               -> i64
+// beryl_vec_len(vec)               -> i64
+// beryl_vec_get(vec, index)        -> i64
+// beryl_vec_set(vec, index, value) -> void
+// beryl_vec_free(vec)              -> void
+
+// ============== HashMap (未来规划) ==============
+// TODO: Sprint 13+ 添加 HashMap 支持
+//
+// struct HashMap<K, V> {
+//     // 使用开放寻址或链表法实现
+// }
+//
+// HashMap<K, V> hashmap_new<K, V>()
+// void hashmap_insert<K, V>(HashMap<K, V> map, K key, V value)
+// V? hashmap_get<K, V>(HashMap<K, V> map, K key)
+// bool hashmap_contains<K, V>(HashMap<K, V> map, K key)
+// void hashmap_remove<K, V>(HashMap<K, V> map, K key)
+// int hashmap_len<K, V>(HashMap<K, V> map)

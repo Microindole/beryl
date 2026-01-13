@@ -383,6 +383,28 @@ impl Specializer {
                     .collect(),
                 body: Box::new(self.specialize_expr(body)),
             },
+            // File I/O intrinsics
+            ExprKind::ReadFile(path) => ExprKind::ReadFile(Box::new(self.specialize_expr(path))),
+            ExprKind::WriteFile(path, content) => ExprKind::WriteFile(
+                Box::new(self.specialize_expr(path)),
+                Box::new(self.specialize_expr(content)),
+            ),
+            // 字符串内置函数 (Sprint 12)
+            ExprKind::Len(arg) => ExprKind::Len(Box::new(self.specialize_expr(arg))),
+            ExprKind::Trim(arg) => ExprKind::Trim(Box::new(self.specialize_expr(arg))),
+            ExprKind::Split(str_arg, delim) => ExprKind::Split(
+                Box::new(self.specialize_expr(str_arg)),
+                Box::new(self.specialize_expr(delim)),
+            ),
+            ExprKind::Join(vec_arg, sep) => ExprKind::Join(
+                Box::new(self.specialize_expr(vec_arg)),
+                Box::new(self.specialize_expr(sep)),
+            ),
+            ExprKind::Substr(str_arg, start, len) => ExprKind::Substr(
+                Box::new(self.specialize_expr(str_arg)),
+                Box::new(self.specialize_expr(start)),
+                Box::new(self.specialize_expr(len)),
+            ),
         };
 
         Expr {

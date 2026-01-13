@@ -1,0 +1,114 @@
+// Beryl 标准库 - 字符串模块 (string.brl)
+// 提供字符串操作函数
+//
+// 核心字符串函数是编译器内置函数 (intrinsics)：
+//   int     len(string s)                       - 字符串长度
+//   string  trim(string s)                      - 去除首尾空白
+//   Vec<string> split(string s, string delim)   - 按分隔符拆分
+//   string  join(Vec<string> parts, string sep) - 用分隔符连接
+//   string  substr(string s, int start, int len) - 提取子串
+
+// ============== 字符串辅助函数 ==============
+
+// 检查字符串是否为空
+bool is_empty(string s) {
+    return len(s) == 0
+}
+
+// 检查字符串是否以指定前缀开头
+bool starts_with(string s, string prefix) {
+    var prefix_len = len(prefix)
+    if len(s) < prefix_len {
+        return false
+    }
+    var head = substr(s, 0, prefix_len)
+    return head == prefix
+}
+
+// 检查字符串是否以指定后缀结尾
+bool ends_with(string s, string suffix) {
+    var suffix_len = len(suffix)
+    var s_len = len(s)
+    if s_len < suffix_len {
+        return false
+    }
+    var tail = substr(s, s_len - suffix_len, suffix_len)
+    return tail == suffix
+}
+
+// 检查字符串是否包含子串
+bool contains(string s, string sub) {
+    var s_len = len(s)
+    var sub_len = len(sub)
+    
+    if sub_len == 0 {
+        return true
+    }
+    if s_len < sub_len {
+        return false
+    }
+    
+    // 简单的线性搜索
+    var i = 0
+    while i <= s_len - sub_len {
+        var candidate = substr(s, i, sub_len)
+        if candidate == sub {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+// 重复字符串 n 次
+string repeat(string s, int n) {
+    if n <= 0 {
+        return ""
+    }
+    
+    var result = s
+    var i = 1
+    while i < n {
+        result = result + s
+        i = i + 1
+    }
+    return result
+}
+
+// 将字符串填充到指定长度 (右填充)
+string pad_right(string s, int target_len, string pad_char) {
+    var current_len = len(s)
+    if current_len >= target_len {
+        return s
+    }
+    
+    var padding_needed = target_len - current_len
+    var padding = repeat(pad_char, padding_needed)
+    return s + padding
+}
+
+// 将字符串填充到指定长度 (左填充)
+string pad_left(string s, int target_len, string pad_char) {
+    var current_len = len(s)
+    if current_len >= target_len {
+        return s
+    }
+    
+    var padding_needed = target_len - current_len
+    var padding = repeat(pad_char, padding_needed)
+    return padding + s
+}
+
+// 替换第一个匹配项
+// TODO: 需要更复杂的实现
+// string replace_first(string s, string old, string new_str) {
+//     // 找到 old 的位置，然后拼接
+//     return s
+// }
+
+// 替换所有匹配项
+// TODO: 需要更复杂的实现
+// string replace_all(string s, string old, string new_str) {
+//     var parts = split(s, old)
+//     return join(parts, new_str)
+// }

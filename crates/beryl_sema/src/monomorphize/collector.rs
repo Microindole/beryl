@@ -235,6 +235,28 @@ impl Collector {
                 }
                 self.collect_expr(body);
             }
+            // File I/O intrinsics
+            ExprKind::ReadFile(path) => self.collect_expr(path),
+            ExprKind::WriteFile(path, content) => {
+                self.collect_expr(path);
+                self.collect_expr(content);
+            }
+            // 字符串内置函数 (Sprint 12)
+            ExprKind::Len(arg) => self.collect_expr(arg),
+            ExprKind::Trim(arg) => self.collect_expr(arg),
+            ExprKind::Split(str_arg, delim) => {
+                self.collect_expr(str_arg);
+                self.collect_expr(delim);
+            }
+            ExprKind::Join(vec_arg, sep) => {
+                self.collect_expr(vec_arg);
+                self.collect_expr(sep);
+            }
+            ExprKind::Substr(str_arg, start, len) => {
+                self.collect_expr(str_arg);
+                self.collect_expr(start);
+                self.collect_expr(len);
+            }
         }
     }
 

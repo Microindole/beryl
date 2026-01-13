@@ -1,7 +1,9 @@
 //! Beryl Runtime Library
 //!
-//! 提供 Beryl 语言的运行时支持，主要是动态数组（Vec）实现
+//! 提供 Beryl 语言的运行时支持，包括动态数组、文件 I/O 和字符串处理
 
+pub mod file;
+pub mod string;
 use std::alloc::{alloc, dealloc, realloc, Layout};
 
 /// Beryl 动态数组

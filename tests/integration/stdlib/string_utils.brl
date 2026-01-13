@@ -1,0 +1,40 @@
+// Test file for Sprint 12: String Utilities
+// 测试字符串处理内置函数
+
+void main() {
+    // Test 1: len - 获取字符串长度
+    var s1 = "hello"
+    print(len(s1))  // 应输出: 5
+
+    var s2 = "你好世界"  // UTF-8 可能有不同行为
+    print(len(s2))
+
+    // Test 2: trim - 去除首尾空白
+    var s3 = "  hello world  "
+    var trimmed = trim(s3)
+    print(trimmed)  // 应输出: "hello world"
+
+    // Test 3: substr - 提取子串
+    var s4 = "hello world"
+    var sub1 = substr(s4, 0, 5)
+    print(sub1)  // 应输出: "hello"
+
+    var sub2 = substr(s4, 6, 5)
+    print(sub2)  // 应输出: "world"
+
+    // Test 4: split - 按分隔符拆分
+    var csv = "apple,banana,cherry"
+    var fruits = split(csv, ",")
+    // fruits 应该是 ["apple", "banana", "cherry"]
+
+    // Test 5: join - 用分隔符连接
+    var joined = join(fruits, " - ")
+    print(joined)  // 应输出: "apple - banana - cherry"
+
+    // Test 6: 组合使用
+    var raw = "  one,two,three  "
+    var clean = trim(raw)
+    var parts = split(clean, ",")
+    var result = join(parts, "|")
+    print(result)  // 应输出: "one|two|three"
+}

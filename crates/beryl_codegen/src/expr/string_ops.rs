@@ -106,3 +106,229 @@ fn get_or_declare_strcat<'ctx>(ctx: &CodegenContext<'ctx>) -> FunctionValue<'ctx
     let fn_type = i8_ptr_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
     ctx.module.add_function("strcat", fn_type, None)
 }
+
+// ============== Sprint 12: 字符串内置函数 ==============
+
+use super::CodegenValue;
+use beryl_syntax::ast::{Expr, Type};
+use std::collections::HashMap;
+
+/// 生成 len(string) -> int
+pub fn gen_len<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    arg: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let arg_val = generate_expr(ctx, locals, arg)?;
+    let str_ptr = arg_val.value.into_pointer_value();
+
+    // 声明 beryl_string_len
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+    let i64_type = ctx.context.i64_type();
+
+    let string_len_fn = ctx
+        .module
+        .get_function("beryl_string_len")
+        .unwrap_or_else(|| {
+            let fn_type = i64_type.fn_type(&[i8_ptr_type.into()], false);
+            ctx.module.add_function("beryl_string_len", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(string_len_fn, &[str_ptr.into()], "str_len")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "beryl_string_len returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::Int,
+    })
+}
+
+/// 生成 trim(string) -> string
+pub fn gen_trim<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    arg: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let arg_val = generate_expr(ctx, locals, arg)?;
+    let str_ptr = arg_val.value.into_pointer_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+
+    let string_trim_fn = ctx
+        .module
+        .get_function("beryl_string_trim")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(&[i8_ptr_type.into()], false);
+            ctx.module.add_function("beryl_string_trim", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(string_trim_fn, &[str_ptr.into()], "str_trim")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "beryl_string_trim returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
+}
+
+/// 生成 split(string, string) -> Vec<string>
+pub fn gen_split<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    str_arg: &Expr,
+    delim: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let str_val = generate_expr(ctx, locals, str_arg)?;
+    let str_ptr = str_val.value.into_pointer_value();
+
+    let delim_val = generate_expr(ctx, locals, delim)?;
+    let delim_ptr = delim_val.value.into_pointer_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+
+    let string_split_fn = ctx
+        .module
+        .get_function("beryl_string_split")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
+            ctx.module.add_function("beryl_string_split", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(
+            string_split_fn,
+            &[str_ptr.into(), delim_ptr.into()],
+            "str_split",
+        )
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "beryl_string_split returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::Vec(Box::new(Type::String)),
+    })
+}
+
+/// 生成 join(Vec<string>, string) -> string
+pub fn gen_join<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    vec_arg: &Expr,
+    sep: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let vec_val = generate_expr(ctx, locals, vec_arg)?;
+    let vec_ptr = vec_val.value.into_pointer_value();
+
+    let sep_val = generate_expr(ctx, locals, sep)?;
+    let sep_ptr = sep_val.value.into_pointer_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+
+    let string_join_fn = ctx
+        .module
+        .get_function("beryl_string_join")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
+            ctx.module.add_function("beryl_string_join", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(
+            string_join_fn,
+            &[vec_ptr.into(), sep_ptr.into()],
+            "str_join",
+        )
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "beryl_string_join returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
+}
+
+/// 生成 substr(string, int, int) -> string
+pub fn gen_substr<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    str_arg: &Expr,
+    start: &Expr,
+    len: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let str_val = generate_expr(ctx, locals, str_arg)?;
+    let str_ptr = str_val.value.into_pointer_value();
+
+    let start_val = generate_expr(ctx, locals, start)?;
+    let start_int = start_val.value.into_int_value();
+
+    let len_val = generate_expr(ctx, locals, len)?;
+    let len_int = len_val.value.into_int_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+    let i64_type = ctx.context.i64_type();
+
+    let string_substr_fn = ctx
+        .module
+        .get_function("beryl_string_substr")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(
+                &[i8_ptr_type.into(), i64_type.into(), i64_type.into()],
+                false,
+            );
+            ctx.module
+                .add_function("beryl_string_substr", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(
+            string_substr_fn,
+            &[str_ptr.into(), start_int.into(), len_int.into()],
+            "str_substr",
+        )
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "beryl_string_substr returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
+}

@@ -1,1 +1,143 @@
-// Placeholder for core.brl
+// Beryl 标准库 - 核心模块 (core.brl)
+// 提供基础类型、Trait 和常用工具函数
+
+// ============== 基础结构体 ==============
+
+// Error 类型 - 用于 Result 错误处理
+struct Error {
+    string message
+}
+
+// ============== 核心 Trait ==============
+
+// Comparable - 可比较的类型
+trait Comparable {
+    bool less_than(int other)
+    bool greater_than(int other)
+}
+
+// 为 int 实现 Comparable
+impl Comparable for int {
+    bool less_than(int other) {
+        return this < other
+    }
+    bool greater_than(int other) {
+        return this > other
+    }
+}
+
+// ============== 泛型数学函数 ==============
+
+// min: 返回两个值中较小的
+// 注意: 目前 Beryl 的 trait 约束需要在运行时验证 < 操作符
+// 简化版本：使用 int 特化
+T min<T>(T a, T b) {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+// max: 返回两个值中较大的
+T max<T>(T a, T b) {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+// clamp: 限制值在 [min_val, max_val] 范围内
+T clamp<T>(T value, T min_val, T max_val) {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+
+// ============== 整数特化版本 ==============
+// 这些版本保证类型安全
+
+int min_int(int a, int b) {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+int max_int(int a, int b) {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+int clamp_int(int value, int min_val, int max_val) {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+
+// ============== 浮点数特化版本 ==============
+
+float min_float(float a, float b) {
+    if a < b {
+        return a
+    }
+    return b
+}
+
+float max_float(float a, float b) {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+float clamp_float(float value, float min_val, float max_val) {
+    if value < min_val {
+        return min_val
+    }
+    if value > max_val {
+        return max_val
+    }
+    return value
+}
+
+// ============== 数值操作 ==============
+
+// 绝对值 (int)
+int abs(int x) {
+    if x < 0 {
+        return 0 - x
+    }
+    return x
+}
+
+// 绝对值 (float)
+float abs_float(float x) {
+    if x < 0.0 {
+        return 0.0 - x
+    }
+    return x
+}
+
+// 两数之差的绝对值
+int diff(int a, int b) {
+    if a > b {
+        return a - b
+    }
+    return b - a
+}
+
+// ============== 类型转换 (TODO: 需要运行时支持) ==============
+// extern string int_to_string(int n)
+// extern string float_to_string(float f)
+// extern int! parse_int(string s)
+// extern float! parse_float(string s)

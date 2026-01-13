@@ -87,6 +87,24 @@ pub enum ExprKind {
         params: Vec<crate::ast::Param>,
         body: Box<Expr>,
     },
+
+    // 文件 I/O 内置函数 (Sprint 12)
+    // read_file("path") -> string!
+    ReadFile(Box<Expr>),
+    // write_file("path", "content") -> void!
+    WriteFile(Box<Expr>, Box<Expr>),
+
+    // 字符串内置函数 (Sprint 12)
+    // len("hello") -> 5
+    Len(Box<Expr>),
+    // trim("  hi  ") -> "hi"
+    Trim(Box<Expr>),
+    // split("a,b", ",") -> Vec<string>
+    Split(Box<Expr>, Box<Expr>),
+    // join(vec, ",") -> "a,b"
+    Join(Box<Expr>, Box<Expr>),
+    // substr("hello", 0, 2) -> "he"
+    Substr(Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

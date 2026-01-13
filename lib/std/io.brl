@@ -1,1 +1,65 @@
-// Placeholder for io.brl
+// Beryl 标准库 - I/O 模块 (io.brl)
+// 提供文件和控制台 I/O 功能
+//
+// 注意：read_file, write_file, print, len, trim, split, join, substr
+// 是编译器内置函数 (intrinsics)，不需要在这里定义。
+// 本文件提供更高级的 I/O 抽象。
+
+// ============== 文件操作辅助函数 ==============
+
+// 检查文件是否存在 (通过尝试读取)
+// TODO: 需要更好的实现
+// bool file_exists(string path) {
+//     var result = read_file(path)
+//     // result.is_ok() - 需要 Result 方法支持
+//     return false
+// }
+
+// 读取文件的所有行
+// TODO: 需要 split 支持换行符
+// Vec<string>! read_lines(string path) {
+//     var content = read_file(path)?
+//     var lines = split(content, "\n")
+//     return Ok(lines)
+// }
+
+// 写入多行到文件
+// TODO: 需要 join 支持换行符
+// void! write_lines(string path, Vec<string> lines) {
+//     var content = join(lines, "\n")
+//     write_file(path, content)?
+//     return Ok(0)
+// }
+
+// ============== 路径操作 ==============
+// TODO: 需要更多字符串函数支持
+
+// 获取文件扩展名
+// string get_extension(string path) {
+//     var parts = split(path, ".")
+//     // 返回最后一个部分
+//     return ""
+// }
+
+// 获取文件名 (不含路径)
+// string get_filename(string path) {
+//     var parts = split(path, "/")
+//     // 返回最后一个部分
+//     return ""
+// }
+
+// ============== 已实现的内置函数 (供参考) ==============
+//
+// 文件 I/O:
+//   string! read_file(string path)     - 读取文件全部内容
+//   void!   write_file(string path, string content) - 写入文件
+//
+// 控制台输出:
+//   void print(any value)  - 打印到标准输出
+//
+// 字符串操作:
+//   int     len(string s)                    - 字符串长度
+//   string  trim(string s)                   - 去除首尾空白
+//   Vec<string> split(string s, string delim) - 按分隔符拆分
+//   string  join(Vec<string> parts, string sep) - 用分隔符连接
+//   string  substr(string s, int start, int len) - 提取子串

@@ -3,6 +3,7 @@
 //! 表达式解析：字面量、变量、运算符、函数调用等
 
 use super::helpers::{ident_parser, type_parser};
+pub mod intrinsics;
 pub mod literal;
 use crate::ast::*;
 use crate::lexer::Token;
@@ -60,16 +61,8 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
                 span,
             });
 
-        // Print expression: print(x)
-        let print_expr = just(Token::Print)
-            .ignore_then(
-                expr.clone()
-                    .delimited_by(just(Token::LParen), just(Token::RParen)),
-            )
-            .map_with_span(|arg, span| Expr {
-                kind: ExprKind::Print(Box::new(arg)),
-                span,
-            });
+        // 内置函数 (Sprint 12 提取到 intrinsics 模块)
+        let intrinsic_expr = intrinsics::intrinsic_parsers(expr.clone());
 
         // Array literal: [1, 2, 3]
         let array_literal = expr
@@ -160,7 +153,7 @@ pub fn expr_parser() -> impl Parser<Token, Expr, Error = ParserError> + Clone {
         // Integrate match_expr. Should be high precedence.
         let atom = closure_expr
             .or(match_expr)
-            .or(print_expr)
+            .or(intrinsic_expr)
             .or(vec_literal)
             .or(array_literal)
             .or(ok_expr)

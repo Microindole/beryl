@@ -6,6 +6,7 @@ mod array;
 mod binary;
 mod call;
 mod closure;
+mod file_io;
 mod intrinsic;
 mod literal;
 mod match_expr;
@@ -123,6 +124,17 @@ fn generate_expr<'ctx>(
         ExprKind::Err(inner) => result::gen_err(ctx, locals, inner),
         ExprKind::Try(inner) => result::gen_try(ctx, locals, inner),
         ExprKind::Closure { params, body } => closure::gen_closure(ctx, locals, params, body),
+        // File I/O intrinsics (Sprint 12)
+        ExprKind::ReadFile(path) => intrinsic::gen_read_file(ctx, locals, path),
+        ExprKind::WriteFile(path, content) => intrinsic::gen_write_file(ctx, locals, path, content),
+        // 字符串内置函数 (Sprint 12)
+        ExprKind::Len(arg) => string_ops::gen_len(ctx, locals, arg),
+        ExprKind::Trim(arg) => string_ops::gen_trim(ctx, locals, arg),
+        ExprKind::Split(str_arg, delim) => string_ops::gen_split(ctx, locals, str_arg, delim),
+        ExprKind::Join(vec_arg, sep) => string_ops::gen_join(ctx, locals, vec_arg, sep),
+        ExprKind::Substr(str_arg, start, len) => {
+            string_ops::gen_substr(ctx, locals, str_arg, start, len)
+        }
     }
 }
 

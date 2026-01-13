@@ -31,6 +31,21 @@ pub enum Token {
     Extern,
     #[token("print")]
     Print,
+    #[token("read_file")]
+    ReadFile,
+    #[token("write_file")]
+    WriteFile,
+    // 字符串内置函数 (Sprint 12)
+    #[token("len")]
+    Len,
+    #[token("trim")]
+    Trim,
+    #[token("split")]
+    Split,
+    #[token("join")]
+    Join,
+    #[token("substr")]
+    Substr,
     #[token("struct")]
     Struct,
     #[token("impl")]

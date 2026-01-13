@@ -1,3 +1,8 @@
+//! Intrinsic Functions Code Generation
+//!
+//! 内置函数代码生成：print
+//! 文件 I/O 函数已移至 file_io 模块
+
 use crate::context::CodegenContext;
 use crate::error::{CodegenError, CodegenResult};
 use crate::expr::{generate_expr, CodegenValue};
@@ -5,85 +10,118 @@ use beryl_syntax::ast::{Expr, Type};
 use inkwell::AddressSpace;
 use std::collections::HashMap;
 
+// 重新导出 file_io 模块的函数
+pub use super::file_io::{gen_read_file, gen_write_file};
+
 /// 生成 Print 内建函数调用
 pub fn gen_print<'ctx>(
     ctx: &CodegenContext<'ctx>,
     locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, beryl_syntax::ast::Type)>,
     arg: &Expr,
 ) -> CodegenResult<CodegenValue<'ctx>> {
-    // 1. 生成参数值
-    let val_wrapper = generate_expr(ctx, locals, arg)?;
-    let val = val_wrapper.value;
-    let ty = val_wrapper.ty;
+    let arg_val = generate_expr(ctx, locals, arg)?;
 
-    let format_str = match ty {
-        Type::Int => "%ld\n", // Beryl Int is i64
-        Type::Float => "%f\n",
-        Type::Bool => "%d\n", // Print bool as 0/1 for now
-        Type::String => "%s\n",
-        Type::Array { .. } => "[Array]\n", // Placeholder
-        Type::Struct(_) => "[Struct]\n",   // Placeholder
-        Type::Vec(_) => "[Vec]\n",         // Placeholder
-
-        Type::GenericParam(_) => "[GenericParam]\n", // 不应该在运行时遇到
-        Type::Generic(_, _) => "[Generic]\n",
-        Type::Void => "\n",
-        Type::Nullable(_) => "[Nullable]\n",
-        Type::Result { .. } => "[Result]\n",
-        Type::Function { .. } => "[Function]\n",
-        Type::Error => "%d\n", // Fallback
-    };
-
-    // Special handling for bool (i1) to print "true"/"false" is harder without AST Type info.
-    // Let's stick to %d for bools (0/1) or improve later.
-
-    // 构建 printf 调用
-    // 构建 printf 调用
-    // declare i32 @printf(i8*, ...)
-    let i32_type = ctx.context.i32_type();
     let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+    let i64_type = ctx.context.i64_type();
 
-    // 获取或创建 printf 声明
-    let printf_func = if let Some(func) = ctx.module.get_function("printf") {
-        func
-    } else {
-        let printf_type = i32_type.fn_type(&[i8_ptr_type.into()], true);
-        ctx.module.add_function("printf", printf_type, None)
-    };
+    match arg_val.ty {
+        Type::Int => {
+            // 使用 printf("%lld\n", value) 打印整数
+            let printf_fn = ctx.module.get_function("printf").unwrap_or_else(|| {
+                let fn_type = i64_type.fn_type(&[i8_ptr_type.into()], true);
+                ctx.module.add_function("printf", fn_type, None)
+            });
 
-    // 创建 format string 全局变量
-    let fmt_global_name = format!("fmt.{}", format_str.replace("%", "").replace("\\n", "nl"));
-    // Optimization: cache strings?
-    let fmt_str_val = ctx
-        .builder
-        .build_global_string_ptr(format_str, &fmt_global_name)
-        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
-        .as_pointer_value();
+            let format_str = ctx
+                .builder
+                .build_global_string_ptr("%lld\n", "int_fmt")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
 
-    // Call printf
-    // Handle float promotion to double for printf (varargs)
-    let arg_val = if val.get_type().is_float_type() {
-        // float -> double
-        // Beryl float is f64, so it's already double.
-        val
-    } else {
-        val
-    };
+            ctx.builder
+                .build_call(
+                    printf_fn,
+                    &[format_str.as_pointer_value().into(), arg_val.value.into()],
+                    "print_int",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+        }
+        Type::Float => {
+            let printf_fn = ctx.module.get_function("printf").unwrap_or_else(|| {
+                let fn_type = i64_type.fn_type(&[i8_ptr_type.into()], true);
+                ctx.module.add_function("printf", fn_type, None)
+            });
 
-    ctx.builder
-        .build_call(
-            printf_func,
-            &[fmt_str_val.into(), arg_val.into()],
-            "printf_call",
-        )
-        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+            let format_str = ctx
+                .builder
+                .build_global_string_ptr("%f\n", "float_fmt")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
 
-    // Print returns void
-    // But Codegen expects BasicValueEnum.
-    // We can return a dummy value or change generate_expr signature?
-    // generate_expr returns BasicValueEnum.
-    // Let's return const int 0.
-    // Return value
+            ctx.builder
+                .build_call(
+                    printf_fn,
+                    &[format_str.as_pointer_value().into(), arg_val.value.into()],
+                    "print_float",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+        }
+        Type::Bool => {
+            let printf_fn = ctx.module.get_function("printf").unwrap_or_else(|| {
+                let fn_type = i64_type.fn_type(&[i8_ptr_type.into()], true);
+                ctx.module.add_function("printf", fn_type, None)
+            });
+
+            let format_str = ctx
+                .builder
+                .build_global_string_ptr("%s\n", "bool_fmt")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            let true_str = ctx
+                .builder
+                .build_global_string_ptr("true", "true_str")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+            let false_str = ctx
+                .builder
+                .build_global_string_ptr("false", "false_str")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            let bool_val = arg_val.value.into_int_value();
+            let str_val = ctx
+                .builder
+                .build_select(
+                    bool_val,
+                    true_str.as_pointer_value(),
+                    false_str.as_pointer_value(),
+                    "bool_str",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            ctx.builder
+                .build_call(
+                    printf_fn,
+                    &[format_str.as_pointer_value().into(), str_val.into()],
+                    "print_bool",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+        }
+        Type::String => {
+            let puts_fn = ctx.module.get_function("puts").unwrap_or_else(|| {
+                let fn_type = i64_type.fn_type(&[i8_ptr_type.into()], false);
+                ctx.module.add_function("puts", fn_type, None)
+            });
+
+            ctx.builder
+                .build_call(puts_fn, &[arg_val.value.into()], "print_str")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+        }
+        _ => {
+            // 其他类型尚不支持直接打印
+            return Err(CodegenError::LLVMBuildError(format!(
+                "print() not implemented for type: {:?}",
+                arg_val.ty
+            )));
+        }
+    }
+
     Ok(CodegenValue {
         value: ctx.context.i64_type().const_int(0, false).into(),
         ty: Type::Void,
