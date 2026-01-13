@@ -13,7 +13,7 @@ Beryl 是一门 **"实用主义的工业级语言"**。它的设计目标是在 
 
 ### 2.1 变量与常量
 
-采用 `var` 进行类型推导，显式类型后置（或兼容 C 系前置，Beryl 推荐更清晰的定义方式）。
+采用 `var` 进行类型推导，支持显式类型标注。
 
 ```
 // 自动推导为 int
@@ -84,16 +84,16 @@ if maybe != null {
 }
 ```
 
-### 3.2 类与泛型 (Classes & Generics)
+### 3.2 结构体与泛型 (Structs & Generics)
 
-采用单态化泛型 (Monomorphization)，零运行时开销。
+采用单态化泛型 (Monomorphization)，零运行时开销。坚持 **组合优于继承** (Composition over Inheritance)。
 
-```
-class Box<T> {
+```beryl
+struct Box<T> {
     T value
 }
 
-var intBox = new Box<int>(10)
+var intBox = Box<int> { value: 10 }
 ```
 
 ## 4. 错误处理 (Error Handling)
@@ -114,17 +114,9 @@ if res.is_err() {
 
 ## 5. 内存管理 (Memory)
 
-- **初期**: 自动垃圾回收 (GC)。开发者无需关心 `free`。
-- **远期目标**: 引入所有权分析优化，减少 GC 压力。
+### 5.1 内存模型
+- **初期**: 自动垃圾回收 (GC)。
+- **值类型**: 结构体默认为值语义。
 
-### **阶段 11: 闭包与函数式编程**
-*目标: 提升语言表达力。* ✅ 已完成
-
-- **函数类型**: `int(int)` (C 风格，无 fn 关键字)
-- **闭包 (Closures)**: `|int x| => x * 2`
-- **远期目标**: 引入所有权分析优化，减少 GC 压力。
-
-
-
-
-文件后缀名是.brl
+## 6. 文件扩展名
+`.brl`
