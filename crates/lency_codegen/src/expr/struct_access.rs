@@ -388,48 +388,41 @@ pub fn gen_safe_member_access<'ctx>(
             )?;
             load_field(ctx, &object_val, field_name, field_ptr)
         }
+    } else if object_val.value.is_pointer_value() {
+        let field_ptr =
+            gen_struct_member_ptr_val(ctx, &object_val, object_expr.span.start, field_name, line)?;
+        load_field(ctx, &object_val, field_name, field_ptr)
     } else {
-        if object_val.value.is_pointer_value() {
-            let field_ptr = gen_struct_member_ptr_val(
-                ctx,
-                &object_val,
-                object_expr.span.start,
-                field_name,
-                line,
-            )?;
-            load_field(ctx, &object_val, field_name, field_ptr)
-        } else {
-            // Struct Value (RValue Aggregate) - use ExtractValue
-            let struct_name = match &object_val.ty {
-                Type::Struct(name) => name,
-                _ => return Err(CodegenError::TypeMismatch),
-            };
+        // Struct Value (RValue Aggregate) - use ExtractValue
+        let struct_name = match &object_val.ty {
+            Type::Struct(name) => name,
+            _ => return Err(CodegenError::TypeMismatch),
+        };
 
-            let field_names = ctx
-                .struct_fields
-                .get(struct_name)
-                .ok_or(CodegenError::TypeMismatch)?;
-            let idx = field_names
-                .iter()
-                .position(|n| n == field_name)
-                .ok_or(CodegenError::TypeMismatch)?;
-            let field_types = ctx.struct_field_types.get(struct_name).unwrap();
-            let ret_type = field_types[idx].clone();
+        let field_names = ctx
+            .struct_fields
+            .get(struct_name)
+            .ok_or(CodegenError::TypeMismatch)?;
+        let idx = field_names
+            .iter()
+            .position(|n| n == field_name)
+            .ok_or(CodegenError::TypeMismatch)?;
+        let field_types = ctx.struct_field_types.get(struct_name).unwrap();
+        let ret_type = field_types[idx].clone();
 
-            let val = ctx
-                .builder
-                .build_extract_value(
-                    object_val.value.into_struct_value(),
-                    idx as u32,
-                    &format!("field_{}_extract", field_name),
-                )
-                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+        let val = ctx
+            .builder
+            .build_extract_value(
+                object_val.value.into_struct_value(),
+                idx as u32,
+                &format!("field_{}_extract", field_name),
+            )
+            .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
 
-            Ok(CodegenValue {
-                value: val,
-                ty: ret_type,
-            })
-        }
+        Ok(CodegenValue {
+            value: val,
+            ty: ret_type,
+        })
     };
 
     let valid_val = access_res?;
