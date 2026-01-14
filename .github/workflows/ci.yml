@@ -11,25 +11,71 @@ env:
   RUST_MIN_STACK: 8388608
 
 jobs:
-  build:
+  format:
+    name: Format Check
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+    - name: Check formatting
+      run: cargo fmt --all -- --check
 
+  clippy:
+    name: Clippy Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
     - name: Install LLVM
       run: |
         sudo apt-get update
         sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
         echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
-
-    - name: Set up Rust
-      uses: dtolnay/rust-toolchain@stable
+    - uses: dtolnay/rust-toolchain@stable
       with:
-        components: rustfmt, clippy
+        components: clippy
+    - uses: Swatinem/rust-cache@v2
+    - name: Run Clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
 
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install LLVM
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+        echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+    - name: Run tests
+      run: cargo test
 
-    - name: Run all checks
-      run: bash scripts/run_checks.sh
+  lcy-tests:
+    name: Lency Integration Tests
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install LLVM
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+        echo "LLVM_SYS_150_PREFIX=/usr/lib/llvm-15" >> $GITHUB_ENV
+    - uses: dtolnay/rust-toolchain@stable
+    - uses: Swatinem/rust-cache@v2
+    - name: Run .lcy tests
+      run: bash scripts/run_lcy_tests.sh
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check file sizes
+      run: python3 scripts/check_file_size.py
+    - name: Check TODOs
+      run: python3 scripts/check_todos.py

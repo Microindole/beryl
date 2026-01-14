@@ -15,7 +15,7 @@ from typing import List, Tuple
 MAX_LINES_WARNING = 300   # 警告阈值
 MAX_LINES_ERROR = 500     # 错误阈值
 EXCLUDE_DIRS = {'.git', 'target', 'node_modules', '.gemini'}
-EXTENSIONS = {'.rs'}
+EXTENSIONS = {'.rs', '.py'}
 
 def count_rust_code_lines(content: str) -> int:
     """计算 Rust 代码行数，排除注释（包括嵌套块注释）和空行"""
@@ -59,40 +59,80 @@ def count_rust_code_lines(content: str) -> int:
             code_lines += 1
     return code_lines
 
+def count_python_code_lines(content: str) -> int:
+    """计算 Python 代码行数，排除注释和空行"""
+    code_lines = 0
+    in_multiline = False
+    quote_char = None
+    
+    for line in content.splitlines():
+        stripped = line.strip()
+        
+        # 处理多行字符串（docstring）
+        if in_multiline:
+            if quote_char in stripped:
+                in_multiline = False
+            continue
+        
+        # 跳过空行
+        if not stripped:
+            continue
+            
+        # 跳过单行注释
+        if stripped.startswith('#'):
+            continue
+            
+        # 检测多行字符串开始（docstring）
+        for quote in ('"""', "'''"):
+            if quote in stripped:
+                count = stripped.count(quote)
+                if count == 1:
+                    # 多行字符串开始
+                    in_multiline = True
+                    quote_char = quote
+                    break
+                # count >= 2 表示在同一行开始和结束，算一行代码
+        
+        code_lines += 1
+    
+    return code_lines
+
 def count_lines(file_path: Path) -> int:
     """根据文件类型计算有效行数"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
             if file_path.suffix == '.rs':
-                content = f.read()
                 return count_rust_code_lines(content)
+            elif file_path.suffix == '.py':
+                return count_python_code_lines(content)
             else:
-                return sum(1 for line in f if line.strip())
+                return sum(1 for line in content.splitlines() if line.strip())
     except Exception as e:
         print(f"⚠️  无法读取 {file_path}: {e}", file=sys.stderr)
         return 0
 
-def find_rust_files(root_dir: Path) -> List[Path]:
-    """查找所有 Rust 文件"""
-    rust_files = []
+def find_code_files(root_dir: Path) -> List[Path]:
+    """查找所有代码文件 (Rust, Python)"""
+    code_files = []
     for root, dirs, files in os.walk(root_dir):
         # 过滤排除目录
         dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
         
         for file in files:
             if any(file.endswith(ext) for ext in EXTENSIONS):
-                rust_files.append(Path(root) / file)
+                code_files.append(Path(root) / file)
     
-    return rust_files
+    return code_files
 
 def check_file_sizes(root_dir: Path) -> Tuple[List, List]:
     """检查文件大小，返回 (warnings, errors)"""
     warnings = []
     errors = []
     
-    rust_files = find_rust_files(root_dir)
+    code_files = find_code_files(root_dir)
     
-    for file_path in rust_files:
+    for file_path in code_files:
         lines = count_lines(file_path)
         rel_path = file_path.relative_to(root_dir)
         
@@ -109,7 +149,7 @@ def main():
     script_dir = Path(__file__).parent
     project_root = script_dir.parent if script_dir.name == 'scripts' else script_dir
     
-    print(f"🔍 扫描 Rust 文件： {project_root}")
+    print(f"🔍 扫描代码文件 (Rust, Python)： {project_root}")
     print(f"   警告阈值: {MAX_LINES_WARNING} 行")
     print(f"   错误阈值: {MAX_LINES_ERROR} 行")
     print()
@@ -134,10 +174,10 @@ def main():
         print()
     
     if not has_issues:
-        print("✅ 所有 Rust 文件大小适中！")
+        print("✅ 所有代码文件大小适中！")
     
     # 统计信息
-    all_files = find_rust_files(project_root)
+    all_files = find_code_files(project_root)
     total_lines = sum(count_lines(f) for f in all_files)
     avg_lines = total_lines // len(all_files) if all_files else 0
     

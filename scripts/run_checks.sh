@@ -23,14 +23,20 @@ cargo test
 echo "✅ Tests passed"
 echo ""
 
-# 4. File Size Check
+# 4. Lcy Integration Tests
+echo "🔬 Running .lcy integration tests..."
+bash scripts/run_lcy_tests.sh
+echo "✅ Lcy tests passed"
+echo ""
+
+# 5. File Size Check
 echo "📏 Checking file sizes..."
 python3 scripts/check_file_size.py
 # check_file_size.py exists 1 on error, so script will stop if it fails
 echo "✅ File size check passed"
 echo ""
 
-# 5. TODO Check (Informational)
+# 6. TODO Check (Informational)
 echo "📝 Checking TODOs..."
 python3 scripts/check_todos.py
 # check_todos.py always exits 0
