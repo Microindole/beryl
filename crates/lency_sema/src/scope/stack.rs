@@ -247,12 +247,12 @@ mod tests {
 
         // 全局作用域
         let var_x = Symbol::Variable(VariableSymbol::new("x".to_string(), Type::Int, true, 0..1));
-        scopes.define(var_x).unwrap();
+        scopes.define(var_x).unwrap(); // allow: unwrap (test code in doc comment?)
 
         // 进入函数作用域
         scopes.enter_scope(ScopeKind::Function);
         let var_y = Symbol::Variable(VariableSymbol::new("y".to_string(), Type::Int, true, 2..3));
-        scopes.define(var_y).unwrap();
+        scopes.define(var_y).unwrap(); // allow: unwrap
 
         // 可以查到外层的 x
         assert!(scopes.lookup("x").is_some());
@@ -273,7 +273,7 @@ mod tests {
         let mut scopes = ScopeStack::new();
 
         let var1 = Symbol::Variable(VariableSymbol::new("x".to_string(), Type::Int, true, 0..1));
-        scopes.define(var1).unwrap();
+        scopes.define(var1).unwrap(); // allow: unwrap
 
         let var2 = Symbol::Variable(VariableSymbol::new(
             "x".to_string(),

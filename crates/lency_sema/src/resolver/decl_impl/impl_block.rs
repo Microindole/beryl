@@ -35,8 +35,8 @@ pub fn resolve_impl(resolver: &mut Resolver, decl: &mut Decl) {
             return;
         }
 
-        let struct_id = struct_id.unwrap();
-        // Sprint 15: Allow impl for both Struct and Enum (e.g., Result<T,E>)
+        let struct_id = struct_id.unwrap(); // allow: unwrap (logic guarantee)
+                                            // Sprint 15: Allow impl for both Struct and Enum (e.g., Result<T,E>)
         let is_valid_target = matches!(
             resolver.scopes.get_symbol(struct_id),
             Some(Symbol::Struct(_)) | Some(Symbol::Enum(_))

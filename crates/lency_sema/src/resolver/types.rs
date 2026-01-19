@@ -81,10 +81,8 @@ pub fn normalize_type_with_generics(
         Type::Struct(name) => {
             if generics.iter().any(|gp| &gp.name == name) {
                 *ty = Type::GenericParam(name.clone());
-            } else {
-                if let Some(Symbol::GenericParam(_)) = resolver.scopes.lookup(name) {
-                    *ty = Type::GenericParam(name.clone());
-                }
+            } else if let Some(Symbol::GenericParam(_)) = resolver.scopes.lookup(name) {
+                *ty = Type::GenericParam(name.clone());
             }
         }
         _ => {}

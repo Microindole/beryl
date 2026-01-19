@@ -312,7 +312,7 @@ pub fn collect_impl_methods(resolver: &mut Resolver, decl: &Decl) {
 
         // 2. Add to Struct Symbol (Requires mutable access to scopes)
         // Now we can borrow resolver.scopes mutably without conflict
-        let struct_id = struct_id.unwrap();
+        let struct_id = struct_id.unwrap(); // allow: unwrap (logic guarantee)
         if let Some(Symbol::Struct(struct_sym)) = resolver.scopes.get_symbol_mut(struct_id) {
             for (name, func_symbol) in methods_to_add {
                 struct_sym.add_method(name, func_symbol);

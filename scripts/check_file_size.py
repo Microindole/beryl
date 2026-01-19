@@ -15,10 +15,10 @@ from typing import List, Tuple
 MAX_LINES_WARNING = 300   # 警告阈值
 MAX_LINES_ERROR = 500     # 错误阈值
 EXCLUDE_DIRS = {'.git', 'target', 'node_modules', '.gemini'}
-EXTENSIONS = {'.rs', '.py'}
+EXTENSIONS = {'.rs', '.py', '.lcy'}
 
 def count_rust_code_lines(content: str) -> int:
-    """计算 Rust 代码行数，排除注释（包括嵌套块注释）和空行"""
+    """计算 Rust/Lency 代码行数，排除注释（包括嵌套块注释）和空行"""
     # 替换块注释内容为空格，但保留换行符以维持行号/结构
     processed = []
     i = 0
@@ -102,7 +102,7 @@ def count_lines(file_path: Path) -> int:
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
-            if file_path.suffix == '.rs':
+            if file_path.suffix == '.rs' or file_path.suffix == '.lcy':
                 return count_rust_code_lines(content)
             elif file_path.suffix == '.py':
                 return count_python_code_lines(content)

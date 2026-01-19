@@ -1,0 +1,97 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_MIN_STACK: 8388608
+  LLVM_SYS_150_PREFIX: /usr/lib/llvm-15
+
+jobs:
+  # 1. Linux Unit Tests
+  unit-tests:
+    name: Unit Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Unit Tests
+        run: ./scripts/run_checks.sh --test
+
+  # 2. Linux Integration Tests
+  integration-tests:
+    name: Integration Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run .lcy Tests
+        run: ./scripts/run_checks.sh --lcy
+
+  # 3. Release Build
+  build-release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    # Run only on main branch or manually
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build Release
+        run: cargo build --release --verbose
+
+  # 4. MacOS Check
+  macos-check:
+    name: MacOS Test
+    runs-on: macos-latest
+    # Run only on main branch or manually
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    env:
+      LLVM_SYS_150_PREFIX: /opt/homebrew/opt/llvm@15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: brew install llvm@15
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build & Test
+        run: cargo test --verbose
+
+  # 5. Windows Check
+  windows-check:
+    name: Windows Test
+    runs-on: windows-latest
+    continue-on-error: true
+    # Run only on main branch or manually
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    env:
+      LLVM_SYS_150_PREFIX: C:\Program Files\LLVM
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: choco install llvm --version 15.0.0 -y
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build & Test
+        # Skip lcy integration tests on Windows as they depend on bash scripts
+        run: cargo test --verbose

@@ -1,0 +1,52 @@
+name: Lints & Docs
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_MIN_STACK: 8388608
+  LLVM_SYS_150_PREFIX: /usr/lib/llvm-15
+
+jobs:
+  # 1. Linux Static Checks & Lints
+  static-checks:
+    name: Static Checks & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format Check
+        run: ./scripts/run_checks.sh --fmt
+      - name: Clippy Check
+        run: ./scripts/run_checks.sh --clippy
+      - name: File Size & TODOs & Banned Patterns
+        run: |
+           python3 scripts/check_file_size.py
+           python3 scripts/check_todos.py
+           python3 scripts/check_banned_patterns.py
+
+  # 2. Documentation Check
+  doc-check:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Check Docs
+        run: cargo doc --no-deps --document-private-items
