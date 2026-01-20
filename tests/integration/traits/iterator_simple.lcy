@@ -1,0 +1,21 @@
+// @expect-error:FIXME VecIterator codegen 返回类型问题
+import std.core
+import std.collections
+
+int main() {
+    print("Testing Vec Iterator")
+    
+    var numbers = vec![1, 2, 3]
+    var it = vec_iter::<int>(numbers)
+    
+    // next() now returns Option<int>
+    var opt = it.next() 
+    
+    match opt {
+        case Option.Some(v) => print(v),
+        case Option.None => print("End")
+    }
+    
+    print("OK")
+    return 0
+}

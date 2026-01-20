@@ -115,6 +115,16 @@ pub fn resolve_type(resolver: &mut Resolver, ty: &Type, span: &Span) {
                         });
                     }
                 }
+                Some(Symbol::Enum(e)) => {
+                    if e.generic_params.len() != args.len() {
+                        resolver.errors.push(SemanticError::GenericArityMismatch {
+                            name: name.clone(),
+                            expected: e.generic_params.len(),
+                            found: args.len(),
+                            span: span.clone(),
+                        });
+                    }
+                }
                 Some(_) => {
                     resolver.errors.push(SemanticError::NotAGenericType {
                         name: name.clone(),

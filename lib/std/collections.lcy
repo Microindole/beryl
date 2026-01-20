@@ -1,8 +1,39 @@
 // Lency 标准库 - 集合模块 (collections.lcy)
+import std.core
 // 提供集合类型和泛型操作
 //
 // Vec<T> 是编译时内置类型，基本操作由运行时提供。
 // 本文件提供更高级的集合操作和 HashMap。
+
+// ============== Vec 扩展方法 ==============
+
+// Sprint 15: Iterator trait - 统一的遍历接口
+trait Iterator<T> {
+    Option<T> next();
+}
+
+// Vec 的迭代器
+struct VecIterator<T> {
+    Vec<T> data // 重命名避免与 vec 关键字冲突
+    int index
+}
+
+// 为 VecIterator 实现 Iterator trait
+impl<T> Iterator<T> for VecIterator<T> {
+    Option<T> next() {
+        if this.index >= this.data.len() {
+            return Option::<T>.None
+        }
+        var item = this.data.get(this.index)
+        this.index = this.index + 1
+        return Option::<T>.Some(item)
+    }
+}
+
+// 为 Vec 创建迭代器（函数形式）
+VecIterator<T> vec_iter<T>(Vec<T> list) {
+    return VecIterator<T> { data: list, index: 0 }
+}
 
 // ============== Pair 类型 ==============
 

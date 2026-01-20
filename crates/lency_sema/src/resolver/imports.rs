@@ -33,7 +33,6 @@ pub fn resolve_import(
     resolver.visited_modules.insert(path_buf.clone());
 
     // 4. 读取并解析文件
-    println!("Importing module: {:?}", path_buf);
     let source = match std::fs::read_to_string(&path_buf) {
         Ok(s) => s,
         Err(e) => {
@@ -100,7 +99,6 @@ pub fn resolve_import_as(
 
     if !already_loaded {
         resolver.visited_modules.insert(path_buf.clone());
-        println!("Importing module as '{}': {:?}", alias, path_buf);
     }
 
     let source = match std::fs::read_to_string(&path_buf) {

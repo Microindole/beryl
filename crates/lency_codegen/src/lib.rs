@@ -123,7 +123,6 @@ mod tests {
         assert!(result.is_ok(), "Compilation failed: {:?}", result.err());
 
         let ir = result.unwrap();
-        println!("Generated IR:\n{}", ir);
 
         // 检查用户代码被重命名为 __lency_main
         assert!(ir.contains("define i64 @__lency_main()"));
@@ -176,7 +175,6 @@ mod tests {
         assert!(result.is_ok(), "Compilation failed: {:?}", result.err());
 
         let ir = result.unwrap();
-        println!("Generated IR:\n{}", ir);
 
         assert!(ir.contains("define i64 @add(i64"));
         assert!(ir.contains("add i64"));

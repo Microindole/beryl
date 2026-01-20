@@ -1,0 +1,78 @@
+// Lency 标准库 - Iterator 模块
+// Sprint 15: 统一的遍历接口
+
+// ============== Iterator Trait 定义 ==============
+
+// Iterator trait 提供统一的遍历接口
+// 任何实现了 Iterator<T> 的类型都可以通过 next() 方法逐个返回元素
+trait Iterator<T> {
+    // 返回下一个元素，如果没有更多元素则返回 null
+    // 这使得可以通过 while 循环进行遍历：
+    //   var item = iter.next()
+    //   while item != null {
+    //       // 使用 item
+    //       item = iter.next()
+    //   }
+    T? next()
+}
+
+// ============== VecIterator 实现 ==============
+
+// Vec<T> 的迭代器
+// 持有 Vec 的副本和当前索引
+// 注意: 当前实现会复制整个 Vec，在未来有引用系统后会优化
+struct VecIterator<T> {
+    Vec<T> vec
+    int index
+}
+
+// 为 VecIterator 实现 Iterator trait
+impl<T> Iterator<T> for VecIterator<T> {
+    T? next() {
+        // 检查是否还有更多元素
+        if this.index >= this.vec.len() {
+            return null
+        }
+        
+        // 获取当前元素
+        var item = this.vec.get(this.index)
+        
+        // 移动到下一个位置
+        this.index = this.index + 1
+        
+        return item
+    }
+}
+
+// ============== 使用示例 ==============
+//
+// int main() {
+//     var numbers = vec![1, 2, 3, 4, 5]
+//     
+//     // 创建迭代器
+//     var iter = numbers.iter()
+//     
+//     // 遍历所有元素
+//     var item = iter.next()
+//     while item != null {
+//         print(item!!)  // 使用 !! 强制解包
+//         item = iter.next()
+//     }
+//     
+//     return 0
+// }
+//
+// 或者计算总和：
+//
+// int sum_vec(Vec<int> vec) {
+//     var sum = 0
+//     var iter = vec.iter()
+//     var item = iter.next()
+//     
+//     while item != null {
+//         sum = sum + item!!
+//         item = iter.next()
+//     }
+//     
+//     return sum
+// }

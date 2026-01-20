@@ -144,9 +144,16 @@ impl<'a> TypeInferer<'a> {
             MatchPattern::Variant { name, sub_patterns } => {
                 // Check if target_ty is Enum
                 // Could be Type::Struct(enum_name) or Type::Generic(enum_name, args)
+                // Sprint 15: Result<T, E> is a special case - need to create a temporary for "Result"
+                let result_str = "Result".to_string();
                 let (enum_name, generic_args) = match target_ty {
-                    Type::Struct(n) => (n, vec![]),
-                    Type::Generic(n, args) => (n, args.clone()),
+                    Type::Struct(n) => (n.as_str(), vec![]),
+                    Type::Generic(n, args) => (n.as_str(), args.clone()),
+                    // Sprint 15: Treat Result<T, E> as Generic("Result", [T, E])
+                    Type::Result { ok_type, err_type } => (
+                        result_str.as_str(),
+                        vec![(**ok_type).clone(), (**err_type).clone()],
+                    ),
                     _ => {
                         return Err(SemanticError::TypeMismatch {
                             expected: "Enum type".to_string(),
@@ -174,14 +181,14 @@ impl<'a> TypeInferer<'a> {
                             (e.generic_params.clone(), vec![field_type])
                         } else {
                             return Err(SemanticError::UndefinedField {
-                                class: enum_name.clone(),
+                                class: enum_name.to_string(),
                                 field: name.clone(),
                                 span: span.clone(),
                             });
                         }
                     } else {
                         return Err(SemanticError::UndefinedType {
-                            name: enum_name.clone(),
+                            name: enum_name.to_string(),
                             span: span.clone(),
                         });
                     };
@@ -227,6 +234,16 @@ impl<'a> TypeInferer<'a> {
         args: &[Type],
     ) -> Type {
         match ty {
+            // Sprint 15: Handle Type::GenericParam for Result<T,E> substitution
+            Type::GenericParam(name) => {
+                // Check if name matches any param
+                for (i, param) in params.iter().enumerate() {
+                    if *name == param.name && i < args.len() {
+                        return args[i].clone();
+                    }
+                }
+                ty.clone()
+            }
             Type::Struct(name) => {
                 // Check if name matches any param
                 for (i, param) in params.iter().enumerate() {

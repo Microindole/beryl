@@ -1,0 +1,51 @@
+// @expect-error:FIXME Option<T>与null比较需要智能类型系统支持
+// Sprint 15: Iterator trait 基础测试
+// 测试 Vec.iter() 和 Iterator.next() 方法
+import std.collections;
+
+int main() {
+    print("Testing Iterator...")
+    
+    // 测试1: 基础遍历
+    var numbers = vec![1, 2, 3, 4, 5]
+    var iter = vec_iter::<int>(numbers)
+    
+    var sum = 0
+    var item = iter.next()
+    while item != null {
+        // 智能类型转换：item 在 != null 检查后自动转换为非空类型
+        sum = sum + item
+        item = iter.next()
+    }
+    
+    print("Sum: ")
+    print(sum)  // 应该是 15
+    
+    // 测试2: 空 Vec
+    var empty = vec![]
+    var iter2 = vec_iter::<int>(empty)
+    var first = iter2.next()
+    
+    if first == null {
+        print("Empty iterator works")
+    }
+    
+    // 测试3: 字符串 Vec
+    var words = vec!["hello", "world", "lency"]
+    var iter3 = vec_iter::<string>(words)
+    
+    var count = 0
+    var word = iter3.next()
+    while word != null {
+        // 智能类型转换
+        print(word)
+        count = count + 1
+        word = iter3.next()
+    }
+    
+    print("Word count: ")
+    print(count)  // 应该是 3
+    
+    print("Iterator tests passed!")
+    return 0
+}

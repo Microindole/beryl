@@ -52,9 +52,13 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
                 resolver.resolve_expr(elem);
             }
         }
-        ExprKind::GenericInstantiation { base, args: _ } => {
+        ExprKind::GenericInstantiation { base, args } => {
             // Resolve the base expression (the function being called)
             resolver.resolve_expr(base);
+            // Normalize type arguments (convert Struct("T") -> GenericParam("T") if in generic scope)
+            for ty in args.iter_mut() {
+                resolver.normalize_type(ty);
+            }
         }
         ExprKind::Literal(_) => {
             // 字面量不需要解析

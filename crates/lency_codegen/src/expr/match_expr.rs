@@ -367,6 +367,8 @@ fn gen_pattern_check<'ctx>(
             let enum_name = match subject_type {
                 Type::Struct(n) => n,
                 Type::Generic(n, _) => n, // Generic Enum
+                // Sprint 15: Treat Result<T, E> as enum "Result"
+                Type::Result { .. } => "Result",
                 _ => return Err(CodegenError::TypeMismatch),
             };
 
@@ -384,7 +386,7 @@ fn gen_pattern_check<'ctx>(
             } else {
                 ctx.enum_variants
                     .get(enum_name)
-                    .ok_or(CodegenError::UndefinedStructType(enum_name.clone()))?
+                    .ok_or(CodegenError::UndefinedStructType(enum_name.to_string()))?
                     .clone()
             };
 

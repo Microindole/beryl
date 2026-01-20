@@ -8,6 +8,12 @@ struct Error {
     string message
 }
 
+// Option 类型 - 用于表示可能存在的值
+enum Option<T> {
+    Some(T),
+    None
+}
+
 // ============== 核心 Trait ==============
 
 // Hash - 可哈希的类型
