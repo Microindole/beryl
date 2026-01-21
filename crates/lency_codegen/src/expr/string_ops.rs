@@ -332,3 +332,44 @@ pub fn gen_substr<'ctx>(
         ty: Type::String,
     })
 }
+
+/// 生成 char_to_string(int) -> string
+/// 将字符码 (ASCII/Unicode) 转换为单字符字符串
+pub fn gen_char_to_string<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    arg: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let arg_val = generate_expr(ctx, locals, arg)?;
+    let char_code = arg_val.value.into_int_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+    let i64_type = ctx.context.i64_type();
+
+    // 声明 C runtime 函数: char* lency_char_to_string(int64_t char_code)
+    let char_to_string_fn = ctx
+        .module
+        .get_function("lency_char_to_string")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(&[i64_type.into()], false);
+            ctx.module
+                .add_function("lency_char_to_string", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(char_to_string_fn, &[char_code.into()], "char_str")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "lency_char_to_string returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
+}

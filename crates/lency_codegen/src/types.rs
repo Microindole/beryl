@@ -87,7 +87,7 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                 };
                 let mangled_name = lency_monomorph::mangling::mangle_type(&result_ty);
 
-                // FIXME: 首先检查是否已经在 context.struct_types 中注册
+                // 首先检查是否已经在 context.struct_types 中注册
                 // 如果已注册，直接返回已有的类型，避免重复创建导致类型不匹配
                 if let Some(existing_struct) = context.struct_types.get(&mangled_name) {
                     return Ok(existing_struct

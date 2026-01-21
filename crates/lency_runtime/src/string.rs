@@ -208,6 +208,37 @@ pub unsafe extern "C" fn lency_string_substr(
     result
 }
 
+/// 将字符码转换为单字符字符串
+/// 返回新分配的字符串
+///
+/// # Safety
+/// 调用者负责释放返回的内存
+#[no_mangle]
+pub unsafe extern "C" fn lency_char_to_string(char_code: i64) -> *mut c_char {
+    // 分配2字节: 1个字符 + null terminator
+    let result = unsafe { libc::malloc(2) as *mut c_char };
+    if result.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    // 简单处理: 只支持 ASCII (0-127)
+    // 对于 Unicode，需要更复杂的 UTF-8 编码
+    if (0..=127).contains(&char_code) {
+        unsafe {
+            *result = char_code as c_char;
+            *result.add(1) = 0; // null terminator
+        }
+    } else {
+        // 非 ASCII: 返回空字符串或 '?'
+        unsafe {
+            *result = b'?' as c_char;
+            *result.add(1) = 0;
+        }
+    }
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

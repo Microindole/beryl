@@ -104,11 +104,22 @@ where
                 .then_ignore(just(Token::Comma))
                 .then(expr.clone())
                 .then_ignore(just(Token::Comma))
-                .then(expr)
+                .then(expr.clone())
                 .delimited_by(just(Token::LParen), just(Token::RParen)),
         )
         .map_with_span(|((str_arg, start), len), span| Expr {
             kind: ExprKind::Substr(Box::new(str_arg), Box::new(start), Box::new(len)),
+            span,
+        });
+
+    // char_to_string(65) -> "A"
+    let char_to_string_expr = just(Token::CharToString)
+        .ignore_then(
+            expr.clone()
+                .delimited_by(just(Token::LParen), just(Token::RParen)),
+        )
+        .map_with_span(|arg, span| Expr {
+            kind: ExprKind::CharToString(Box::new(arg)),
             span,
         });
 
@@ -121,4 +132,5 @@ where
         .or(split_expr)
         .or(join_expr)
         .or(substr_expr)
+        .or(char_to_string_expr)
 }

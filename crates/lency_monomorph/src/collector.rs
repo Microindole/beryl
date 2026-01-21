@@ -260,6 +260,7 @@ impl Collector {
                 self.collect_expr(start);
                 self.collect_expr(len);
             }
+            ExprKind::CharToString(arg) => self.collect_expr(arg),
         }
     }
 

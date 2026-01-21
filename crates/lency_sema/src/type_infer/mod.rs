@@ -411,6 +411,18 @@ impl<'a> TypeInferer<'a> {
                 }
                 Ok(Type::String)
             }
+            ExprKind::CharToString(arg) => {
+                // char_to_string(int) -> string
+                let arg_ty = self.infer(arg)?;
+                if arg_ty != Type::Int {
+                    return Err(SemanticError::TypeMismatch {
+                        expected: "int".to_string(),
+                        found: arg_ty.to_string(),
+                        span: arg.span.clone(),
+                    });
+                }
+                Ok(Type::String)
+            }
         }
     }
 }

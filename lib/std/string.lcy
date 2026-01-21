@@ -164,17 +164,16 @@ string to_upper(string s) {
     var i = 0
     while i < len(s) {
         var c = s[i]
-        // a-z: 97-122
+        // a-z: 97-122 -> A-Z: 65-90
         if c >= 97 {
             if c <= 122 {
                 c = c - 32
             }
         }
-        // 需要 char_to_string intrinsic
-        // 暂时无法实现，返回原字符串
+        result = result + char_to_string(c)
         i = i + 1
     }
-    return s  // FIXME: 需要 char_to_string intrinsic 支持
+    return result
 }
 
 // 将字符串转为小写 (仅 ASCII)
@@ -183,16 +182,16 @@ string to_lower(string s) {
     var i = 0
     while i < len(s) {
         var c = s[i]
-        // A-Z: 65-90
+        // A-Z: 65-90 -> a-z: 97-122
         if c >= 65 {
             if c <= 90 {
                 c = c + 32
             }
         }
-        // 需要 char_to_string intrinsic
+        result = result + char_to_string(c)
         i = i + 1
     }
-    return s  // FIXME: 需要 char_to_string intrinsic 支持
+    return result
 }
 
 // 重复字符串 n 次
@@ -231,5 +230,13 @@ string pad_right(string s, int total_len, string pad) {
     return s + substr(padding, 0, pad_len)
 }
 
-// FIXME: reverse() 需要 char_to_string intrinsic
-// 目前无法实现字符串反转，因为无法从 int 转回 char
+// 反转字符串
+string reverse(string s) {
+    var result = ""
+    var i = len(s) - 1
+    while i >= 0 {
+        result = result + char_to_string(s[i])
+        i = i - 1
+    }
+    return result
+}

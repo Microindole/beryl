@@ -108,6 +108,8 @@ pub enum ExprKind {
     Join(Box<Expr>, Box<Expr>),
     // substr("hello", 0, 2) -> "he"
     Substr(Box<Expr>, Box<Expr>, Box<Expr>),
+    // char_to_string(65) -> "A"
+    CharToString(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

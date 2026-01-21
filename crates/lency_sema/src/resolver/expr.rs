@@ -151,6 +151,9 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
             resolver.resolve_expr(start);
             resolver.resolve_expr(len);
         }
+        ExprKind::CharToString(arg) => {
+            resolver.resolve_expr(arg);
+        }
     }
 }
 

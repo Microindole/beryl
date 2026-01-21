@@ -421,6 +421,9 @@ impl Specializer {
                 Box::new(self.specialize_expr(start)),
                 Box::new(self.specialize_expr(len)),
             ),
+            ExprKind::CharToString(arg) => {
+                ExprKind::CharToString(Box::new(self.specialize_expr(arg)))
+            }
         };
 
         Expr {

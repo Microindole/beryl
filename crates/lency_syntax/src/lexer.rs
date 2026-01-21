@@ -46,6 +46,8 @@ pub enum Token {
     Join,
     #[token("substr")]
     Substr,
+    #[token("char_to_string")]
+    CharToString,
     #[token("struct")]
     Struct,
     #[token("impl")]
