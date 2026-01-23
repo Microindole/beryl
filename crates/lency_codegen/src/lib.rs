@@ -215,7 +215,6 @@ mod tests {
         assert!(result.is_ok(), "Compilation failed: {:?}", result.err());
 
         let ir = result.unwrap();
-        println!("Generated IR:\n{}", ir);
 
         assert!(ir.contains("alloca i64"));
         assert!(ir.contains("store i64 10"));

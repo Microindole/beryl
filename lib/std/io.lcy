@@ -30,7 +30,7 @@ void println_bool(bool b) {
 // ============== 文件操作 ==============
 
 // 读取文件的所有行
-// FIXME: Result 返回类型需要修复
+// TODO: 实现 read_lines 函数（需要 Result 支持）
 // Vec<string>! read_lines(string path) {
 //     var content = read_file(path)?
 //     var lines = split(content, "\n")
@@ -38,7 +38,7 @@ void println_bool(bool b) {
 // }
 
 // 写入多行到文件
-// FIXME: void! 返回类型需要修复
+// TODO: 实现 write_lines 函数（需要 Result 支持）
 // void! write_lines(string path, Vec<string> lines) {
 //     var content = join(lines, "\n")
 //     write_file(path, content)?
@@ -46,7 +46,7 @@ void println_bool(bool b) {
 // }
 
 // 追加内容到文件
-// FIXME: 需要 Result.is_ok() 方法
+// TODO: 实现 append_file 函数（需要 Result 支持）
 // void! append_file(string path, string content) {
 //     var existing = read_file(path)
 //     var new_content = ""

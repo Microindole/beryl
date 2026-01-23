@@ -233,8 +233,8 @@ string bool_to_string(bool b) {
 
 // 字符串解析为 int (简单版本，失败返回 0)
 int parse_int_or_default(string s, int default_val) {
-    // FIXME: 需要完整的 Result 支持
-    // 目前简单返回默认值，因为 FFI 返回的 is_ok 指针难以在纯 Lency 中处理
+    // TODO: 实现完整的 Result<int, Error> parse_int_strict()
+    // 目前简单返回默认值
     return default_val
 }
 

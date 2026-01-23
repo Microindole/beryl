@@ -134,7 +134,7 @@ T last<T>(Vec<T> v) {
 // 注意：extern 函数直接在代码生成器中处理
 // HashMap 方法通过 hashmap_int_* 函数名来识别
 
-// FIXME: HashMapIntInt 包装暂时不可用
+// TODO: HashMapIntInt 包装暂时不可用
 // 原因：返回 struct 的函数在 codegen 中有问题
 // 请直接使用 hashmap_int_* 函数：
 //   var map = hashmap_int_new()

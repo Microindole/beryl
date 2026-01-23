@@ -48,6 +48,8 @@ pub enum Token {
     Substr,
     #[token("char_to_string")]
     CharToString,
+    #[token("panic")]
+    Panic,
     #[token("struct")]
     Struct,
     #[token("impl")]

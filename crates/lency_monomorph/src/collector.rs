@@ -261,6 +261,7 @@ impl Collector {
                 self.collect_expr(len);
             }
             ExprKind::CharToString(arg) => self.collect_expr(arg),
+            ExprKind::Panic(arg) => self.collect_expr(arg),
         }
     }
 

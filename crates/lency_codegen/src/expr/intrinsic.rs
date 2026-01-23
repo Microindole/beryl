@@ -279,3 +279,40 @@ fn gen_print_str_literal<'ctx>(ctx: &CodegenContext<'ctx>, s: &str) -> CodegenRe
         .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
     Ok(())
 }
+
+/// 生成 panic 内建函数调用
+/// panic(string message) -> void (never returns)
+pub fn gen_panic<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, lency_syntax::ast::Type)>,
+    arg: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    let arg_val = generate_expr(ctx, locals, arg)?;
+    let msg_ptr = arg_val.value.into_pointer_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+
+    // 声明 C runtime 函数: void lency_panic(char* message)
+    let panic_fn = ctx.module.get_function("lency_panic").unwrap_or_else(|| {
+        let fn_type = ctx
+            .context
+            .void_type()
+            .fn_type(&[i8_ptr_type.into()], false);
+        ctx.module.add_function("lency_panic", fn_type, None)
+    });
+
+    ctx.builder
+        .build_call(panic_fn, &[msg_ptr.into()], "panic_call")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+    // panic 永远不返回，添加 unreachable 指令
+    ctx.builder
+        .build_unreachable()
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+    // 返回 void（实际上不会执行到）
+    Ok(CodegenValue {
+        value: ctx.context.i64_type().const_int(0, false).into(),
+        ty: Type::Void,
+    })
+}

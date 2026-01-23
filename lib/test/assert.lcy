@@ -6,10 +6,7 @@
 // 断言条件为真
 void assert(bool condition, string message) {
     if !condition {
-        print("Assertion failed: ")
-        print(message)
-        print("\n")
-        // FIXME: 无法终止程序，需要 panic 支持
+        panic("Assertion failed: " + message)
     }
 }
 

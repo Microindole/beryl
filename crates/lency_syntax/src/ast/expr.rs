@@ -110,6 +110,8 @@ pub enum ExprKind {
     Substr(Box<Expr>, Box<Expr>, Box<Expr>),
     // char_to_string(65) -> "A"
     CharToString(Box<Expr>),
+    // panic("error message")
+    Panic(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -123,6 +123,17 @@ where
             span,
         });
 
+    // panic("error message")
+    let panic_expr = just(Token::Panic)
+        .ignore_then(
+            expr.clone()
+                .delimited_by(just(Token::LParen), just(Token::RParen)),
+        )
+        .map_with_span(|arg, span| Expr {
+            kind: ExprKind::Panic(Box::new(arg)),
+            span,
+        });
+
     // 组合所有内置函数解析器
     print_expr
         .or(read_file_expr)
@@ -133,4 +144,5 @@ where
         .or(join_expr)
         .or(substr_expr)
         .or(char_to_string_expr)
+        .or(panic_expr)
 }

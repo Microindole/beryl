@@ -423,6 +423,18 @@ impl<'a> TypeInferer<'a> {
                 }
                 Ok(Type::String)
             }
+            ExprKind::Panic(arg) => {
+                // panic(string) -> void (never returns)
+                let arg_ty = self.infer(arg)?;
+                if arg_ty != Type::String {
+                    return Err(SemanticError::TypeMismatch {
+                        expected: "string".to_string(),
+                        found: arg_ty.to_string(),
+                        span: arg.span.clone(),
+                    });
+                }
+                Ok(Type::Void)
+            }
         }
     }
 }

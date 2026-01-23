@@ -154,6 +154,9 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
         ExprKind::CharToString(arg) => {
             resolver.resolve_expr(arg);
         }
+        ExprKind::Panic(arg) => {
+            resolver.resolve_expr(arg);
+        }
     }
 }
 

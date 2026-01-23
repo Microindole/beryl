@@ -8,6 +8,27 @@ pub mod hashmap_string;
 pub mod string;
 use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
+
+// ============== Panic Runtime ==============
+
+/// Panic 函数 - 打印错误并退出程序
+///
+/// # Safety
+/// `msg` must be a valid null-terminated C string
+#[no_mangle]
+pub unsafe extern "C" fn lency_panic(msg: *const c_char) {
+    if msg.is_null() {
+        eprintln!("panic: (null message)");
+    } else {
+        let c_str = unsafe { CStr::from_ptr(msg) };
+        match c_str.to_str() {
+            Ok(s) => eprintln!("panic: {}", s),
+            Err(_) => eprintln!("panic: (invalid UTF-8)"),
+        }
+    }
+    std::process::exit(1);
+}
 
 /// Lency 动态数组
 #[repr(C)]

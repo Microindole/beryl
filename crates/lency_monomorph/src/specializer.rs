@@ -424,6 +424,7 @@ impl Specializer {
             ExprKind::CharToString(arg) => {
                 ExprKind::CharToString(Box::new(self.specialize_expr(arg)))
             }
+            ExprKind::Panic(arg) => ExprKind::Panic(Box::new(self.specialize_expr(arg))),
         };
 
         Expr {
