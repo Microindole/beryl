@@ -37,12 +37,32 @@ impl<'ctx, 'a> ModuleGenerator<'ctx, 'a> {
 
         // 4. Sprint 15: 预注册 intrinsic 函数使用的 Result 类型 (read_file 依赖 Error struct)
         // 此时 Error struct 已经注册完成
-        let read_file_result = Type::Result {
+        // 预注册常见的 Result 类型变体
+        let error_struct = Type::Struct("Error".to_string());
+
+        // Result<string, Error> - 用于 read_file
+        self.register_result_type(&Type::Result {
             ok_type: Box::new(Type::String),
-            err_type: Box::new(Type::Struct("Error".to_string())),
-        };
-        self.register_result_type(&read_file_result)?;
-        // write_file 返回 Result<void, Error> 会被 register_result_type 自动注册
+            err_type: Box::new(error_struct.clone()),
+        })?;
+
+        // Result<int, Error> - 用于可能失败的 int 操作
+        self.register_result_type(&Type::Result {
+            ok_type: Box::new(Type::Int),
+            err_type: Box::new(error_struct.clone()),
+        })?;
+
+        // Result<float, Error> - 用于可能失败的 float 操作
+        self.register_result_type(&Type::Result {
+            ok_type: Box::new(Type::Float),
+            err_type: Box::new(error_struct.clone()),
+        })?;
+
+        // Result<bool, Error> - 用于可能失败的 bool 操作
+        self.register_result_type(&Type::Result {
+            ok_type: Box::new(Type::Bool),
+            err_type: Box::new(error_struct.clone()),
+        })?;
 
         // 5. 第0.6遍：定义 Enum Body (必须在 Struct Body 之后，以便计算大小)
         self.define_enum_bodies(program)?;

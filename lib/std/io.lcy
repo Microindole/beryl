@@ -29,29 +29,21 @@ void println_bool(bool b) {
 
 // ============== 文件操作 ==============
 
-// 读取文件的所有行
-// TODO: 实现 read_lines 函数（需要 Result 支持）
-// Vec<string>! read_lines(string path) {
-//     var content = read_file(path)?
-//     var lines = split(content, "\n")
-//     return Ok(lines)
+// TODO: read_lines/write_lines/append_file 需要 Result 单态化支持
+// 问题：read_file 返回 Result<string, Error>，但 Result 方法当前无法正确单态化
+// 临时方案：请直接使用 read_file + split 组合
+
+// Vec<string> read_lines(string path) {
+//     return split(read_file(path), "\n")
 // }
 
-// 写入多行到文件
-// TODO: 实现 write_lines 函数（需要 Result 支持）
-// void! write_lines(string path, Vec<string> lines) {
-//     var content = join(lines, "\n")
-//     write_file(path, content)?
-//     return Ok(0)
+// void write_lines(string path, Vec<string> lines) {
+//     write_file(path, join(lines, "\n"))
 // }
 
-// 追加内容到文件
-// TODO: 实现 append_file 函数（需要 Result 支持）
-// void! append_file(string path, string content) {
+// void append_file(string path, string content) {
 //     var existing = read_file(path)
-//     var new_content = ""
-//     write_file(path, content)?
-//     return Ok(0)
+//     write_file(path, existing + content)
 // }
 
 // ============== 路径操作 ==============

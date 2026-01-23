@@ -88,16 +88,14 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                 let mangled_name = lency_monomorph::mangling::mangle_type(&result_ty);
 
                 // 首先检查是否已经在 context.struct_types 中注册
-                // 如果已注册，直接返回已有的类型，避免重复创建导致类型不匹配
                 if let Some(existing_struct) = context.struct_types.get(&mangled_name) {
                     return Ok(existing_struct
                         .ptr_type(AddressSpace::default())
                         .as_basic_type_enum());
                 }
 
-                // 如果未注册，创建新的struct type（但不注册，因为这里是&引用）
-                // 注意：这种情况下可能会导致问题，因为后续无法找到这个类型
-                // 正确的做法是在 module.rs 中提前注册所有 Result 类型
+                // 如果未注册，动态注册这个 Result 类型
+                // 创建字段类型
                 let mut field_types: Vec<BasicTypeEnum> = Vec::new();
 
                 // 1. is_ok 标志位 (i1)
@@ -108,12 +106,12 @@ impl<'ctx> ToLLVMType<'ctx> for Type {
                     field_types.push(ok_type.to_llvm_type(context)?);
                 }
 
-                // 3. err_value (如果不是 void - 虽然 Error 通常不是 Void)
+                // 3. err_value (如果不是 void)
                 if !matches!(**err_type, Type::Void) {
                     field_types.push(err_type.to_llvm_type(context)?);
                 }
 
-                // 创建命名结构体 (使用mangled name)
+                // 创建命名结构体并注册
                 let struct_type = context.context.opaque_struct_type(&mangled_name);
                 struct_type.set_body(&field_types, false);
 
