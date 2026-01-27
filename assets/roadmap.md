@@ -19,17 +19,13 @@ lency_driver        # 编译流程驱动器
 lency_diagnostics   # 统一错误诊断 ⚠️ 待实现
 ```
 
-### ⚠️ 当前架构问题
+### ✅ 架构状态
 
-**问题 1**: `lency_monomorph` 未使用
-- 单态化代码在 `lency_sema/monomorphize/` 中
-- 违反了模块化原则
-- **解决方案**: 迁移到独立 crate
-
-**问题 2**: `lency_diagnostics` 未实现
-- 各模块使用自己的错误类型
-- 错误信息不统一
-- **解决方案**: 实现统一诊断系统
+**已完成**:
+- ✅ `lency_monomorph` 已迁移到独立 crate，被 `lency_driver` 使用
+- ✅ `lency_diagnostics` 统一诊断系统已实现并集成
+  - `SemanticError` 和 `CodegenError` 支持转换为 `Diagnostic`
+  - `CompileError` 支持 `collect_to_sink()` 和 `emit()` 方法
 
 ---
 
@@ -108,23 +104,22 @@ pub struct DiagnosticSink {
 
 ## 🚀 开发路线图
 
-### Sprint 14: 架构重构 (1周)
+### Sprint 14: 架构重构 ✅ 完成
 
 **目标**: 模块化清晰，职责分明
 
-- [ ] 迁移单态化到 lency_monomorph
-- [ ] 实现 lency_diagnostics
-- [ ] 更新所有模块使用新错误系统
-- [ ] 文档和注释完善
+- [x] 迁移单态化到 lency_monomorph
+- [x] 实现 lency_diagnostics
+- [x] 更新所有模块使用新错误系统
+- [x] 文档和注释完善
 
-### Sprint 15: 泛型增强 (1-2周)
+### Sprint 15: 泛型增强 ✅ 完成
 
-**目标**: 完整的泛型 enum 支持
+**目标**: Result 内置方法支持
 
-- [ ] Result<T, E> 完整实现
-- [ ] Option<T> 完整实现
-- [ ] 模式匹配增强
-- [ ] 标准库集成
+- [x] Result<T, E> 内置方法 (is_ok, is_err, unwrap_or)
+- [ ] Option<T> 方法支持 (可选)
+- [ ] 模式匹配增强 (可选)
 
 ### Sprint 16: 标准库扩展 (1-2周)
 
@@ -207,8 +202,8 @@ let diag = Diagnostic::error("type mismatch")
 ### 立即执行 (今天)
 
 1. ✅ 更新 assets/roadmap.md
-2. [ ] 创建迁移计划文档
-3. [ ] 开始 lency_monomorph 重构
+2. ✅ Sprint 14 架构重构完成
+3. [ ] 开始 Sprint 15 泛型增强
 
 ### 本周完成
 

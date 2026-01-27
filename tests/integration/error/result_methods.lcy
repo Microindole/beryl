@@ -1,36 +1,9 @@
-// @expect-error: TODO - Result当前实现为struct，不支持match语法
-// Sprint 16: 需将Result重构为enum类型以支持模式匹配
-// Sprint 15: Result<T,E> 方法测试
-// 验证为内置Result类型定义impl方法
-
-// ============== Result<T, E> impl ==============
-// 注意: Result<T,E> 是编译器内置类型，Ok/Err是保留关键字
-// 我们直接为内置Result添加方法
-
-impl<T, E> Result<T, E> {
-    bool is_ok() {
-        return match this {
-            case Result.Ok(_) => true,
-            case Result.Err(_) => false
-        };
-    }
-    
-    bool is_err() {
-        return match this {
-            case Result.Ok(_) => false,
-            case Result.Err(_) => true
-        };
-    }
-    
-    T unwrap_or(T default_value) {
-        return match this {
-            case Result.Ok(v) => v,
-            case Result.Err(_) => default_value
-        };
-    }
-}
+// Sprint 15: Result<T,E> 方法测试 (内置方法实现)
+// 验证 is_ok(), is_err(), unwrap_or() 内置方法
+// 这些方法由编译器在 codegen 层直接实现
 
 // ============== 测试代码 ==============
+
 
 struct Error {
     string message

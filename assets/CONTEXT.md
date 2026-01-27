@@ -36,6 +36,7 @@ cargo build --release     # 构建编译器
 ## 当前状态
 - ✅ 基础语法、泛型、Null安全、Enum、Vec、HashMap、Iterator、String intrinsics
 - ✅ VS Code 语法高亮支持 (.lcy)
+- ✅ 统一诊断系统 (lency_diagnostics)
 - ⚠️ Result 方法（需实现）、panic 机制（未实现）
 
 ---

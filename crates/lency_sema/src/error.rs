@@ -228,4 +228,15 @@ impl SemanticError {
             Self::PatternNotExhaustive { span, .. } => span,
         }
     }
+
+    /// 转换为统一诊断格式
+    pub fn to_diagnostic(&self) -> lency_diagnostics::Diagnostic {
+        lency_diagnostics::Diagnostic::error(self.to_string()).span(self.span().clone())
+    }
+}
+
+impl From<SemanticError> for lency_diagnostics::Diagnostic {
+    fn from(err: SemanticError) -> Self {
+        err.to_diagnostic()
+    }
 }

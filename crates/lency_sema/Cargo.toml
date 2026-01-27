@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 lency_syntax = { workspace = true }
+lency_diagnostics = { workspace = true }
 thiserror = { workspace = true }

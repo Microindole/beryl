@@ -50,3 +50,16 @@ pub enum CodegenError {
 
 /// 代码生成结果类型
 pub type CodegenResult<T> = Result<T, CodegenError>;
+
+impl CodegenError {
+    /// 转换为统一诊断格式
+    pub fn to_diagnostic(&self) -> lency_diagnostics::Diagnostic {
+        lency_diagnostics::Diagnostic::error(self.to_string())
+    }
+}
+
+impl From<CodegenError> for lency_diagnostics::Diagnostic {
+    fn from(err: CodegenError) -> Self {
+        err.to_diagnostic()
+    }
+}

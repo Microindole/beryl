@@ -1,8 +1,9 @@
 //! Compilation Errors
 //!
-//! 编译器驱动层的错误类型
+//! 编译器驱动层的错误类型，集成统一诊断系统
 
 use lency_codegen::CodegenError;
+use lency_diagnostics::{Diagnostic, DiagnosticSink, Emitter};
 use lency_sema::SemanticError;
 use thiserror::Error;
 
@@ -28,6 +29,40 @@ pub enum CompileError {
     /// IO 错误
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
+}
+
+impl CompileError {
+    /// 转换为诊断列表并收集到 DiagnosticSink
+    pub fn collect_to_sink(&self, sink: &mut DiagnosticSink) {
+        match self {
+            CompileError::LexError(msg) => {
+                sink.add(Diagnostic::error(format!("Lexical error: {}", msg)));
+            }
+            CompileError::ParseError(msg) => {
+                sink.add(Diagnostic::error(format!("Parse error: {}", msg)));
+            }
+            CompileError::SemanticErrors(errors) => {
+                for err in errors {
+                    sink.add(err.to_diagnostic());
+                }
+            }
+            CompileError::CodegenError(err) => {
+                sink.add(err.to_diagnostic());
+            }
+            CompileError::IoError(err) => {
+                sink.add(Diagnostic::error(format!("IO error: {}", err)));
+            }
+        }
+    }
+
+    /// 使用统一诊断系统输出错误
+    pub fn emit(&self) {
+        let mut sink = DiagnosticSink::new();
+        self.collect_to_sink(&mut sink);
+
+        let emitter = Emitter::new();
+        emitter.emit_all(sink.diagnostics());
+    }
 }
 
 /// 格式化语义错误列表

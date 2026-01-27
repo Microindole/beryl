@@ -145,7 +145,15 @@ impl<'a> TypeInferer<'a> {
                     Type::String => Some("string".to_string()),
                     Type::Float => Some("float".to_string()),
                     // Sprint 15: Support Result<T,E> method calls
-                    Type::Result { .. } => Some("Result".to_string()),
+                    // 内置方法: is_ok, is_err, unwrap_or
+                    Type::Result { ok_type, .. } => {
+                        // 检查是否为内置方法
+                        match name.as_str() {
+                            "is_ok" | "is_err" => return Ok(Type::Bool),
+                            "unwrap_or" => return Ok((**ok_type).clone()),
+                            _ => Some("Result".to_string()),
+                        }
+                    }
                     // 泛型实例化类型：使用基础名称查找方法
                     Type::Generic(base_name, _) => Some(base_name.clone()),
                     _ => None,
