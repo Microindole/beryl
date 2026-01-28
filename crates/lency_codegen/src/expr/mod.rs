@@ -13,6 +13,7 @@ mod intrinsic;
 mod literal;
 mod match_expr;
 mod method_call;
+pub mod option;
 mod result;
 mod string_ops;
 mod struct_access;

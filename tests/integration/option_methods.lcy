@@ -1,0 +1,79 @@
+// Sprint 15: Option<T> 方法测试
+// 验证 is_some(), is_none(), unwrap_or() 内置方法
+
+enum Option<T> {
+    Some(T),
+    None
+}
+
+impl<T> Option<T> {
+    bool is_some() { return false }
+    bool is_none() { return false }
+    T unwrap_or(T def) { return def }
+}
+
+int main() {
+    // ============== Integer Option Test =============
+    
+    var some_int = Option::<int>.Some(10)
+    var none_int = Option::<int>.None
+    
+    // is_some
+    if some_int.is_some() {
+        print("Test 1: OK (Some is some)\n")
+    } else {
+        print("Test 1: FAIL\n")
+    }
+    
+    if none_int.is_some() {
+        print("Test 2: FAIL\n")
+    } else {
+        print("Test 2: OK (None is not some)\n")
+    }
+    
+    // is_none
+    if some_int.is_none() {
+        print("Test 3: FAIL\n")
+    } else {
+        print("Test 3: OK (Some is not none)\n")
+    }
+    
+    if none_int.is_none() {
+        print("Test 4: OK (None is none)\n")
+    } else {
+        print("Test 4: FAIL\n")
+    }
+    
+    // unwrap_or
+    var v1 = some_int.unwrap_or(999)
+    print("Test 5: ")
+    print(v1)
+    print(" (expected: 10)\n")
+    
+    var v2 = none_int.unwrap_or(999)
+    print("Test 6: ")
+    print(v2)
+    print(" (expected: 999)\n")
+    
+    // ============== Boolean Option Test =============
+    
+    var some_bool = Option::<bool>.Some(true)
+    var none_bool = Option::<bool>.None
+    
+    if some_bool.is_some() {
+        print("Test 7: OK\n")
+    }
+    
+    var vb = some_bool.unwrap_or(false)
+    if vb {
+        print("Test 8: OK (true)\n")
+    }
+    
+    var vb2 = none_bool.unwrap_or(true) 
+    if vb2 {
+         print("Test 9: OK (true default)\n")
+    }
+
+    print("\n=== All Option method tests completed ===\n")
+    return 0
+}
