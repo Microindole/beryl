@@ -1,11 +1,12 @@
 # Lency 项目核心上下文 (Agent Root)
 
 > [!IMPORTANT]
-> **Agent 技能加载协议 (Skill Loading Protocol)**：
-> 在开始任何工作前，请根据你的任务类型加载并遵循 `prompt/skills/` 下对应的技能文件：
-> - **整体架构/准则/评审**：阅读 `prompt/skills/architect/SKILL.md`
-> - **进度更新/Sprint 管理**：阅读 `prompt/skills/management/SKILL.md`
-> - **代码开发/调试/后端**：阅读 `prompt/skills/compiler/SKILL.md`
+> **外科手术式技能加载协议 (Surgical Skill Loading Protocol)**：
+> 为保持注意力高度集中并节省 Token，你必须依任务类型**仅加载**对应的子技能文件：
+> - **架构决策/规范评审**：仅阅读 `prompt/skills/architect/SKILL.md`
+> - **流水线管理/状态同步**：仅阅读 `prompt/skills/management/SKILL.md`
+> - **编译器开发/故障排查**：首先阅读 `prompt/skills/compiler/SKILL.md` 的路由图，然后**仅加载**相关的 Crate 指南（如 `crates/sema.md`）。
+> - **生态/工具链/LSP**：仅阅读 `prompt/skills/tooling/SKILL.md`
 
 ## 项目概述
 **Lency** 是一门静态类型、编译型语言，基于 LLVM 实现。设计哲学：「简洁、规范、清晰」，无“黑魔法”。
@@ -19,11 +20,12 @@
 ```bash
 crates/          # Rust 编译器组件 (Syntax, Sema, Codegen, Runtime)
 prompt/          # Agent 职能与技能中心 (Skill Hub)
-  skills/        # 模块化技能定义 (Architect, Management, Compiler)
+  skills/        # 模块化技能定义 (Architect, Management, Compiler, Tooling)
 assets/          # 语言蓝图与设计规范 (Blueprints)
 lib/             # Lency 标准库 (.lcy)
 tests/           # 集成测试集
 scripts/         # 自动化检查与开发工具
+editors/         # IDE 插件与工具链
 ```
 
 ## 关键工作流
