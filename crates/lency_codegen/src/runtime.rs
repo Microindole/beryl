@@ -158,3 +158,23 @@ pub fn gen_bounds_check<'ctx>(
     // Continue block
     builder.position_at_end(cont_block);
 }
+
+/// 生成 panic 调用
+pub fn gen_panic<'ctx>(
+    context: &'ctx Context,
+    builder: &inkwell::builder::Builder<'ctx>,
+    panic_func: FunctionValue<'ctx>,
+    msg: &str,
+    line: u32,
+) {
+    let msg_global = builder.build_global_string_ptr(msg, "panic_msg").unwrap();
+    let line_val = context.i32_type().const_int(line as u64, false);
+    builder
+        .build_call(
+            panic_func,
+            &[msg_global.as_pointer_value().into(), line_val.into()],
+            "",
+        )
+        .unwrap();
+    builder.build_unreachable().unwrap();
+}

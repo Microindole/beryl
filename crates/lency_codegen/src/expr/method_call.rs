@@ -20,10 +20,10 @@ pub fn gen_method_call<'ctx>(
 ) -> CodegenResult<CodegenValue<'ctx>> {
     // 0. Check for Enum Constructor Call (Enum.Variant(args))
     let enum_check = match &object.kind {
-        lency_syntax::ast::ExprKind::Variable(name) => Some(name.clone()),
-        lency_syntax::ast::ExprKind::GenericInstantiation { base, .. } => {
+        lency_syntax::ast::ExprKind::Variable(name) => Some((name.clone(), vec![])),
+        lency_syntax::ast::ExprKind::GenericInstantiation { base, args } => {
             if let lency_syntax::ast::ExprKind::Variable(name) = &base.kind {
-                Some(name.clone())
+                Some((name.clone(), args.clone()))
             } else {
                 None
             }
@@ -31,10 +31,17 @@ pub fn gen_method_call<'ctx>(
         _ => None,
     };
 
-    if let Some(name) = enum_check {
+    if let Some((name, generic_args)) = enum_check {
         if ctx.enum_types.contains(&name) {
             // It's an Enum Constructor!
-            let ctor_name = format!("{}_{}", name, method_name);
+            // If generic args are present, we need to mangle the name (e.g. Option<int> -> Option_int)
+            let struct_name = if !generic_args.is_empty() {
+                lency_monomorph::mangling::mangle_type(&Type::Generic(name.clone(), generic_args))
+            } else {
+                name.clone()
+            };
+
+            let ctor_name = format!("{}_{}", struct_name, method_name);
             let function = ctx
                 .module
                 .get_function(&ctor_name)
@@ -60,7 +67,7 @@ pub fn gen_method_call<'ctx>(
 
             return Ok(CodegenValue {
                 value: val,
-                ty: Type::Struct(name.clone()),
+                ty: Type::Struct(struct_name),
             });
         }
     }
@@ -174,7 +181,7 @@ pub fn gen_method_call<'ctx>(
             }
 
             // Sprint 15: Option 内置方法支持
-            if struct_name.starts_with("Option_") {
+            if struct_name.starts_with("Option__") {
                 if let Some(res) = crate::expr::option::gen_option_builtin_method(
                     ctx,
                     locals,
@@ -182,6 +189,7 @@ pub fn gen_method_call<'ctx>(
                     method_name,
                     args,
                     &struct_name,
+                    &[], // Generic args not preserved in Codegen Type::Struct, passing empty
                 )? {
                     return Ok(res);
                 }

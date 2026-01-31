@@ -22,7 +22,8 @@ pub fn gen_option_builtin_method<'ctx>(
     option_ptr: PointerValue<'ctx>,
     method_name: &str,
     args: &[Expr],
-    struct_name: &str, // 例如 "Option_int"
+    struct_name: &str,     // 例如 "Option_int"
+    generic_args: &[Type], // T
 ) -> CodegenResult<Option<CodegenValue<'ctx>>> {
     let struct_type = match ctx.struct_types.get(struct_name) {
         Some(st) => *st,
@@ -158,6 +159,132 @@ pub fn gen_option_builtin_method<'ctx>(
 
             Ok(Some(CodegenValue {
                 value: result,
+                ty: t_type,
+            }))
+        }
+        "unwrap" => {
+            if !args.is_empty() {
+                return Ok(None);
+            }
+
+            // check tag == 0 (Some)
+            let tag_ptr = ctx
+                .builder
+                .build_struct_gep(struct_type, option_ptr, 0, "tag_ptr")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+            let tag_val = ctx
+                .builder
+                .build_load(ctx.context.i64_type(), tag_ptr, "tag_val")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+                .into_int_value();
+
+            let is_some = ctx
+                .builder
+                .build_int_compare(
+                    inkwell::IntPredicate::EQ,
+                    tag_val,
+                    ctx.context.i64_type().const_int(0, false),
+                    "is_some",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            // Block setup for panic
+            let func = ctx
+                .builder
+                .get_insert_block()
+                .unwrap()
+                .get_parent()
+                .unwrap();
+
+            let then_bb = ctx.context.append_basic_block(func, "unwrap_some");
+            let else_bb = ctx.context.append_basic_block(func, "unwrap_none");
+            let merge_bb = ctx.context.append_basic_block(func, "unwrap_merge");
+
+            ctx.builder
+                .build_conditional_branch(is_some, then_bb, else_bb)
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            // Emit Some block
+            ctx.builder.position_at_end(then_bb);
+
+            // Extract T (needed for return type)
+            let payload_arr_ptr = ctx
+                .builder
+                .build_struct_gep(struct_type, option_ptr, 1, "payload_arr")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            // Retrieve T from generic_args (added to signature)
+            let t_type = if let Some(ty) = generic_args.first() {
+                ty.clone()
+            } else {
+                // Fallback: Parse T from struct_name "Option__int", "Option__MyStruct"
+                if let Some(type_name) = struct_name.strip_prefix("Option__") {
+                    match type_name {
+                        "int" => Type::Int,
+                        "bool" => Type::Bool,
+                        "string" => Type::String,
+                        "float" => Type::Float,
+                        _ => Type::Struct(type_name.to_string()),
+                    }
+                } else {
+                    return Err(CodegenError::LLVMBuildError(
+                        "Option missing generic arg T".to_string(),
+                    ));
+                }
+            };
+
+            let t_llvm_type = t_type.to_llvm_type(ctx)?;
+            let variant_struct_type = ctx.context.struct_type(&[t_llvm_type], false);
+
+            let payload_typed_ptr = ctx
+                .builder
+                .build_bitcast(
+                    payload_arr_ptr,
+                    variant_struct_type.ptr_type(inkwell::AddressSpace::default()),
+                    "payload_typed",
+                )
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+                .into_pointer_value();
+
+            // GEP to get T*
+            let val_ptr = ctx
+                .builder
+                .build_struct_gep(variant_struct_type, payload_typed_ptr, 0, "some_val_ptr")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            let some_val = ctx
+                .builder
+                .build_load(t_llvm_type, val_ptr, "some_val")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            ctx.builder
+                .build_unconditional_branch(merge_bb)
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+
+            // Emit None block (Panic!)
+            ctx.builder.position_at_end(else_bb);
+            if let Some(panic_func) = ctx.panic_func {
+                crate::runtime::gen_panic(
+                    ctx.context,
+                    &ctx.builder,
+                    panic_func,
+                    "Option::unwrap called on None",
+                    0,
+                );
+            } else {
+                ctx.builder.build_unreachable().unwrap();
+            }
+
+            // Merge block
+            ctx.builder.position_at_end(merge_bb);
+            let phi = ctx
+                .builder
+                .build_phi(t_llvm_type, "unwrap_res")
+                .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+            phi.add_incoming(&[(&some_val, then_bb)]);
+
+            Ok(Some(CodegenValue {
+                value: phi.as_basic_value(),
                 ty: t_type,
             }))
         }

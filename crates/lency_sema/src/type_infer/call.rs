@@ -5,7 +5,6 @@ use lency_syntax::ast::{Expr, ExprKind, Type};
 
 impl<'a> TypeInferer<'a> {
     /// 推导函数调用类型
-    /// 推导函数调用类型
     pub(crate) fn infer_call(
         &mut self,
         callee: &mut Expr,
@@ -152,6 +151,22 @@ impl<'a> TypeInferer<'a> {
                             "is_ok" | "is_err" => return Ok(Type::Bool),
                             "unwrap_or" => return Ok((**ok_type).clone()),
                             _ => Some("Result".to_string()),
+                        }
+                    }
+                    // Sprint 15: Support Option<T> method calls
+                    // 内置方法: is_some, is_none, unwrap, unwrap_or
+                    Type::Generic(base_name, args) if base_name == "Option" => {
+                        match name.as_str() {
+                            "is_some" | "is_none" => return Ok(Type::Bool),
+                            "unwrap" | "unwrap_or" => {
+                                if args.len() == 1 {
+                                    return Ok(args[0].clone());
+                                } else {
+                                    // Should not happen if well-typed
+                                    return Ok(Type::Error);
+                                }
+                            }
+                            _ => Some(base_name.clone()),
                         }
                     }
                     // 泛型实例化类型：使用基础名称查找方法
