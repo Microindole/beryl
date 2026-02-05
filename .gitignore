@@ -6,6 +6,7 @@ target/
 .idea/
 .vscode/
 !editors/vscode/.vscode/
+.cursor/
 *.iml
 *.swp
 .DS_Store
@@ -18,7 +19,7 @@ target/
 tmp/
 *.log
 
-# 5. Root Temporary Files
+# 5. 根目录临时文件
 /*.rs
 /*.lcy
 /*.ll
