@@ -32,13 +32,13 @@ editors/         # IDE 插件与工具链
 2. **同步**：阅读 `prompt/sprint/status.md` 确定当前战术目标。
 3. **执行**：按需加载 `prompt/skills/` 下的子技能。
 4. **验证**：运行 `./scripts/run_checks.sh --fast`。
-5. **交付**：及时更新 `prompt/sprint/status.md`。
+5. **交付**：必须更新 `prompt/sprint/status.md` 及 `prompt/context.md` (如有架构/状态变更)。
 
 ## 当前编译器状态
 - ✅ 基础语法、泛型、Null安全、Enum、Vec、HashMap、Iterator
 - ✅ 统一诊断系统 (lency_diagnostics)
 - ✅ Result/Option 方法全量支持 (is_ok, unwrap, unwrap_or, expect等)
-- ⚠️ panic 机制（待强化，目前支持基础 exit(1)）
+- ✅ panic 机制强化（支持动态消息、文件行号追踪）
 
 ---
 详细设计参考: [design_spec.md](../assets/design_spec.md), [Lency.txt](../assets/Lency.txt)
