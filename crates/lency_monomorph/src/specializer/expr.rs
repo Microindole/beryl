@@ -107,6 +107,10 @@ pub fn specialize(spec: &Specializer, expr: &Expr) -> Expr {
         ),
         ExprKind::CharToString(arg) => ExprKind::CharToString(Box::new(spec.specialize_expr(arg))),
         ExprKind::Panic(arg) => ExprKind::Panic(Box::new(spec.specialize_expr(arg))),
+        ExprKind::Format(template, args) => ExprKind::Format(
+            Box::new(spec.specialize_expr(template)),
+            Box::new(spec.specialize_expr(args)),
+        ),
     };
 
     Expr {

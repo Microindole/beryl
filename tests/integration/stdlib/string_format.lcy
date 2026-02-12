@@ -1,0 +1,38 @@
+// 字符串格式化测试
+// 测试 format(template, args) 内置函数
+
+import std.core
+
+int main() {
+    print("String Format Test\n")
+
+    // 1. 基础替换
+    var args = vec!["world"]
+    var result = format("hello {}!", args)
+    if result != "hello world!" {
+        print("FAIL: basic format\n")
+        return 1
+    }
+    print("basic format passed\n")
+
+    // 2. 多参数替换
+    var args2 = vec!["1", "2", "3"]
+    var result2 = format("{} + {} = {}", args2)
+    if result2 != "1 + 2 = 3" {
+        print("FAIL: multi format\n")
+        return 1
+    }
+    print("multi format passed\n")
+
+    // 3. 无占位符
+    var args3 = vec!["unused"]
+    var result3 = format("no placeholders", args3)
+    if result3 != "no placeholders" {
+        print("FAIL: no placeholder format\n")
+        return 1
+    }
+    print("no placeholder format passed\n")
+
+    print("All format tests passed!\n")
+    return 0
+}

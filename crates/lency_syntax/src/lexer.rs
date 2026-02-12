@@ -50,6 +50,8 @@ pub enum Token {
     CharToString,
     #[token("panic")]
     Panic,
+    #[token("format")]
+    Format,
     #[token("struct")]
     Struct,
     #[token("impl")]

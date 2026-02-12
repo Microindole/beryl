@@ -112,6 +112,8 @@ pub enum ExprKind {
     CharToString(Box<Expr>),
     // panic("error message")
     Panic(Box<Expr>),
+    // format("template {}", args_vec) -> string
+    Format(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

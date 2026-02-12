@@ -134,6 +134,19 @@ where
             span,
         });
 
+    // format("template {}", args_vec) -> string
+    let format_expr = just(Token::Format)
+        .ignore_then(
+            expr.clone()
+                .then_ignore(just(Token::Comma))
+                .then(expr.clone())
+                .delimited_by(just(Token::LParen), just(Token::RParen)),
+        )
+        .map_with_span(|(template, args), span| Expr {
+            kind: ExprKind::Format(Box::new(template), Box::new(args)),
+            span,
+        });
+
     // 组合所有内置函数解析器
     print_expr
         .or(read_file_expr)
@@ -145,4 +158,5 @@ where
         .or(substr_expr)
         .or(char_to_string_expr)
         .or(panic_expr)
+        .or(format_expr)
 }

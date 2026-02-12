@@ -373,3 +373,49 @@ pub fn gen_char_to_string<'ctx>(
         ty: Type::String,
     })
 }
+
+/// 生成 format(string, Vec<string>) -> string
+pub fn gen_format<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    template: &Expr,
+    args: &Expr,
+) -> CodegenResult<CodegenValue<'ctx>> {
+    use super::generate_expr;
+
+    let template_val = generate_expr(ctx, locals, template)?;
+    let template_ptr = template_val.value.into_pointer_value();
+
+    let args_val = generate_expr(ctx, locals, args)?;
+    let args_ptr = args_val.value.into_pointer_value();
+
+    let i8_ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+
+    let string_format_fn = ctx
+        .module
+        .get_function("lency_string_format")
+        .unwrap_or_else(|| {
+            let fn_type = i8_ptr_type.fn_type(&[i8_ptr_type.into(), i8_ptr_type.into()], false);
+            ctx.module
+                .add_function("lency_string_format", fn_type, None)
+        });
+
+    let result = ctx
+        .builder
+        .build_call(
+            string_format_fn,
+            &[template_ptr.into(), args_ptr.into()],
+            "str_format",
+        )
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?
+        .try_as_basic_value()
+        .left()
+        .ok_or(CodegenError::LLVMBuildError(
+            "lency_string_format returned void".to_string(),
+        ))?;
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
+}

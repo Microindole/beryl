@@ -118,7 +118,8 @@ impl<'a> TypeInferer<'a> {
             | ExprKind::Join(_, _)
             | ExprKind::Substr(_, _, _)
             | ExprKind::CharToString(_)
-            | ExprKind::Panic(_) => self.infer_intrinsic(expr),
+            | ExprKind::Panic(_)
+            | ExprKind::Format(_, _) => self.infer_intrinsic(expr),
         }
     }
 }

@@ -239,6 +239,80 @@ pub unsafe extern "C" fn lency_char_to_string(char_code: i64) -> *mut c_char {
     result
 }
 
+/// 字符串格式化：将模板中的 {} 占位符按顺序替换为 Vec 中的字符串
+/// 返回新分配的字符串
+///
+/// # Safety
+/// `template_ptr` must be a valid null-terminated C string
+/// `vec_ptr` must be a valid LencyVec containing string pointers
+#[no_mangle]
+pub unsafe extern "C" fn lency_string_format(
+    template_ptr: *const c_char,
+    vec_ptr: *const LencyVec,
+) -> *mut c_char {
+    if template_ptr.is_null() || vec_ptr.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let c_template = unsafe { CStr::from_ptr(template_ptr) };
+    let template = match c_template.to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+
+    let vec = unsafe { &*vec_ptr };
+    let arg_count = vec.len();
+
+    // 收集所有参数字符串
+    let mut args: Vec<String> = Vec::new();
+    for i in 0..arg_count {
+        let str_ptr = vec.get(i) as *const c_char;
+        if !str_ptr.is_null() {
+            let c_str = unsafe { CStr::from_ptr(str_ptr) };
+            if let Ok(s) = c_str.to_str() {
+                args.push(s.to_string());
+            }
+        }
+    }
+
+    // 执行替换：逐字符扫描，遇到 {} 则替换
+    let mut result = String::with_capacity(template.len() * 2);
+    let mut arg_idx = 0;
+    let mut chars = template.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            if chars.peek() == Some(&'}') {
+                chars.next(); // consume '}'
+                if arg_idx < args.len() {
+                    result.push_str(&args[arg_idx]);
+                    arg_idx += 1;
+                } else {
+                    // 参数不足，保留 {}
+                    result.push_str("{}");
+                }
+            } else {
+                result.push(c);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    let result_len = result.len();
+    let buf = unsafe { libc::malloc(result_len + 1) as *mut c_char };
+    if buf.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    unsafe {
+        std::ptr::copy_nonoverlapping(result.as_ptr(), buf as *mut u8, result_len);
+        *buf.add(result_len) = 0;
+    }
+
+    buf
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,5 +417,50 @@ mod tests {
         let substr2 = unsafe { CStr::from_ptr(result2) }.to_str().unwrap();
         assert_eq!(substr2, "world");
         unsafe { libc::free(result2 as *mut libc::c_void) };
+    }
+
+    #[test]
+    fn test_string_format() {
+        use crate::LencyVec;
+
+        // 测试基础替换
+        let template = CString::new("hello {}!").unwrap();
+        let arg = CString::new("world").unwrap();
+
+        let mut vec = LencyVec::new(4);
+        vec.push(arg.as_ptr() as i64);
+
+        let result = unsafe { lency_string_format(template.as_ptr(), &*vec) };
+        assert!(!result.is_null());
+        let formatted = unsafe { CStr::from_ptr(result) }.to_str().unwrap();
+        assert_eq!(formatted, "hello world!");
+        unsafe { libc::free(result as *mut libc::c_void) };
+
+        // 测试多参数替换
+        let template2 = CString::new("{} + {} = {}").unwrap();
+        let a1 = CString::new("1").unwrap();
+        let a2 = CString::new("2").unwrap();
+        let a3 = CString::new("3").unwrap();
+
+        let mut vec2 = LencyVec::new(4);
+        vec2.push(a1.as_ptr() as i64);
+        vec2.push(a2.as_ptr() as i64);
+        vec2.push(a3.as_ptr() as i64);
+
+        let result2 = unsafe { lency_string_format(template2.as_ptr(), &*vec2) };
+        assert!(!result2.is_null());
+        let formatted2 = unsafe { CStr::from_ptr(result2) }.to_str().unwrap();
+        assert_eq!(formatted2, "1 + 2 = 3");
+        unsafe { libc::free(result2 as *mut libc::c_void) };
+
+        // 测试无占位符
+        let template3 = CString::new("no placeholders").unwrap();
+        let vec3 = LencyVec::new(4);
+
+        let result3 = unsafe { lency_string_format(template3.as_ptr(), &*vec3) };
+        assert!(!result3.is_null());
+        let formatted3 = unsafe { CStr::from_ptr(result3) }.to_str().unwrap();
+        assert_eq!(formatted3, "no placeholders");
+        unsafe { libc::free(result3 as *mut libc::c_void) };
     }
 }

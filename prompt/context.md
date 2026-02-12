@@ -7,6 +7,7 @@
 > - **流水线管理/状态同步**：仅阅读 `prompt/skills/management/SKILL.md`
 > - **编译器开发/故障排查**：首先阅读 `prompt/skills/compiler/SKILL.md` 的路由图，然后**仅加载**相关的 Crate 指南（如 `crates/sema.md`）。
 > - **生态/工具链/LSP**：仅阅读 `prompt/skills/tooling/SKILL.md`
+> - **文档风格**：避免使用 emoji，用纯文本标记（如 [DONE]、[WIP]、[TODO]）替代。
 
 ## 项目概述
 **Lency** 是一门静态类型、编译型语言，基于 LLVM 实现。设计哲学：「简洁、规范、清晰」，无“黑魔法”。
@@ -33,12 +34,14 @@ editors/         # IDE 插件与工具链
 3. **执行**：按需加载 `prompt/skills/` 下的子技能。
 4. **验证**：运行 `./scripts/run_checks.sh --fast`。
 5. **交付**：必须更新 `prompt/sprint/status.md` 及 `prompt/context.md` (如有架构/状态变更)。
+6. **存档**：将最新的 task/implementation_plan/walkthrough 同步到 `prompt/artifacts/`，确保跨会话可追溯。
 
 ## 当前编译器状态
-- ✅ 基础语法、泛型、Null安全、Enum、Vec、HashMap、Iterator
-- ✅ 统一诊断系统 (lency_diagnostics)
-- ✅ Result/Option 方法全量支持 (is_ok, unwrap, unwrap_or, expect等)
-- ✅ panic 机制强化（支持动态消息、文件行号追踪）
+- [DONE] 基础语法、泛型、Null安全、Enum、Vec、HashMap、Iterator
+- [DONE] 统一诊断系统 (lency_diagnostics)
+- [DONE] Result/Option 方法全量支持 (is_ok, unwrap, unwrap_or, expect等)
+- [DONE] panic 机制强化（支持动态消息、文件行号追踪）
+- [DONE] String 格式化 -- `format(string, Vec<string>)` 内置函数
 
 ---
 详细设计参考: [design_spec.md](../assets/design_spec.md), [Lency.txt](../assets/Lency.txt)

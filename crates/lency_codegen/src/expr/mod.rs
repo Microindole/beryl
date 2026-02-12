@@ -143,6 +143,7 @@ fn generate_expr<'ctx>(
             string_ops::gen_substr(ctx, locals, str_arg, start, len)
         }
         ExprKind::CharToString(arg) => string_ops::gen_char_to_string(ctx, locals, arg),
+        ExprKind::Format(template, args) => string_ops::gen_format(ctx, locals, template, args),
         ExprKind::Panic(arg) => intrinsic::gen_panic(ctx, locals, arg),
     }
 }

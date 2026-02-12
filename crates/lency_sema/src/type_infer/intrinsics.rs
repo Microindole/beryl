@@ -167,6 +167,29 @@ impl<'a> TypeInferer<'a> {
                 }
                 Ok(Type::Void)
             }
+            ExprKind::Format(template, args) => {
+                // format(string, Vec<string>) -> string
+                let template_ty = self.infer(template)?;
+                if template_ty != Type::String {
+                    return Err(SemanticError::TypeMismatch {
+                        expected: "string".to_string(),
+                        found: template_ty.to_string(),
+                        span: template.span.clone(),
+                    });
+                }
+                let args_ty = self.infer(args)?;
+                match &args_ty {
+                    Type::Vec(inner) if **inner == Type::String => {}
+                    _ => {
+                        return Err(SemanticError::TypeMismatch {
+                            expected: "Vec<string>".to_string(),
+                            found: args_ty.to_string(),
+                            span: args.span.clone(),
+                        });
+                    }
+                }
+                Ok(Type::String)
+            }
             _ => unreachable!("Not an intrinsic expression"),
         }
     }

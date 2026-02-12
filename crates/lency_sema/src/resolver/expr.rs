@@ -157,6 +157,10 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
         ExprKind::Panic(arg) => {
             resolver.resolve_expr(arg);
         }
+        ExprKind::Format(template, args) => {
+            resolver.resolve_expr(template);
+            resolver.resolve_expr(args);
+        }
     }
 }
 

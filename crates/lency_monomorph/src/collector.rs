@@ -262,6 +262,10 @@ impl Collector {
             }
             ExprKind::CharToString(arg) => self.collect_expr(arg),
             ExprKind::Panic(arg) => self.collect_expr(arg),
+            ExprKind::Format(template, args) => {
+                self.collect_expr(template);
+                self.collect_expr(args);
+            }
         }
     }
 
