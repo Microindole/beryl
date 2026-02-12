@@ -1,14 +1,16 @@
 // Sprint 9: Error Handling - 语法测试
 // 验证 int! 语法糖和 Ok/Err 构造器能正确解析
 
-struct Error {
+import std.core
+
+struct TestError {
     string message
 }
 
-// 返回 Result<int, Error> 的函数
+// 返回 Result<int, TestError> 的函数
 int! divide(int a, int b) {
     if b == 0 {
-        return Err(Error { message: "division by zero" })
+        return Err(TestError { message: "division by zero" })
     }
     return Ok(a / b)
 }
@@ -21,10 +23,18 @@ int! test_try(int a, int b) {
 
 int main() {
     var res1 = test_try(10, 2) // Ok(10)
-    
-    // 如果实现正确，Early Return 应该工作
+    var ok_val = res1.unwrap()
+    if ok_val != 10 {
+        print("FAIL: test_try(10, 2) should be Ok(10)\n")
+        return 1
+    }
+
     var res2 = test_try(10, 0) // Err(...)
-    
-    // TODO: Assert results (需实现 unwrap)
+    if res2.is_ok() {
+        print("FAIL: test_try(10, 0) should be Err\n")
+        return 1
+    }
+
+    print("All error handling tests passed!\n")
     return 0
 }

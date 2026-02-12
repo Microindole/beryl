@@ -31,7 +31,7 @@ int main() {
     // 4. parse_int
     var n = parse_int("456")
     print("parse_int(\"456\") = ")
-    // TODO: print int directly
+    print(n)
     print("\n")
 
     print("All conversion tests passed!\n")

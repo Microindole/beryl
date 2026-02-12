@@ -225,8 +225,7 @@ impl<'a> TypeInferer<'a> {
         }
     }
 
-    // Helper for substitution
-    // TODO: move to a shared utility
+    /// 泛型类型替换辅助函数
     fn substitute_generics(
         &self,
         ty: &Type,

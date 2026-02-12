@@ -1,8 +1,4 @@
 //! Vec Literal Code Generation
-//!
-//! TODO: Vec 方法支持尚未完全实现，以下部分函数暂未使用
-
-#![allow(dead_code)]
 
 use crate::context::CodegenContext;
 use crate::error::{CodegenError, CodegenResult};

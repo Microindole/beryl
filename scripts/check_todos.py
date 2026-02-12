@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict
 
 # 配置
-EXCLUDE_DIRS = {'.git', 'target', 'node_modules', '.gemini', 'assets', 'docs', 'scripts'}
+EXCLUDE_DIRS = {'.git', 'target', 'node_modules', '.gemini', 'assets', 'docs', 'scripts', 'prompt'}
 EXTENSIONS = {'.rs', '.py', '.sh', '.md', '.lcy'}
 TAGS = {'TODO', 'FIXME', 'XXX'}
 

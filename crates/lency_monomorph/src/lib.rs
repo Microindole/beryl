@@ -87,7 +87,7 @@ impl Monomorphizer {
                         let key = match type_name {
                             Type::Struct(n) => n.clone(),
                             Type::Generic(n, _) => n.clone(),
-                            _ => "unknown".to_string(), // TODO: better handling
+                            _ => format!("{:?}", type_name),
                         };
                         self.generic_impls
                             .entry(key)
