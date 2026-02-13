@@ -1,0 +1,293 @@
+// Lency 自举编译器 - 词法分析器 (lexer.lcy)
+// 将源代码字符串转换为 Token 流
+
+import std.core
+import std.char
+import lencyc.syntax.token
+import lencyc.syntax.keywords
+
+// ============== Lexer 结构体 ==============
+
+struct Lexer {
+    string source   // 源代码
+    int pos         // 当前位置 (0-based)
+    int line        // 当前行号 (1-based)
+    int col         // 当前列号 (1-based)
+}
+
+// 创建新的 Lexer
+Lexer lexer_new(string source) {
+    return Lexer { source: source, pos: 0, line: 1, col: 1 }
+}
+
+// ============== 基础方法 ==============
+
+// 是否到达源码末尾
+bool is_at_end(Lexer lex) {
+    return lex.pos >= len(lex.source)
+}
+
+// 获取当前字符 (ASCII int)，到达末尾返回 0
+int current_char(Lexer lex) {
+    if is_at_end(lex) {
+        return 0
+    }
+    return lex.source[lex.pos]
+}
+
+// 获取下一个字符 (peek)，越界返回 0
+int peek_char(Lexer lex) {
+    if lex.pos + 1 >= len(lex.source) {
+        return 0
+    }
+    return lex.source[lex.pos + 1]
+}
+
+// 前进一个字符，返回消耗的字符
+int advance(Lexer lex) {
+    var c = current_char(lex)
+    lex.pos = lex.pos + 1
+    if c == 10 { // '\n'
+        lex.line = lex.line + 1
+        lex.col = 1
+    } else {
+        lex.col = lex.col + 1
+    }
+    return c
+}
+
+// 如果当前字符匹配 expected，前进并返回 true
+bool match_char(Lexer lex, int expected) {
+    if is_at_end(lex) {
+        return false
+    }
+    if current_char(lex) != expected {
+        return false
+    }
+    advance(lex)
+    return true
+}
+
+// ============== 跳过空白和注释 ==============
+
+void skip_whitespace(Lexer lex) {
+    while !is_at_end(lex) {
+        var c = current_char(lex)
+
+        // 空白字符
+        if c == 32 || c == 9 || c == 13 || c == 10 {
+            advance(lex)
+            continue
+        }
+
+        // 单行注释 // ...
+        if c == 47 && peek_char(lex) == 47 {
+            while !is_at_end(lex) && current_char(lex) != 10 {
+                advance(lex)
+            }
+            continue
+        }
+
+        break
+    }
+}
+
+// ============== Token 扫描器 ==============
+
+// 扫描字符串字面量
+Token scan_string(Lexer lex, int start_line, int start_col) {
+    var result = ""
+    while !is_at_end(lex) && current_char(lex) != 34 {
+        var c = current_char(lex)
+        if c == 92 { // backslash
+            advance(lex)
+            if !is_at_end(lex) {
+                var esc = current_char(lex)
+                if esc == 110 {
+                    result = result + "\n"
+                } else {
+                    if esc == 116 {
+                        result = result + "\t"
+                    } else {
+                        if esc == 114 {
+                            result = result + "\r"
+                        } else {
+                            if esc == 92 {
+                                result = result + "\\"
+                            } else {
+                                if esc == 34 {
+                                    result = result + "\""
+                                } else {
+                                    result = result + "\\"
+                                    result = result + char_to_string(esc)
+                                }
+                            }
+                        }
+                    }
+                }
+                advance(lex)
+            }
+        } else {
+            result = result + char_to_string(c)
+            advance(lex)
+        }
+    }
+
+    if !is_at_end(lex) {
+        advance(lex) // skip closing '"'
+    }
+
+    return make_token(TK_STRING_LIT(), result, start_line, start_col)
+}
+
+// 扫描数字字面量 (int 或 float)
+Token scan_number(Lexer lex, int first_char, int start_line, int start_col) {
+    var result = char_to_string(first_char)
+    var is_float = false
+
+    while !is_at_end(lex) && is_digit(current_char(lex)) {
+        result = result + char_to_string(current_char(lex))
+        advance(lex)
+    }
+
+    // 检查小数点
+    if !is_at_end(lex) && current_char(lex) == 46 {
+        if peek_char(lex) != 0 && is_digit(peek_char(lex)) {
+            is_float = true
+            result = result + "."
+            advance(lex)
+            while !is_at_end(lex) && is_digit(current_char(lex)) {
+                result = result + char_to_string(current_char(lex))
+                advance(lex)
+            }
+        }
+    }
+
+    if is_float {
+        return make_token(TK_FLOAT_LIT(), result, start_line, start_col)
+    }
+    return make_token(TK_INT_LIT(), result, start_line, start_col)
+}
+
+// 扫描标识符或关键字
+Token scan_identifier(Lexer lex, int first_char, int start_line, int start_col) {
+    var result = char_to_string(first_char)
+
+    while !is_at_end(lex) {
+        var c = current_char(lex)
+        if is_alphanumeric(c) || c == 95 {
+            result = result + char_to_string(c)
+            advance(lex)
+        } else {
+            break
+        }
+    }
+
+    var tk_type = lookup_keyword(result)
+    return make_token(tk_type, result, start_line, start_col)
+}
+
+// ============== 核心扫描函数 ==============
+
+// 扫描下一个 Token
+Token scan_token(Lexer lex) {
+    skip_whitespace(lex)
+
+    if is_at_end(lex) {
+        return make_token(TK_EOF(), "", lex.line, lex.col)
+    }
+
+    var start_line = lex.line
+    var start_col = lex.col
+    var c = advance(lex)
+
+    // 标识符和关键字
+    if is_alpha(c) || c == 95 {
+        return scan_identifier(lex, c, start_line, start_col)
+    }
+
+    // 数字
+    if is_digit(c) {
+        return scan_number(lex, c, start_line, start_col)
+    }
+
+    // 字符串
+    if c == 34 {
+        return scan_string(lex, start_line, start_col)
+    }
+
+    // 符号
+    if c == 43 { return make_token(TK_PLUS(), "+", start_line, start_col) }
+    if c == 45 { return make_token(TK_MINUS(), "-", start_line, start_col) }
+    if c == 42 { return make_token(TK_STAR(), "*", start_line, start_col) }
+    if c == 47 { return make_token(TK_SLASH(), "/", start_line, start_col) }
+    if c == 37 { return make_token(TK_PERCENT(), "%", start_line, start_col) }
+
+    if c == 61 {
+        if match_char(lex, 61) { return make_token(TK_EQ_EQ(), "==", start_line, start_col) }
+        if match_char(lex, 62) { return make_token(TK_ARROW(), "=>", start_line, start_col) }
+        return make_token(TK_EQ(), "=", start_line, start_col)
+    }
+
+    if c == 33 {
+        if match_char(lex, 61) { return make_token(TK_NOT_EQ(), "!=", start_line, start_col) }
+        return make_token(TK_BANG(), "!", start_line, start_col)
+    }
+
+    if c == 60 {
+        if match_char(lex, 61) { return make_token(TK_LEQ(), "<=", start_line, start_col) }
+        return make_token(TK_LT(), "<", start_line, start_col)
+    }
+
+    if c == 62 {
+        if match_char(lex, 61) { return make_token(TK_GEQ(), ">=", start_line, start_col) }
+        return make_token(TK_GT(), ">", start_line, start_col)
+    }
+
+    if c == 38 {
+        if match_char(lex, 38) { return make_token(TK_AND(), "&&", start_line, start_col) }
+        return make_token(TK_ERROR(), "&", start_line, start_col)
+    }
+
+    if c == 124 {
+        if match_char(lex, 124) { return make_token(TK_OR(), "||", start_line, start_col) }
+        return make_token(TK_PIPE(), "|", start_line, start_col)
+    }
+
+    if c == 63 {
+        if match_char(lex, 46) { return make_token(TK_QUESTION_DOT(), "?.", start_line, start_col) }
+        if match_char(lex, 63) { return make_token(TK_QUESTION_QUESTION(), "??", start_line, start_col) }
+        return make_token(TK_QUESTION(), "?", start_line, start_col)
+    }
+
+    if c == 40 { return make_token(TK_LPAREN(), "(", start_line, start_col) }
+    if c == 41 { return make_token(TK_RPAREN(), ")", start_line, start_col) }
+    if c == 123 { return make_token(TK_LBRACE(), "{", start_line, start_col) }
+    if c == 125 { return make_token(TK_RBRACE(), "}", start_line, start_col) }
+    if c == 91 { return make_token(TK_LBRACKET(), "[", start_line, start_col) }
+    if c == 93 { return make_token(TK_RBRACKET(), "]", start_line, start_col) }
+    if c == 44 { return make_token(TK_COMMA(), ",", start_line, start_col) }
+    if c == 46 { return make_token(TK_DOT(), ".", start_line, start_col) }
+    if c == 58 { return make_token(TK_COLON(), ":", start_line, start_col) }
+    if c == 59 { return make_token(TK_SEMICOLON(), ";", start_line, start_col) }
+
+    return make_token(TK_ERROR(), char_to_string(c), start_line, start_col)
+}
+
+// ============== 完整 Tokenize ==============
+
+// 将源代码转换为 Token 列表
+Vec<Token> tokenize(string source) {
+    var lex = lexer_new(source)
+    var tokens: Vec<Token> = vec![]
+
+    while true {
+        var tok = scan_token(lex)
+        tokens.push(tok)
+        if tok.type == TK_EOF() {
+            break
+        }
+    }
+
+    return tokens
+}

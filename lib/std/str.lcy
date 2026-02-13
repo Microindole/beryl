@@ -194,42 +194,6 @@ string to_lower(string s) {
     return result
 }
 
-// 重复字符串 n 次
-string repeat(string s, int n) {
-    if n <= 0 {
-        return ""
-    }
-    var result = ""
-    var i = 0
-    while i < n {
-        result = result + s
-        i = i + 1
-    }
-    return result
-}
-
-// 左填充到指定长度
-string pad_left(string s, int total_len, string pad) {
-    var s_len = len(s)
-    if s_len >= total_len {
-        return s
-    }
-    var pad_len = total_len - s_len
-    var padding = repeat(pad, pad_len)
-    return substr(padding, 0, pad_len) + s
-}
-
-// 右填充到指定长度
-string pad_right(string s, int total_len, string pad) {
-    var s_len = len(s)
-    if s_len >= total_len {
-        return s
-    }
-    var pad_len = total_len - s_len
-    var padding = repeat(pad, pad_len)
-    return s + substr(padding, 0, pad_len)
-}
-
 // 反转字符串
 string reverse(string s) {
     var result = ""
@@ -239,4 +203,87 @@ string reverse(string s) {
         i = i - 1
     }
     return result
+}
+
+// ============== 新增字符串函数 ==============
+
+// 统计子串出现次数
+int count(string s, string sub) {
+    var sub_len = len(sub)
+    if sub_len == 0 {
+        return 0
+    }
+    var s_len = len(s)
+    if s_len < sub_len {
+        return 0
+    }
+    var n = 0
+    var i = 0
+    while i <= s_len - sub_len {
+        var candidate = substr(s, i, sub_len)
+        if candidate == sub {
+            n = n + 1
+            i = i + sub_len // 不重叠计数
+        } else {
+            i = i + 1
+        }
+    }
+    return n
+}
+
+// 去除左侧空白
+string trim_left(string s) {
+    var i = 0
+    var l = len(s)
+    while i < l {
+        var c = s[i]
+        if c != 32 && c != 9 && c != 10 && c != 13 {
+            return substr(s, i, l - i)
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// 去除右侧空白
+string trim_right(string s) {
+    var l = len(s)
+    var i = l - 1
+    while i >= 0 {
+        var c = s[i]
+        if c != 32 && c != 9 && c != 10 && c != 13 {
+            return substr(s, 0, i + 1)
+        }
+        i = i - 1
+    }
+    return ""
+}
+
+// 获取指定位置的字符 (返回 ASCII int，越界返回 -1)
+int char_at(string s, int index) {
+    if index < 0 || index >= len(s) {
+        return -1
+    }
+    return s[index]
+}
+
+// 从后往前查找子串位置 (返回 -1 表示未找到)
+int last_index_of(string s, string sub) {
+    var s_len = len(s)
+    var sub_len = len(sub)
+    if sub_len == 0 {
+        return s_len
+    }
+    if s_len < sub_len {
+        return -1
+    }
+    var i = s_len - sub_len
+    while i >= 0 {
+        var candidate = substr(s, i, sub_len)
+        if candidate == sub {
+            return i
+        }
+        i = i - 1
+    }
+    return -1
 }

@@ -1,6 +1,7 @@
 // 类型转换测试
 
 import std.core
+import std.convert
 
 int main() {
     print("Type Conversion Test\n")

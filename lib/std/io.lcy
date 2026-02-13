@@ -14,6 +14,16 @@ void println(string s) {
     print("\n")
 }
 
+// 打印整数 (不换行)
+void print_int(int n) {
+    print(n)
+}
+
+// 打印浮点数 (不换行)
+void print_float(float f) {
+    print(f)
+}
+
 // 打印整数并换行
 void println_int(int n) {
     print(n)

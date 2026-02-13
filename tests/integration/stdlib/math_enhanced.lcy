@@ -1,0 +1,40 @@
+// 数学增强功能测试
+import std.core
+import std.math
+
+int main() {
+    print("Math Enhanced Test\n")
+
+    // 1. abs
+    print("abs(-5) = ")
+    print(abs(-5)) // 5
+    print("\n")
+
+    // 2. diff
+    print("diff(3, 8) = ")
+    print(diff(3, 8)) // 5
+    print("\n")
+
+    // 3. gcd
+    print("gcd(12, 8) = ")
+    print(gcd(12, 8)) // 4
+    print("\n")
+
+    // 4. lcm
+    print("lcm(4, 6) = ")
+    print(lcm(4, 6)) // 12
+    print("\n")
+
+    // 5. factorial
+    print("factorial(5) = ")
+    print(factorial(5)) // 120
+    print("\n")
+
+    // 6. fibonacci
+    print("fibonacci(10) = ")
+    print(fibonacci(10)) // 55
+    print("\n")
+
+    print("Math enhanced tests passed!\n")
+    return 0
+}

@@ -218,38 +218,23 @@ var result = read_file("data.txt")
 
 ### 6.1 已实现模块 ✅
 
-**std/core** - 核心功能
-- print, assert
-- 类型转换 (int_to_string, parse_int)
-
-**std/string** - 字符串处理
-- trim, split, join, substr
-- repeat, pad_left, pad_right
-- starts_with, ends_with, replace
-
-**std/collections** - 集合类型
-- Vec<T> (动态数组)
-- HashMap (整数键)
-
-**std/io** - 文件 I/O
-- read_file, write_file
-- file_exists, is_dir
-
-**std/math** - 数学函数
-- abs, max, min, clamp
-- pow, sqrt (规划中)
-- PI, E 常量
-
-**lib/test** - 测试工具
-- assert_eq, assert_true
-- test_passed, test_failed
+**std/core** - 核心类型和 Trait (Error, Option, Hash, Eq, Comparable)
+**std/string** - 字符串处理 (trim, split, join, substr, repeat, starts_with, ends_with, replace, index_of, contains)
+**std/collections** - 集合 (Vec<T>, HashMap FFI, Pair, Box, Iterator)
+**std/iterator** - 迭代器 (Iterator<T> trait, VecIterator<T>, vec_iter)
+**std/io** - I/O (println, print_line)
+**std/fs** - 文件系统 (read_file, write_file)
+**std/math** - 数学 (abs, max, min, clamp, sign, pow_int, lerp, is_close)
+**std/char** - 字符处理 (is_digit, is_alpha, is_alphanumeric, is_whitespace)
+**std/assert** - 断言 (assert_true, assert_false, assert_eq_int, assert_eq_string)
+**std/result** - Result 辅助 (result_to_string)
+**std/option** - Option 辅助 (option_int_to_string, option_string_to_string)
+**std/convert** - 类型转换 (bool_to_string, int_to_bool)
+**lib/test** - 测试工具 (assert_eq, assert_true, test_passed, test_failed)
 
 ### 6.2 规划中模块 📋
 
-- std/result - Result<T, E> 辅助
-- std/option - Option<T> 辅助
-- lib/json - JSON 解析
-- lib/http - HTTP 客户端
+- lib/json - JSON 解析（需要更多语言特性）
 
 ---
 
@@ -260,11 +245,11 @@ lency_cli      # CLI 入口
 lency_driver   # 编译驱动
   ├─ lency_syntax      # 词法+语法 ✅
   ├─ lency_sema        # 语义分析 ✅
-  ├─ lency_monomorph   # 泛型单态化 ⚠️ 待重构
+  ├─ lency_monomorph   # 泛型单态化 ✅
   ├─ lency_codegen     # LLVM 代码生成 ✅
   └─ lency_runtime     # 运行时库 ✅
 
-lency_diagnostics # 统一诊断 ⚠️ 待实现
+lency_diagnostics # 统一诊断 ✅
 ```
 
 **详见**: [assets/roadmap.md](file:///home/indolyn/beryl/assets/roadmap.md)
@@ -279,16 +264,11 @@ lency_diagnostics # 统一诊断 ⚠️ 待实现
 
 ## 9. 下一步开发
 
-**Sprint 14 - 架构重构**:
-- 迁移单态化到独立模块
-- 实现统一诊断系统
+**Sprint 16 - 自举 Lexer**:
+- 使用 Lency 实现词法分析器
+- Token 定义、Lexer 架构、Scanner 逻辑
 
-**Sprint 15 - 泛型增强**:
-- Result<T, E> 完整支持
-- Option<T> 完整支持
+**Sprint 17+ - 自举 Parser**:
+- 使用 Lency 实现语法分析器
 
-**Sprint 16 - 标准库**:
-- JSON 解析
-- HTTP 基础
-
-详见 [roadmap.md](file:///home/indolyn/beryl/assets/roadmap.md)
+详见 [roadmap.md](../prompt/sprint/roadmap.md)

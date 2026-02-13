@@ -1,0 +1,45 @@
+// 字符串增强功能测试
+import std.core
+import std.str
+
+int main() {
+    print("String Enhanced Test\n")
+
+    // 1. count
+    var n = count("abcabcabc", "abc")
+    print("count(abcabcabc, abc) = ")
+    print(n) // 3
+    print("\n")
+
+    // 2. trim_left
+    var s1 = trim_left("  hello  ")
+    print("trim_left = [")
+    print(s1) // "hello  "
+    print("]\n")
+
+    // 3. trim_right
+    var s2 = trim_right("  hello  ")
+    print("trim_right = [")
+    print(s2) // "  hello"
+    print("]\n")
+
+    // 4. char_at
+    var c = char_at("hello", 1) // 'e' = 101
+    print("char_at(hello, 1) = ")
+    print(c)
+    print("\n")
+
+    var c2 = char_at("hello", 10) // out of bounds = -1
+    print("char_at(hello, 10) = ")
+    print(c2)
+    print("\n")
+
+    // 5. last_index_of
+    var idx = last_index_of("abcabc", "abc")
+    print("last_index_of(abcabc, abc) = ")
+    print(idx) // 3
+    print("\n")
+
+    print("String enhanced tests passed!\n")
+    return 0
+}

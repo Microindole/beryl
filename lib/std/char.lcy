@@ -44,3 +44,44 @@ bool is_hex_digit(int c) {
     if c >= 65 && c <= 70 { return true } // A-F
     return false
 }
+
+// ============== 字符转换函数 ==============
+
+// 字符转大写 (若为小写字母则转换，否则原样返回)
+int to_upper_char(int c) {
+    if c >= 97 && c <= 122 {
+        return c - 32
+    }
+    return c
+}
+
+// 字符转小写 (若为大写字母则转换，否则原样返回)
+int to_lower_char(int c) {
+    if c >= 65 && c <= 90 {
+        return c + 32
+    }
+    return c
+}
+
+// 数字字符转数值 ('0'→0, ..., '9'→9)
+// 非数字字符返回 -1
+int digit_value(int c) {
+    if c >= 48 && c <= 57 {
+        return c - 48
+    }
+    return -1
+}
+
+// 判断是否为可打印 ASCII 字符 (32-126)
+bool is_printable(int c) {
+    return c >= 32 && c <= 126
+}
+
+// 判断是否为标点符号
+bool is_punctuation(int c) {
+    if c >= 33 && c <= 47 { return true }   // ! " # $ % & ' ( ) * + , - . /
+    if c >= 58 && c <= 64 { return true }   // : ; < = > ? @
+    if c >= 91 && c <= 96 { return true }   // [ \ ] ^ _ `
+    if c >= 123 && c <= 126 { return true } // { | } ~
+    return false
+}

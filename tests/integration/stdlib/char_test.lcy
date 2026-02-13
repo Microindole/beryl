@@ -1,0 +1,42 @@
+// 字符处理增强测试
+import std.core
+import std.char
+
+int main() {
+    print("Char Enhanced Test\n")
+
+    // 1. to_upper_char
+    var upper = to_upper_char(97) // 'a' -> 'A' = 65
+    print("to_upper_char(a) = ")
+    print(upper)
+    print("\n")
+
+    // 2. to_lower_char
+    var lower = to_lower_char(65) // 'A' -> 'a' = 97
+    print("to_lower_char(A) = ")
+    print(lower)
+    print("\n")
+
+    // 3. digit_value
+    var d = digit_value(53) // '5' -> 5
+    print("digit_value(5) = ")
+    print(d)
+    print("\n")
+
+    // 4. is_printable
+    print("is_printable(65) = ")
+    if is_printable(65) { print("true") } else { print("false") }
+    print("\n")
+
+    print("is_printable(7) = ")
+    if is_printable(7) { print("true") } else { print("false") }
+    print("\n")
+
+    // 5. is_punctuation
+    print("is_punctuation(33) = ") // '!'
+    if is_punctuation(33) { print("true") } else { print("false") }
+    print("\n")
+
+    print("Char enhanced tests passed!\n")
+    return 0
+}

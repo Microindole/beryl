@@ -6,34 +6,8 @@ import std.core
 // 本文件提供更高级的集合操作和 HashMap。
 
 // ============== Vec 扩展方法 ==============
-
-// Sprint 15: Iterator trait - 统一的遍历接口
-trait Iterator<T> {
-    Option<T> next();
-}
-
-// Vec 的迭代器
-struct VecIterator<T> {
-    Vec<T> data // 重命名避免与 vec 关键字冲突
-    int index
-}
-
-// 为 VecIterator 实现 Iterator trait
-impl<T> Iterator<T> for VecIterator<T> {
-    Option<T> next() {
-        if this.index >= this.data.len() {
-            return Option::<T>.None
-        }
-        var item = this.data.get(this.index)
-        this.index = this.index + 1
-        return Option::<T>.Some(item)
-    }
-}
-
-// 为 Vec 创建迭代器（函数形式）
-VecIterator<T> vec_iter<T>(Vec<T> list) {
-    return VecIterator<T> { data: list, index: 0 }
-}
+// Iterator trait、VecIterator、vec_iter 定义在 std.iterator 模块
+import std.iterator
 
 // ============== Pair 类型 ==============
 
@@ -118,6 +92,74 @@ T last<T>(Vec<T> v) {
     return v.get(v.len() - 1)
 }
 
+// ============== 新增 Vec 辅助函数 ==============
+
+// 生成整数序列 [start, end)
+Vec<int> range(int start, int end) {
+    var result: Vec<int> = vec![]
+    var i = start
+    while i < end {
+        result.push(i)
+        i = i + 1
+    }
+    return result
+}
+
+// 检查 Vec<int> 是否包含目标值
+bool vec_contains_int(Vec<int> v, int target) {
+    return find_index_int(v, target) != -1
+}
+
+// 检查 Vec<string> 是否包含目标值
+bool vec_contains_string(Vec<string> v, string target) {
+    return find_index_string(v, target) != -1
+}
+
+// Vec<int> 求和
+int vec_sum(Vec<int> v) {
+    var sum = 0
+    var i = 0
+    while i < v.len() {
+        sum = sum + v.get(i)
+        i = i + 1
+    }
+    return sum
+}
+
+// Vec<int> 最大值 (空 Vec 返回 0)
+int vec_max(Vec<int> v) {
+    if v.len() == 0 {
+        return 0
+    }
+    var m = v.get(0)
+    var i = 1
+    while i < v.len() {
+        var val = v.get(i)
+        if val > m {
+            m = val
+        }
+        i = i + 1
+    }
+    return m
+}
+
+// Vec<int> 最小值 (空 Vec 返回 0)
+int vec_min(Vec<int> v) {
+    if v.len() == 0 {
+        return 0
+    }
+    var m = v.get(0)
+    var i = 1
+    while i < v.len() {
+        var val = v.get(i)
+        if val < m {
+            m = val
+        }
+        i = i + 1
+    }
+    return m
+}
+
 // ============== 运行时 Vec FFI (供参考) ==============
 //
 // lency_vec_new(capacity)          -> *mut LencyVec
@@ -129,53 +171,22 @@ T last<T>(Vec<T> v) {
 // lency_vec_free(vec)              -> void
 
 // ============== HashMap ==============
-// HashMap 使用运行时 FFI 实现，支持 int 和 string 作为键
-// 
-// 注意：extern 函数直接在代码生成器中处理
-// HashMap 方法通过 hashmap_int_* 函数名来识别
-
-// TODO: HashMapIntInt 包装暂时不可用
-// 原因：返回 struct 的函数在 codegen 中有问题
-// 请直接使用 hashmap_int_* 函数：
+// HashMap 通过运行时 FFI 实现。
+// TODO: struct 包装暂不可用（返回 struct 的 codegen 问题），请直接使用函数形式：
+//
+// Int 键 HashMap:
 //   var map = hashmap_int_new()
 //   hashmap_int_insert(map, key, value)
 //   var v = hashmap_int_get(map, key)
 //   var exists = hashmap_int_contains(map, key)
 //   var removed = hashmap_int_remove(map, key)
-//   var len = hashmap_int_len(map)
-
-// struct HashMapIntInt {
-//     int ptr  // 运行时指针
-// }
-
-// HashMapIntInt hashmap_new_int_int() {
-//     return HashMapIntInt { ptr: hashmap_int_new() }
-// }
-
-// impl HashMapIntInt {
-//     void insert(int key, int value) {
-//         hashmap_int_insert(this.ptr, key, value)
-//     }
-//     int get(int key) {
-//         return hashmap_int_get(this.ptr, key)
-//     }
-//     bool contains(int key) {
-//         return hashmap_int_contains(this.ptr, key)
-//     }
-//     bool remove(int key) {
-//         return hashmap_int_remove(this.ptr, key)
-//     }
-//     int size() {
-//         return hashmap_int_len(this.ptr)
-//     }
-// }
-
-// ============== 运行时 HashMap FFI (供参考) ==============
+//   var size = hashmap_int_len(map)
 //
-// lency_hashmap_new(capacity)              -> *mut LencyHashMap
-// lency_hashmap_insert(map, key, value)    -> void
-// lency_hashmap_get(map, key)              -> i64
-// lency_hashmap_contains(map, key)         -> bool
-// lency_hashmap_remove(map, key)           -> bool
-// lency_hashmap_len(map)                   -> i64
-// lency_hashmap_free(map)                  -> void
+// String 键 HashMap:
+//   var map = hashmap_string_new()
+//   hashmap_string_insert(map, key, value)
+//   var v = hashmap_string_get(map, key)
+//   var exists = hashmap_string_contains(map, key)
+//   var removed = hashmap_string_remove(map, key)
+//   var size = hashmap_string_len(map)
+

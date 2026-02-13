@@ -1,0 +1,46 @@
+// 集合增强功能测试
+import std.core
+import std.collections
+
+int main() {
+    print("Collections Enhanced Test\n")
+
+    // 1. range
+    var r = range(0, 5)
+    print("range(0, 5).len() = ")
+    print(r.len()) // 5
+    print("\n")
+
+    // 2. vec_sum
+    var nums = vec![1, 2, 3, 4, 5]
+    print("vec_sum([1..5]) = ")
+    print(vec_sum(nums)) // 15
+    print("\n")
+
+    // 3. vec_contains_int
+    print("contains(3) = ")
+    if vec_contains_int(nums, 3) { print("true") } else { print("false") }
+    print("\n")
+
+    print("contains(9) = ")
+    if vec_contains_int(nums, 9) { print("true") } else { print("false") }
+    print("\n")
+
+    // 4. vec_max / vec_min
+    print("vec_max = ")
+    print(vec_max(nums)) // 5
+    print("\n")
+
+    print("vec_min = ")
+    print(vec_min(nums)) // 1
+    print("\n")
+
+    // 5. vec_contains_string
+    var words = vec!["hello", "world"]
+    print("contains(hello) = ")
+    if vec_contains_string(words, "hello") { print("true") } else { print("false") }
+    print("\n")
+
+    print("Collections enhanced tests passed!\n")
+    return 0
+}

@@ -42,6 +42,9 @@ editors/         # IDE 插件与工具链
 - [DONE] Result/Option 方法全量支持 (is_ok, unwrap, unwrap_or, expect等)
 - [DONE] panic 机制强化（支持动态消息、文件行号追踪）
 - [DONE] String 格式化 -- `format(string, Vec<string>)` 内置函数
+- [DONE] 标准库清理 -- core 瘦身、去重、Iterator 统一、string→str 重命名
+- [DONE] 标准库增强 -- 24 个新函数 (str/io/collections/math/char)
+- [DONE] 自举 Lexer -- lencyc/syntax/{token,keywords,lexer}.lcy, 三级 import (70 pass)
 
 ---
 详细设计参考: [design_spec.md](../assets/design_spec.md), [Lency.txt](../assets/Lency.txt)

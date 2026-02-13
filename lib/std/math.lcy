@@ -23,6 +23,19 @@ int abs_int(int x) {
     return x
 }
 
+// abs 的别名（兼容常规用法）
+int abs(int x) {
+    return abs_int(x)
+}
+
+// 两个整数之差的绝对值
+int diff(int a, int b) {
+    if a > b {
+        return a - b
+    }
+    return b - a
+}
+
 // 最大值
 int max_int(int a, int b) {
     if a > b {
@@ -164,4 +177,61 @@ float lerp(float a, float b, float t) {
 float map_range(float value, float from_min, float from_max, float to_min, float to_max) {
     var normalized = (value - from_min) / (from_max - from_min)
     return to_min + normalized * (to_max - to_min)
+}
+
+// ============== 新增数学函数 ==============
+
+// 最大公约数 (欧几里得算法)
+int gcd(int a, int b) {
+    var x = abs_int(a)
+    var y = abs_int(b)
+    while y != 0 {
+        var temp = y
+        y = x - (x / y) * y  // x % y 的等价写法
+        x = temp
+    }
+    return x
+}
+
+// 最小公倍数
+int lcm(int a, int b) {
+    if a == 0 || b == 0 {
+        return 0
+    }
+    var g = gcd(a, b)
+    return abs_int(a / g * b)
+}
+
+// 阶乘 (n! = 1*2*...*n, 0! = 1)
+int factorial(int n) {
+    if n <= 1 {
+        return 1
+    }
+    var result = 1
+    var i = 2
+    while i <= n {
+        result = result * i
+        i = i + 1
+    }
+    return result
+}
+
+// 斐波那契数列第 n 项 (0, 1, 1, 2, 3, 5, 8, ...)
+int fibonacci(int n) {
+    if n <= 0 {
+        return 0
+    }
+    if n == 1 {
+        return 1
+    }
+    var a = 0
+    var b = 1
+    var i = 2
+    while i <= n {
+        var temp = b
+        b = a + b
+        a = temp
+        i = i + 1
+    }
+    return b
 }

@@ -10,7 +10,7 @@ import std.io
 import std.fs
 
 // 字符串操作
-import std.string
+import std.str
 
 // 集合类型
 import std.collections
@@ -24,6 +24,10 @@ import std.math
 // 断言工具
 import std.assert
 
-// 常用工具
+// 类型系统辅助
 import std.result
+import std.option
 import std.iterator
+
+// 类型转换
+import std.convert

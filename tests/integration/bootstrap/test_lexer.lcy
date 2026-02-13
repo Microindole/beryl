@@ -1,0 +1,151 @@
+// 自举 Lexer 集成测试
+// 验证 Lexer 正确识别各种 Token
+
+import std.core
+import lencyc.syntax.token
+import lencyc.syntax.lexer
+
+int main() {
+    print("Lexer Test Start\n")
+
+    // === 测试 1: 关键字 ===
+    var tokens1 = tokenize("var if else while return")
+    // var=20, if=22, else=23, while=24, return=29, EOF=0
+    if tokens1.get(0).type != 20 {
+        print("FAIL: var keyword\n")
+        return 1
+    }
+    if tokens1.get(1).type != 22 {
+        print("FAIL: if keyword\n")
+        return 1
+    }
+    if tokens1.get(2).type != 23 {
+        print("FAIL: else keyword\n")
+        return 1
+    }
+    if tokens1.get(3).type != 24 {
+        print("FAIL: while keyword\n")
+        return 1
+    }
+    if tokens1.get(4).type != 29 {
+        print("FAIL: return keyword\n")
+        return 1
+    }
+    if tokens1.get(5).type != 0 {
+        print("FAIL: EOF\n")
+        return 1
+    }
+    print("keywords passed\n")
+
+    // === 测试 2: 标识符 ===
+    var tokens2 = tokenize("foo bar_baz x123")
+    if tokens2.get(0).type != 10 {
+        print("FAIL: ident type\n")
+        return 1
+    }
+    if tokens2.get(0).lexeme != "foo" {
+        print("FAIL: ident lexeme\n")
+        return 1
+    }
+    if tokens2.get(1).lexeme != "bar_baz" {
+        print("FAIL: underscore ident\n")
+        return 1
+    }
+    if tokens2.get(2).lexeme != "x123" {
+        print("FAIL: alphanumeric ident\n")
+        return 1
+    }
+    print("identifiers passed\n")
+
+    // === 测试 3: 数字 ===
+    var tokens3 = tokenize("42 3.14")
+    if tokens3.get(0).type != 11 {
+        print("FAIL: int literal type\n")
+        return 1
+    }
+    if tokens3.get(0).lexeme != "42" {
+        print("FAIL: int literal lexeme\n")
+        return 1
+    }
+    if tokens3.get(1).type != 12 {
+        print("FAIL: float literal type\n")
+        return 1
+    }
+    if tokens3.get(1).lexeme != "3.14" {
+        print("FAIL: float literal lexeme\n")
+        return 1
+    }
+    print("numbers passed\n")
+
+    // === 测试 4: 字符串 ===
+    var tokens4 = tokenize("\"hello world\"")
+    if tokens4.get(0).type != 13 {
+        print("FAIL: string literal type\n")
+        return 1
+    }
+    if tokens4.get(0).lexeme != "hello world" {
+        print("FAIL: string literal lexeme\n")
+        return 1
+    }
+    print("strings passed\n")
+
+    // === 测试 5: 运算符 (单字符) ===
+    var tokens5 = tokenize("+ - * / %")
+    if tokens5.get(0).type != 100 { print("FAIL: +\n") return 1 }
+    if tokens5.get(1).type != 101 { print("FAIL: -\n") return 1 }
+    if tokens5.get(2).type != 102 { print("FAIL: *\n") return 1 }
+    if tokens5.get(3).type != 103 { print("FAIL: /\n") return 1 }
+    if tokens5.get(4).type != 104 { print("FAIL: %\n") return 1 }
+    print("single-char operators passed\n")
+
+    // === 测试 6: 运算符 (双字符) ===
+    var tokens6 = tokenize("== != <= >= && || =>")
+    if tokens6.get(0).type != 130 { print("FAIL: ==\n") return 1 }
+    if tokens6.get(1).type != 131 { print("FAIL: !=\n") return 1 }
+    if tokens6.get(2).type != 132 { print("FAIL: <=\n") return 1 }
+    if tokens6.get(3).type != 133 { print("FAIL: >=\n") return 1 }
+    if tokens6.get(4).type != 134 { print("FAIL: &&\n") return 1 }
+    if tokens6.get(5).type != 135 { print("FAIL: ||\n") return 1 }
+    if tokens6.get(6).type != 136 { print("FAIL: =>\n") return 1 }
+    print("double-char operators passed\n")
+
+    // === 测试 7: 注释跳过 ===
+    var tokens7 = tokenize("a // this is comment\nb")
+    if tokens7.get(0).lexeme != "a" { print("FAIL: before comment\n") return 1 }
+    if tokens7.get(1).lexeme != "b" { print("FAIL: after comment\n") return 1 }
+    if tokens7.get(2).type != 0 { print("FAIL: EOF after comment\n") return 1 }
+    print("comments passed\n")
+
+    // === 测试 8: 行号追踪 ===
+    var tokens8 = tokenize("a\nb\nc")
+    if tokens8.get(0).line != 1 { print("FAIL: line 1\n") return 1 }
+    if tokens8.get(1).line != 2 { print("FAIL: line 2\n") return 1 }
+    if tokens8.get(2).line != 3 { print("FAIL: line 3\n") return 1 }
+    print("line tracking passed\n")
+
+    // === 测试 9: 类型关键字 ===
+    var tokens9 = tokenize("int float bool string void")
+    if tokens9.get(0).type != 50 { print("FAIL: int type\n") return 1 }
+    if tokens9.get(1).type != 51 { print("FAIL: float type\n") return 1 }
+    if tokens9.get(2).type != 52 { print("FAIL: bool type\n") return 1 }
+    if tokens9.get(3).type != 53 { print("FAIL: string type\n") return 1 }
+    if tokens9.get(4).type != 54 { print("FAIL: void type\n") return 1 }
+    print("type keywords passed\n")
+
+    // === 测试 10: 分隔符 ===
+    var tokens10 = tokenize("( ) { } [ ] , . : ;")
+    if tokens10.get(0).type != 109 { print("FAIL: (\n") return 1 }
+    if tokens10.get(1).type != 110 { print("FAIL: )\n") return 1 }
+    if tokens10.get(2).type != 111 { print("FAIL: {\n") return 1 }
+    if tokens10.get(3).type != 112 { print("FAIL: }\n") return 1 }
+    if tokens10.get(4).type != 113 { print("FAIL: [\n") return 1 }
+    if tokens10.get(5).type != 114 { print("FAIL: ]\n") return 1 }
+    if tokens10.get(6).type != 115 { print("FAIL: ,\n") return 1 }
+    if tokens10.get(7).type != 116 { print("FAIL: .\n") return 1 }
+    if tokens10.get(8).type != 117 { print("FAIL: :\n") return 1 }
+    if tokens10.get(9).type != 118 { print("FAIL: ;\n") return 1 }
+    print("delimiters passed\n")
+
+    print("\nAll lexer tests passed!\n")
+    return 0
+}

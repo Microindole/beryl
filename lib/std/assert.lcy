@@ -2,7 +2,7 @@
 // 提供测试和调试用的断言函数
 
 import std.core
-import std.string
+import std.str
 
 // 断言条件为真，否则 panic
 void assert(bool condition, string message) {

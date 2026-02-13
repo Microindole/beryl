@@ -1,0 +1,30 @@
+// Lency 标准库 - 类型转换模块 (convert.lcy)
+// 提供类型转换函数
+//
+// 编译器内置转换函数 (intrinsics):
+//   string int_to_string(int n)      - int → string
+//   string float_to_string(float f)  - float → string
+//   int    parse_int(string s)       - string → int
+//   float  parse_float(string s)     - string → float
+//   string char_to_string(int c)     - ASCII code → string (单字符)
+
+// bool 转 string
+string bool_to_string(bool b) {
+    if b {
+        return "true"
+    }
+    return "false"
+}
+
+// int 转 bool (0 为 false，其余为 true)
+bool int_to_bool(int n) {
+    return n != 0
+}
+
+// float 转 int (截断小数部分)
+// TODO: 需要编译器 intrinsic 支持
+// int float_to_int(float f) { ... }
+
+// int 转 float
+// TODO: 需要编译器 intrinsic 支持
+// float int_to_float(int n) { ... }
