@@ -24,18 +24,44 @@ pub struct CompilationOutput {
 }
 
 /// 解析源代码
+/// 解析源代码
 fn parse_source(source: &str) -> CompileResult<Program> {
-    // 词法分析
-    let tokens: Vec<Token> = Token::lexer(source)
-        .spanned()
-        .map(|(tok, _span)| tok.map_err(|_| CompileError::LexError("Unknown token".to_string())))
-        .collect::<Result<Vec<_>, _>>()?;
+    use chumsky::Stream;
 
-    // 语法分析
+    // 1. 词法分析 (保留 Span)
+    let token_iter = Token::lexer(source).spanned().map(|(tok, span)| match tok {
+        Ok(t) => (t, span),
+        Err(_) => (Token::Error, span),
+    });
+
+    let token_vec: Vec<(Token, std::ops::Range<usize>)> = token_iter.collect();
+    let len = source.len();
+
+    // 2. 创建 Stream
+    // Stream 需要一个迭代器，其中元素是 (Token, Span)
+    // 还需要指定 EOF 的 Span (这里用 source.len()..source.len())
+    let stream = Stream::from_iter(len..len, token_vec.into_iter());
+
+    // 3. 语法分析
     let parser = program_parser();
-    parser
-        .parse(tokens)
-        .map_err(|e| CompileError::ParseError(format!("{:?}", e)))
+    parser.parse(stream).map_err(|e| {
+        let details = e
+            .into_iter()
+            .map(|err| {
+                // Simple<Token> has a public span field or method that doesn't need the trait imported if inherent,
+                // or if it is imported, it's seemingly not needed according to rustc.
+                // Actually Simple struct usually has span()
+                let span = err.span();
+                let msg = if let chumsky::error::SimpleReason::Custom(msg) = err.reason() {
+                    msg.clone()
+                } else {
+                    format!("{:?}", err)
+                };
+                crate::error::ParseErrorDetail { span, message: msg }
+            })
+            .collect();
+        CompileError::ParseError(details)
+    })
 }
 
 /// 编译 Lency 源代码

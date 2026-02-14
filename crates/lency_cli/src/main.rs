@@ -5,10 +5,22 @@ use std::fs;
 
 #[derive(Parser)]
 #[command(name = "lencyc")]
-#[command(about = "Lency 编译器 - 简洁、规范、清晰", version)]
+#[command(
+    about = "Lency 编译器 - 简洁、规范、清晰",
+    version,
+    propagate_version = true
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    /// 详细输出模式
+    #[arg(short, long, global = true)]
+    verbose: bool,
+
+    /// 安静模式 (只输出错误)
+    #[arg(short, long, global = true)]
+    quiet: bool,
 }
 
 #[derive(Subcommand)]
@@ -27,6 +39,10 @@ enum Commands {
     Run {
         /// 输入文件
         input: String,
+
+        /// 传递给程序的参数
+        #[arg(last = true)]
+        args: Vec<String>,
     },
 
     /// 检查语法和语义错误
@@ -43,17 +59,35 @@ enum Commands {
         /// 输出文件 (默认: lencyTemp.out)
         #[arg(short, long, default_value = "lencyTemp.out")]
         output: String,
+
+        /// 优化构建 (Release mode)
+        #[arg(long)]
+        release: bool,
     },
+
+    /// 交互式 REPL (实验性)
+    Repl,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
+    // Set up logging/verbosity based on flags (Future improvement)
+    if cli.verbose {
+        // e.g. env_logger::builder().filter_level(log::LevelFilter::Debug).init();
+        println!("🔧 Verbose mode enabled");
+    }
+
     match cli.command {
         Commands::Compile { input, output } => cmd_compile(&input, &output)?,
-        Commands::Run { input } => cmd_run(&input)?,
+        Commands::Run { input, args: _ } => cmd_run(&input)?,
         Commands::Check { input } => cmd_check(&input)?,
-        Commands::Build { input, output } => cmd_build(&input, &output)?,
+        Commands::Build {
+            input,
+            output,
+            release,
+        } => cmd_build(&input, &output, release)?,
+        Commands::Repl => cmd_repl()?,
     }
 
     Ok(())
@@ -154,8 +188,8 @@ fn cmd_check(input: &str) -> Result<()> {
 }
 
 /// 构建命令 - 生成可执行文件
-fn cmd_build(input: &str, output: &str) -> Result<()> {
-    println!("🔨 构建 {} ...", input);
+fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
+    println!("🔨 构建 {} (release={}) ...", input, release);
 
     // 1. 编译为 LLVM IR
     let result = compile_file(input)?;
@@ -165,6 +199,7 @@ fn cmd_build(input: &str, output: &str) -> Result<()> {
     // 2. 使用 llc 生成目标文件
     println!("  ⚙️  生成目标文件...");
     let temp_obj = "/tmp/lency_temp.o";
+    // TODO: Pass optimization flags to llc if release is true
     let llc_status = std::process::Command::new("llc-15")
         .args(["-filetype=obj", temp_ll, "-o", temp_obj])
         .status()?;
@@ -176,14 +211,14 @@ fn cmd_build(input: &str, output: &str) -> Result<()> {
     // 3. 查找运行时库
     let mut runtime_path = None;
     if let Ok(cwd) = std::env::current_dir() {
-        let dirs = ["target/debug", "target/release"];
-        // Check for static lib first, then dynamic
-        // Note: lency_runtime might be compiled as rlib (static) or dylib
-        // Rust produces liblency_runtime.rlib usually.
-        // But for FFI usage, we might need cdylib (liblency_runtime.so) or staticlib (liblency_runtime.a)
-        // Let's assume .so/.dylib/.a exist if they were built.
-        // Based on cmd_run, we look for shared libs. GCC can link against them.
+        // Defines search order based on release flag
+        let dirs = if release {
+            vec!["target/release", "target/debug"]
+        } else {
+            vec!["target/debug", "target/release"]
+        };
 
+        // Note: lency_runtime might be compiled as rlib (static) or dylib
         let libs = [
             "liblency_runtime.so",
             "liblency_runtime.dylib",
@@ -228,5 +263,55 @@ fn cmd_build(input: &str, output: &str) -> Result<()> {
     }
 
     println!("✅ 成功生成可执行文件: {}", output);
+    Ok(())
+}
+
+/// REPL 循环 (实验性)
+fn cmd_repl() -> Result<()> {
+    use std::io::{self, Write};
+
+    println!("Lency REPL (Experimental)");
+    println!("Type 'exit' or press Ctrl+D to quit.");
+
+    let mut input = String::new();
+    let stdin = io::stdin();
+
+    loop {
+        print!("> ");
+        io::stdout().flush()?;
+
+        input.clear();
+        if stdin.read_line(&mut input)? == 0 {
+            break; // EOF
+        }
+
+        let trimmed = input.trim();
+        if trimmed == "exit" || trimmed == "quit" {
+            break;
+        }
+
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        // Just check syntax for now
+        // Wrap in a function to allow declarations if needed, or parse as statements
+        // But driver compiles a whole file.
+        // Let's create a temporary source string.
+        match lency_driver::compile(trimmed) {
+            Ok(_res) => {
+                println!("✅ Parse OK");
+                // Optional: Print IR or verify semantic
+                // println!("{}", _res.ir);
+            }
+            Err(e) => {
+                // Use enhanced error emission
+                // We pass Some(trimmed) as source so snippet is shown
+                e.emit(Some("<repl>"), Some(trimmed));
+            }
+        }
+    }
+
+    println!("Bye!");
     Ok(())
 }

@@ -1,0 +1,13 @@
+
+// import std.core
+// import lencyc.syntax.ast
+
+// Dummy implementations to test if file parses without imports
+string printer_int_to_string(int n) {
+    return "0"
+}
+
+// string print_stmts(Vec<Stmt> stmts) {
+//     return "AST"
+// }
+// cannot use Stmt without import

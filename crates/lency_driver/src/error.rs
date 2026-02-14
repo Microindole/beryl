@@ -7,6 +7,13 @@ use lency_diagnostics::{Diagnostic, DiagnosticSink, Emitter};
 use lency_sema::SemanticError;
 use thiserror::Error;
 
+/// 解析错误详情
+#[derive(Debug)]
+pub struct ParseErrorDetail {
+    pub span: std::ops::Range<usize>,
+    pub message: String,
+}
+
 /// 编译错误
 #[derive(Debug, Error)]
 pub enum CompileError {
@@ -15,8 +22,9 @@ pub enum CompileError {
     LexError(String),
 
     /// 语法错误
-    #[error("Parse error: {0}")]
-    ParseError(String),
+    /// 语法错误
+    #[error("Parse error(s)")]
+    ParseError(Vec<ParseErrorDetail>),
 
     /// 语义错误（可能有多个）
     #[error("Semantic errors:\n{}", format_semantic_errors(.0))]
@@ -46,8 +54,13 @@ impl CompileError {
             CompileError::LexError(msg) => {
                 add_diag(Diagnostic::error(format!("Lexical error: {}", msg)));
             }
-            CompileError::ParseError(msg) => {
-                add_diag(Diagnostic::error(format!("Parse error: {}", msg)));
+            CompileError::ParseError(errors) => {
+                for err in errors {
+                    add_diag(
+                        Diagnostic::error(format!("Parse error: {}", err.message))
+                            .span(err.span.clone()),
+                    );
+                }
             }
             CompileError::SemanticErrors(errors) => {
                 for err in errors {

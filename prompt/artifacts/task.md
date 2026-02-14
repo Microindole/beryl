@@ -1,27 +1,35 @@
-# Sprint 16 Tasks: Bootstrap - Lexer
+# Sprint 17 Tasks: Bootstrap - Parser
 
-- [ ] **Token 定义**
-    - [ ] `TokenType` enum
-    - [ ] `Token` struct
-    - [ ] `to_string` 方法
+- [ ] **AST 定义** (`lencyc/syntax/ast.lcy`)
+    - [ ] `Node` interface/trait (if applicable) or Base Enum
+    - [ ] `Expr` enum (Binary, Unary, Literal, etc.)
+    - [ ] `Stmt` enum (If, While, VarDecl, etc.)
+    - [ ] `Type` representation
 
-- [ ] **String Helper** (如果标准库缺少)
-    - [ ] `is_digit(char)`
-    - [ ] `is_alpha(char)`
-    - [ ] `is_alphanumeric(char)`
+- [ ] **Parser 基础** (`lencyc/syntax/parser.lcy`)
+    - [ ] `struct Parser`
+    - [ ] `match`, `consume`, `check` helper methods
+    - [ ] Error synchronization logic
 
-- [ ] **Lexer 结构**
-    - [ ] `struct Lexer`
-    - [ ] `advance()`, `peek()`
-    - [ ] `skip_whitespace()`
+- [ ] **Expression Parsing**
+    - [ ] Precedence table/logic
+    - [ ] `parse_precedence` (Pratt) or recursive structure
+    - [ ] Leaf nodes (literals, identifiers)
+    - [ ] Infix/Prefix operators
 
-- [ ] **Scanner 逻辑**
-    - [ ] 单字符符号
-    - [ ] 运算符 (`==`, `!=` 等)
-    - [ ] 字符串 (`"`)
-    - [ ] 数字 (int/float)
-    - [ ] 标识符 & 关键字
+- [ ] **Statement Parsing**
+    - [ ] `parse_decl` (var, func)
+    - [ ] `parse_stmt` (if, while, block, return, expr_stmt)
 
-- [ ] **验证**
-    - [ ] 编写 `tests/integration/bootstrap/lexer_test.lcy`
-    - [ ] 运行 `./scripts/run_checks.sh`
+- [ ] **验证 & 驱动**
+    - [ ] AST Pretty Printer (`ast_to_string`)
+    - [ ] 更新 `lencyc/driver/main.lcy`
+    - [ ] 运行测试
+
+---
+
+# Completed (Sprint 16)
+- [x] Token 定义
+- [x] Keywords 映射
+- [x] Lexer 核心逻辑
+- [x] Driver 验证

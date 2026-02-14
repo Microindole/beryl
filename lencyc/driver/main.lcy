@@ -1,33 +1,44 @@
-// Lency 自举编译器 - Lexer 驱动程序 (main.lcy)
-// 演示 Lexer 功能：tokenize 一段源代码并输出 Token 列表
+// Lency 自举编译器 - Parser 驱动程序 (main.lcy)
+// 演示 Parser 功能：Source -> Tokens -> AST
 
 import std.core
 import std.io
 import lencyc.syntax.token
 import lencyc.syntax.lexer
+import lencyc.syntax.ast
+import lencyc.syntax.parser
+import lencyc.syntax.printer
 
 int main() {
     // 测试源代码
-    var source = "int add(int a, int b) {\n    return a + b\n}\n\nvar x = add(1, 2)\nprint(x)\n"
+    var source = "var x = 1 + 2 * 3; if (x > 5) { print(x); } else { print(0); }"
 
-    print("=== Lency Self-Hosted Lexer ===\n")
+    print("=== Lency Self-Hosted Parser ===\n")
     print("Source:\n")
     print(source)
-    print("\n--- Tokens ---\n")
+    print("\n\n--- Tokens ---\n")
 
     var tokens = tokenize(source)
-
+    
+    // Print tokens for debug
     var i = 0
     while i < tokens.len() {
         var tok = tokens.get(i)
-        println(token_to_string(tok))
+        // println(token_to_string(tok))
         i = i + 1
     }
-
-    print("\n--- Summary ---\n")
     print("Total tokens: ")
     print(tokens.len())
     print("\n")
+    
+    print("--- AST ---\n")
+    
+    var parser = parser_new(tokens, source)
+    var stmts = parse(parser)
+    
+    print(print_stmts(stmts))
+    
+    print("\n--- Done ---\n")
 
     return 0
 }

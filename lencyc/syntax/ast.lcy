@@ -1,0 +1,183 @@
+// Lency 自举编译器 - AST 定义 (ast.lcy)
+// 定义语法树节点：Expr, Stmt, Type
+
+import std.core
+import lencyc.syntax.token
+
+// Span: 源码位置范围
+struct Span {
+    int start
+    int end
+}
+
+Span make_span(int start, int end) {
+    return Span { start: start, end: end }
+}
+
+// --- AST Node Types ---
+
+// 表达式节点
+enum Expr {
+    // 字面量
+    Literal(LiteralValue),
+    
+    // 变量
+    Variable(string),
+    
+    // 二元操作: left + right
+    // 由于 Lency 暂不支持递归 Enum (Box<T>)，使用 Vec<Expr> 模拟 Box
+    // Vec 长度必须为 1
+    Binary(Vec<Expr>, BinaryOp, Vec<Expr>),
+    
+    // 一元操作: -expr
+    Unary(UnaryOp, Vec<Expr>),
+    
+    // 函数调用: func(args)
+    Call(Vec<Expr>, Vec<Expr>), // callee, args
+    
+    // 分组: (expr)
+    Grouping(Vec<Expr>),
+    
+    // 赋值: target = value
+    Assignment(Vec<Expr>, Vec<Expr>),
+    
+    // 逻辑操作
+    Logical(Vec<Expr>, BinaryOp, Vec<Expr>),
+    
+    // 成员访问: object.name
+    Get(Vec<Expr>, string),
+    
+    // 数组字面量: [1, 2, 3]
+    ArrayLiteral(Vec<Expr>),
+    
+    // 索引: arr[i]
+    Index(Vec<Expr>, Vec<Expr>),
+    
+    // 结构体字面量: Point { x: 1, y: 2 }
+    // fields: names, values
+    StructLiteral(Type, Vec<string>, Vec<Expr>),
+    
+    // 错误检查/Propagating: expr?
+    Try(Vec<Expr>),
+    
+    // Block Expression? (Lency uses Stmt block mostly, but match acts like expr)
+    Match(Vec<Expr>, Vec<MatchCase>),
+}
+
+// 语句节点
+enum Stmt {
+    // 表达式语句: expr;
+    Expression(Expr),
+    
+    // 变量声明: var name: Type = value;
+    VarDecl(string, Option<Type>, Expr),
+    
+    // 块: { stmts }
+    Block(Vec<Stmt>),
+    
+    // If: if (cond) { then } else { else }
+    If(Expr, Vec<Stmt>, Option<Vec<Stmt>>), // Else block is optional Vec
+    
+    // While: while (cond) { body }
+    While(Expr, Vec<Stmt>),
+    
+    // Return: return expr;
+    Return(Option<Expr>),
+    
+    // Break/Continue
+    Break,
+    Continue,
+    
+    // 函数定义
+    Function(string, Vec<Param>, Type, Vec<Stmt>),
+    
+    // 结构体定义
+    Struct(string, Vec<Param>), // Fields treated as Params for simplicity in definition? Or separate Field struct.
+}
+
+// 类型节点
+enum Type {
+    Int,
+    Float,
+    Bool,
+    String,
+    Void,
+    
+    // 用户自定义类型 (Struct/Enum)
+    Named(string),
+    
+    // 泛型实例化: Vec<int>
+    Generic(string, Vec<Type>),
+    
+    // 数组: [int; 5] - size is const int
+    Array(Vec<Type>, int),
+    
+    // 可空: int?
+    Nullable(Vec<Type>),
+    
+    // 函数类型: fn(int, int) -> int
+    Function(Vec<Type>, Vec<Type>), // params, return (Vec size 1)
+    
+    Error, // 解析错误占位
+}
+
+// 辅助结构 ---
+
+// 字面量值
+enum LiteralValue {
+    Int(int),
+    Float(float),
+    Bool(bool),
+    Str(string),
+    Null,
+}
+
+// 二元运算符
+enum BinaryOp {
+    Add, Sub, Mul, Div, Mod,
+    Eq, Neq, Lt, Gt, Leq, Geq,
+    And, Or
+}
+
+// 一元运算符
+enum UnaryOp {
+    Neg, Not,
+}
+
+// 函数参数 / 结构体字段
+struct Param {
+    string name
+    Type type
+}
+
+// Match Case
+struct MatchCase {
+    MatchPattern pattern
+    Expr body
+}
+
+enum MatchPattern {
+    Literal(LiteralValue),
+    Variable(string),
+    Wildcard,
+}
+
+// --- Helper Functions for "Box" simulation ---
+
+Vec<Expr> expr_box(Expr e) {
+    var v = vec![e]
+    return v
+}
+
+Expr expr_unbox(Vec<Expr> v) {
+    return v.get(0)
+}
+
+Vec<Type> type_box(Type t) {
+    var v = vec![t]
+    return v
+}
+
+Type type_unbox(Vec<Type> v) {
+    return v.get(0)
+}

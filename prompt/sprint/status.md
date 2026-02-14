@@ -1,18 +1,28 @@
 # Sprint 状态总结
 
-## Sprint 16: 自举 - Lexer (进行中)
+## Sprint 17: 自举 - Parser (进行中)
 
-**工作记录**: [task](../artifacts/task.md) | [implementation_plan](../artifacts/implementation_plan.md) | [walkthrough](../artifacts/walkthrough.md) | [详细计划](plan_16.md)
+**工作记录**: [task](../artifacts/task.md) | [implementation_plan](../artifacts/implementation_plan.md) | [walkthrough](../artifacts/walkthrough.md) | [详细计划](plan_17.md)
 
 ### 目标
-使用 Lency 语言实现一个功能完整的 Lexer，能够解析 Lency 源代码并生成 Token 流。
+实现一个递归下降解析器 (Recursive Descent Parser)，将 Token 流转换为 AST。
 
 ### 待完成
-- [ ] Token 定义 (Enum/Struct)
-- [ ] String Helper (is_digit, is_alpha)
-- [ ] Lexer 基础架构 (advance, peek)
-- [ ] Scanner 逻辑 (Symbols, Strings, Numbers, Identifiers)
-- [ ] 集成测试验证
+- [ ] AST 定义 (Enum/Struct) - `lencyc/syntax/ast.lcy`
+- [ ] Parser 基础架构 - `lencyc/syntax/parser.lcy`
+- [ ] Expression Parsing (优先级, Pratt/Recursive)
+- [ ] Statement/Declaration Parsing
+- [ ] AST Printer (Debug验证)
+
+---
+
+## Sprint 16: 自举 - Lexer [DONE]
+
+### 完成内容
+1. **Token 定义** [DONE] -- `lencyc/syntax/token.lcy`
+2. **Keyword Mapping** [DONE] -- `lencyc/syntax/keywords.lcy`
+3. **Lexer 实现** [DONE] -- `lencyc/syntax/lexer.lcy` (完整支持 String/Number/Symbol)
+4. **Driver 验证** [DONE] -- `lencyc/driver/main.lcy`
 
 ---
 
@@ -35,9 +45,9 @@
 
 ## 下一步计划
 
-### 优先级 1: Sprint 16 -- 正则表达式、Token 定义、基础 Lexer
+### 优先级 1: Sprint 17 -- Parser Implementation
 
-### 优先级 2: 更多 Integration Tests
+### 优先级 2: Sprint 18 -- Semantic Analysis (Name Resolution)
 
 ---
 
@@ -45,8 +55,7 @@
 | 指标 | 值 |
 |------|-----|
 | 测试通过 | 64 (.lcy) + Rust unit tests |
-| FIXME | 3 |
-| TODO | 8 |
-| 自举准备度 | ~95% |
+| 自举组件 | Lexer (Done), Parser (Todo) |
+| 自举准备度 | ~98% |
 
-*更新时间: 2026-02-12*
+*更新时间: 2026-02-14*

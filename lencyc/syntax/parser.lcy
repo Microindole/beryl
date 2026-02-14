@@ -1,0 +1,88 @@
+
+import std.core
+import lencyc.syntax.token
+import lencyc.syntax.ast
+
+struct Parser {
+    Vec<Token> tokens
+    int current
+    string source
+    bool had_error
+}
+
+Parser parser_new(Vec<Token> tokens, string source) {
+    return Parser {
+        tokens: tokens,
+        current: 0,
+        source: source,
+        had_error: false
+    }
+}
+
+// --- Helper Methods ---
+
+bool p_is_at_end(Parser p) {
+    return p_peek(p).type == TK_EOF()
+}
+
+Token p_peek(Parser p) {
+    if (p.current >= p.tokens.len()) { 
+        return p.tokens.get(p.tokens.len() - 1) 
+    }
+    return p.tokens.get(p.current)
+}
+
+Token p_previous(Parser p) {
+    return p.tokens.get(p.current - 1)
+}
+
+bool p_check(Parser p, int kind) {
+    if (p_is_at_end(p)) {
+        return false
+    }
+    var tok = p_peek(p)
+    return tok.type == kind
+}
+
+Token p_advance(Parser p) {
+    if (!p_is_at_end(p)) {
+        p.current = p.current + 1
+    }
+    return p_previous(p)
+}
+
+bool p_match(Parser p, int kind) {
+    if (p_check(p, kind)) {
+        p_advance(p)
+        return true
+    }
+    return false
+}
+
+Token p_consume(Parser p, int kind, string message) {
+    if (p_check(p, kind)) {
+        return p_advance(p)
+    }
+    
+    var tok = p_peek(p)
+    print("Error: " + message) 
+    p.had_error = true
+// --- Parsing Logic ---
+
+Vec<Stmt> parse(Parser p) {
+    var statements: Vec<Stmt> = vec![]
+    while (!p_is_at_end(p)) {
+        var decl = parse_declaration(p)
+// Use match expression
+        var dummy = match decl {
+            case Option.Some(d) => statements.push(d)
+            case Option.None => {}
+        }
+    }
+    return statements
+}
+
+Option<Stmt> parse_declaration(Parser p) {
+    // Placeholder to allow compilation
+    return Option.None
+}
