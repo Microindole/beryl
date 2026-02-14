@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     // Set up logging/verbosity based on flags (Future improvement)
     if cli.verbose {
         // e.g. env_logger::builder().filter_level(log::LevelFilter::Debug).init();
-        println!("🔧 Verbose mode enabled");
+        println!("Verbose mode enabled");
     }
 
     match cli.command {
@@ -95,7 +95,7 @@ fn main() -> Result<()> {
 
 /// 编译命令
 fn cmd_compile(input: &str, output: &str) -> Result<()> {
-    println!("📦 编译 {} ...", input);
+    println!("Compiling {} ...", input);
 
     let source = fs::read_to_string(input)?;
     let result = match lency_driver::compile(&source) {
@@ -107,14 +107,14 @@ fn cmd_compile(input: &str, output: &str) -> Result<()> {
     };
 
     fs::write(output, result.ir)?;
-    println!("✅ 成功生成 {}", output);
+    println!("Generated {}", output);
 
     Ok(())
 }
 
 /// 运行命令
 fn cmd_run(input: &str) -> Result<()> {
-    println!("🚀 运行 {} ...", input);
+    println!("Running {} ...", input);
 
     // 1. 编译
     let result = compile_file(input)?;
@@ -172,12 +172,12 @@ fn cmd_run(input: &str) -> Result<()> {
 
 /// 检查命令
 fn cmd_check(input: &str) -> Result<()> {
-    println!("🔍 检查 {} ...", input);
+    println!("Checking {} ...", input);
 
     let source = fs::read_to_string(input)?;
     match lency_driver::compile(&source) {
         Ok(_) => {
-            println!("✅ 无错误");
+            println!("No errors found");
             Ok(())
         }
         Err(e) => {
@@ -189,7 +189,7 @@ fn cmd_check(input: &str) -> Result<()> {
 
 /// 构建命令 - 生成可执行文件
 fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
-    println!("🔨 构建 {} (release={}) ...", input, release);
+    println!("Building {} (release={}) ...", input, release);
 
     // 1. 编译为 LLVM IR
     let result = compile_file(input)?;
@@ -197,7 +197,7 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
     fs::write(temp_ll, result.ir)?;
 
     // 2. 使用 llc 生成目标文件
-    println!("  ⚙️  生成目标文件...");
+    println!("  Generating object file...");
     let temp_obj = "/tmp/lency_temp.o";
     // TODO: Pass optimization flags to llc if release is true
     let llc_status = std::process::Command::new("llc-15")
@@ -205,7 +205,7 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
         .status()?;
 
     if !llc_status.success() {
-        anyhow::bail!("llc 编译失败");
+        anyhow::bail!("llc compilation failed");
     }
 
     // 3. 查找运行时库
@@ -240,11 +240,11 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
     }
 
     if runtime_path.is_none() {
-        eprintln!("⚠️ Warning: lency_runtime library not found in target dir. Linking might fail.");
+        eprintln!("Warning: lency_runtime library not found in target dir. Linking might fail.");
     }
 
     // 4. 使用 gcc 链接
-    println!("  🔗 链接可执行文件...");
+    println!("  Linking executable...");
 
     let mut gcc_cmd = std::process::Command::new("gcc");
     gcc_cmd.args([temp_obj, "-o", output, "-no-pie"]);
@@ -259,10 +259,10 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
     let gcc_status = gcc_cmd.status()?;
 
     if !gcc_status.success() {
-        anyhow::bail!("链接失败 - 请确保 lency_runtime 已编译");
+        anyhow::bail!("Linking failed - please ensure lency_runtime is built");
     }
 
-    println!("✅ 成功生成可执行文件: {}", output);
+    println!("Successfully built: {}", output);
     Ok(())
 }
 
@@ -300,7 +300,7 @@ fn cmd_repl() -> Result<()> {
         // Let's create a temporary source string.
         match lency_driver::compile(trimmed) {
             Ok(_res) => {
-                println!("✅ Parse OK");
+                println!("Parse OK");
                 // Optional: Print IR or verify semantic
                 // println!("{}", _res.ir);
             }
@@ -312,6 +312,5 @@ fn cmd_repl() -> Result<()> {
         }
     }
 
-    println!("Bye!");
     Ok(())
 }

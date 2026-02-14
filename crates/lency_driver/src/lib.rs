@@ -52,11 +52,24 @@ fn parse_source(source: &str) -> CompileResult<Program> {
                 // or if it is imported, it's seemingly not needed according to rustc.
                 // Actually Simple struct usually has span()
                 let span = err.span();
-                let msg = if let chumsky::error::SimpleReason::Custom(msg) = err.reason() {
-                    msg.clone()
-                } else {
-                    format!("{:?}", err)
+                let msg = match err.reason() {
+                    chumsky::error::SimpleReason::Custom(msg) => msg.clone(),
+                    chumsky::error::SimpleReason::Unexpected => {
+                        format!(
+                            "Unexpected token found: {:?}",
+                            err.found()
+                                .map(|t| t.to_string())
+                                .unwrap_or_else(|| "EOF".to_string())
+                        )
+                    }
+                    chumsky::error::SimpleReason::Unclosed { span: _, delimiter } => {
+                        format!("Unclosed delimiter {:?}", delimiter)
+                    }
                 };
+
+                // Optional: Add "expected" info if useful, but keep it simple
+                // let expected = err.expected().map(|t| t.to_string()).collect::<Vec<_>>().join(", ");
+
                 crate::error::ParseErrorDetail { span, message: msg }
             })
             .collect();
