@@ -7,11 +7,12 @@ use lency_diagnostics::{Diagnostic, DiagnosticSink, Emitter};
 use lency_sema::SemanticError;
 use thiserror::Error;
 
-/// 解析错误详情
 #[derive(Debug)]
 pub struct ParseErrorDetail {
     pub span: std::ops::Range<usize>,
     pub message: String,
+    pub label: Option<String>,
+    pub help: Option<String>,
 }
 
 /// 编译错误
@@ -56,10 +57,17 @@ impl CompileError {
             }
             CompileError::ParseError(errors) => {
                 for err in errors {
-                    add_diag(
-                        Diagnostic::error(format!("Parse error: {}", err.message))
-                            .span(err.span.clone()),
-                    );
+                    let mut diag = Diagnostic::error(err.message.clone()).span(err.span.clone());
+
+                    if let Some(label) = &err.label {
+                        diag = diag.with_note(label);
+                    }
+
+                    if let Some(help) = &err.help {
+                        diag = diag.suggest(help);
+                    }
+
+                    add_diag(diag);
                 }
             }
             CompileError::SemanticErrors(errors) => {

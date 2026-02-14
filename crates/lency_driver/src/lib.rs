@@ -70,7 +70,43 @@ fn parse_source(source: &str) -> CompileResult<Program> {
                 // Optional: Add "expected" info if useful, but keep it simple
                 // let expected = err.expected().map(|t| t.to_string()).collect::<Vec<_>>().join(", ");
 
-                crate::error::ParseErrorDetail { span, message: msg }
+                let label = None;
+                let mut help = None;
+
+                // Simple heuristic for common errors
+                if let chumsky::error::SimpleReason::Unexpected = err.reason() {
+                    let expected: Vec<_> = err
+                        .expected()
+                        .map(|t| {
+                            t.as_ref()
+                                .map(|tok| tok.to_string())
+                                .unwrap_or_else(|| "EOF".to_string())
+                        })
+                        .collect();
+
+                    if !expected.is_empty() {
+                        if expected.len() < 5 {
+                            help = Some(format!("expected one of: {}", expected.join(", ")));
+                        } else {
+                            help = Some(format!(
+                                "expected one of: {}, ...",
+                                expected
+                                    .iter()
+                                    .take(4)
+                                    .cloned()
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            ));
+                        }
+                    }
+                }
+
+                crate::error::ParseErrorDetail {
+                    span,
+                    message: msg,
+                    label,
+                    help,
+                }
             })
             .collect();
         CompileError::ParseError(details)
