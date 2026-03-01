@@ -22,6 +22,13 @@ int T_DOT()         { return 20; } // '.'
 int T_COMMA()       { return 21; } // ','
 int T_LESS()        { return 22; } // '<'
 int T_GREATER()     { return 23; } // '>'
+int T_BANG()        { return 24; } // '!'
+int T_BANG_EQUAL()  { return 25; } // '!='
+int T_EQUAL_EQUAL() { return 26; } // '=='
+int T_LESS_EQUAL()  { return 27; } // '<='
+int T_GREATER_EQUAL() { return 28; } // '>='
+int T_AND_AND()     { return 29; } // '&&'
+int T_OR_OR()       { return 30; } // '||'
 
 // Literals
 int T_NUMBER() { return 7; }
@@ -34,6 +41,14 @@ int T_ELSE()    { return 15; }
 int T_VAR()    { return 9; }
 int T_TRUE()   { return 10; }
 int T_FALSE()  { return 11; }
+int T_WHILE()  { return 31; }
+int T_STRUCT() { return 32; }
+int T_IMPL()   { return 33; }
+int T_RETURN() { return 34; }
+int T_VOID()   { return 35; }
+int T_INT()    { return 36; }
+int T_STRING() { return 37; }
+int T_BOOL()   { return 38; }
 
 struct Token {
     int kind

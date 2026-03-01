@@ -1,0 +1,21 @@
+// lencyc/cli/args.lcy
+// 命令行参数处理模块
+
+import std.core
+import std.collections
+
+struct Args {
+    string input_file
+    string output_file
+    bool check_only
+}
+
+// 暂时简单的解析逻辑，后续根据需要扩展
+Args parse_args() {
+    // FIXME: 暂时返回硬编码或默认值，直到 std/runtime 支持 argv 获取
+    return Args {
+        input_file: "",
+        output_file: "out.ll",
+        check_only: false
+    }
+}

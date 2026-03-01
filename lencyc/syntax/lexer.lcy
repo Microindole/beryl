@@ -45,6 +45,14 @@ impl Lexer {
         }
         return substr(this.source, this.current, 1);
     }
+
+    bool match_char(string expected) {
+        if this.is_at_end() { return false; }
+        if substr(this.source, this.current, 1) != expected { return false; }
+        this.current = this.current + 1;
+        this.column = this.column + 1;
+        return true;
+    }
     
     int peek_char() {
         if this.is_at_end() {
@@ -108,11 +116,19 @@ impl Lexer {
         var text = substr(this.source, this.start, l);
         
         var kind = T_IDENTIFIER();
+        if text == "if" { kind = T_IF(); }
+        if text == "else" { kind = T_ELSE(); }
         if text == "var" { kind = T_VAR(); }
-        else { if text == "true" { kind = T_TRUE(); }
-        else { if text == "false" { kind = T_FALSE(); }
-        else { if text == "if" { kind = T_IF(); }
-        else { if text == "else" { kind = T_ELSE(); } } } } }
+        if text == "true" { kind = T_TRUE(); }
+        if text == "false" { kind = T_FALSE(); }
+        if text == "while" { kind = T_WHILE(); }
+        if text == "struct" { kind = T_STRUCT(); }
+        if text == "impl" { kind = T_IMPL(); }
+        if text == "return" { kind = T_RETURN(); }
+        if text == "void" { kind = T_VOID(); }
+        if text == "int" { kind = T_INT(); }
+        if text == "string" { kind = T_STRING(); }
+        if text == "bool" { kind = T_BOOL(); }
         
         return this.make_token_from(kind);
     }
@@ -144,7 +160,6 @@ impl Lexer {
         if c == "+" { return this.make_token_from(T_PLUS()); }
         if c == "-" { return this.make_token_from(T_MINUS()); }
         if c == "/" { return this.make_token_from(T_SLASH()); }
-        if c == "=" { return this.make_token_from(T_EQUAL()); }
         if c == "{" { return this.make_token_from(T_LEFT_BRACE()); }
         if c == "}" { return this.make_token_from(T_RIGHT_BRACE()); }
         if c == "*" { return this.make_token_from(T_STAR()); }
@@ -154,8 +169,30 @@ impl Lexer {
         if c == ":" { return this.make_token_from(T_COLON()); }
         if c == "." { return this.make_token_from(T_DOT()); }
         if c == "," { return this.make_token_from(T_COMMA()); }
-        if c == "<" { return this.make_token_from(T_LESS()); }
-        if c == ">" { return this.make_token_from(T_GREATER()); }
+
+        if c == "!" {
+            if this.match_char("=") { return this.make_token_from(T_BANG_EQUAL()); }
+            return this.make_token_from(T_BANG());
+        }
+        if c == "=" { 
+            if this.match_char("=") { return this.make_token_from(T_EQUAL_EQUAL()); }
+            return this.make_token_from(T_EQUAL()); 
+        }
+        if c == "<" {
+            if this.match_char("=") { return this.make_token_from(T_LESS_EQUAL()); }
+            return this.make_token_from(T_LESS());
+        }
+        if c == ">" {
+            if this.match_char("=") { return this.make_token_from(T_GREATER_EQUAL()); }
+            return this.make_token_from(T_GREATER());
+        }
+        
+        if c == "&" {
+            if this.match_char("&") { return this.make_token_from(T_AND_AND()); }
+        }
+        if c == "|" {
+            if this.match_char("|") { return this.make_token_from(T_OR_OR()); }
+        }
         
         // Number literals
         var c_int = this.source[this.start];

@@ -67,28 +67,90 @@ impl Parser {
     // Pratt Parser / Recursive Descent Expression Parsing Basics
     // ----------------------------------------------------
 
+    Expr expression() {
+        return this.assignment()
+    }
+
+    Expr assignment() {
+        var expr = this.or()
+        if this.match_token(T_EQUAL()) {
+            var value = this.assignment()
+            if expr.kind == EXPR_VARIABLE() {
+                return make_expr_assign(expr.literal_value, value)
+            }
+            this.error("Invalid assignment target.")
+        }
+        return expr
+    }
+
+    Expr or() {
+        var expr = this.and()
+        while this.match_token(T_OR_OR()) {
+            var operator = this.previous
+            var right = this.and()
+            expr = make_expr_logical(expr, operator, right)
+        }
+        return expr
+    }
+
+    Expr and() {
+        var expr = this.equality()
+        while this.match_token(T_AND_AND()) {
+            var operator = this.previous
+            var right = this.equality()
+            expr = make_expr_logical(expr, operator, right)
+        }
+        return expr
+    }
+
+    Expr equality() {
+        var expr = this.comparison()
+        while this.match_token(T_BANG_EQUAL()) || this.match_token(T_EQUAL_EQUAL()) {
+            var operator = this.previous
+            var right = this.comparison()
+            expr = make_expr_binary(expr, operator, right)
+        }
+        return expr
+    }
+
+    Expr comparison() {
+        var expr = this.term()
+        while this.match_token(T_GREATER()) || this.match_token(T_GREATER_EQUAL()) ||
+              this.match_token(T_LESS()) || this.match_token(T_LESS_EQUAL()) {
+            var operator = this.previous
+            var right = this.term()
+            expr = make_expr_binary(expr, operator, right)
+        }
+        return expr
+    }
+
     Expr term() {
         var expr = this.factor()
-        
         while this.match_token(T_PLUS()) || this.match_token(T_MINUS()) {
             var operator = this.previous
             var right = this.factor()
             expr = make_expr_binary(expr, operator, right)
         }
-        
         return expr
     }
     
     Expr factor() {
-        var expr = this.primary()
-        
+        var expr = this.unary()
         while this.match_token(T_STAR()) || this.match_token(T_SLASH()) {
             var operator = this.previous
-            var right = this.primary()
+            var right = this.unary()
             expr = make_expr_binary(expr, operator, right)
         }
-        
         return expr
+    }
+
+    Expr unary() {
+        if this.match_token(T_BANG()) || this.match_token(T_MINUS()) {
+            var operator = this.previous
+            var right = this.unary()
+            return make_expr_unary(operator, right)
+        }
+        return this.primary()
     }
     
     Expr primary() {
@@ -99,11 +161,15 @@ impl Parser {
         if this.match_token(T_TRUE()) {
             return make_expr_literal(this.previous)
         }
-        if this.match_token(T_FALSE()) {
-            return make_expr_literal(this.previous)
+        if this.match_token(T_IDENTIFIER()) {
+            return make_expr_variable(this.previous)
         }
         
-        // TODO: Add support for grouping, variables, etc.
+        if this.match_token(T_LEFT_PAREN()) {
+            var expr = this.expression()
+            this.consume(T_RIGHT_PAREN(), "Expect ')' after expression.")
+            return make_expr_grouping(expr)
+        }
         
         this.error("Expect expression.")
         // Return a dummy expression to prevent crashes
@@ -120,7 +186,7 @@ impl Parser {
         
         this.consume(T_EQUAL(), "Expect '=' after variable name.")
         
-        var initializer = this.term() // Currently, the top-level expression parsing is term()
+        var initializer = this.expression() // Currently, the top-level expression parsing is expression()
         
         return make_stmt_var_decl(name, initializer)
     }
@@ -137,7 +203,7 @@ impl Parser {
     }
 
     Stmt if_statement() {
-        var condition = this.term()
+        var condition = this.expression()
         
         this.consume(T_LEFT_BRACE(), "Expect '{' before then block.")
         var then_branch = this.block()
@@ -161,13 +227,20 @@ impl Parser {
         return make_stmt_if(condition, then_branch, else_branch)
     }
 
+    Stmt while_statement() {
+        var condition = this.expression()
+        this.consume(T_LEFT_BRACE(), "Expect '{' before while body.")
+        var body = this.block()
+        return make_stmt_while(condition, body)
+    }
+
     Stmt statement() {
         if this.match_token(T_LEFT_BRACE()) {
             return make_stmt_block(this.block())
         }
         
         // Expression statement
-        var expr = this.term()
+        var expr = this.expression()
         return make_stmt_expr(expr)
     }
 
@@ -178,6 +251,10 @@ impl Parser {
         
         if this.match_token(T_IF()) {
             return this.if_statement()
+        }
+        
+        if this.match_token(T_WHILE()) {
+            return this.while_statement()
         }
         
         return this.statement()

@@ -2,7 +2,8 @@
 """
 Lencyc 专用的元检查脚本
 1. 检查命名规范 (snake_case for functions/vars, PascalCase for structs)
-2. 检查是否有基本的模块注释
+3. 检查文件行数 (限制单个文件长度以强制模块化)
+4. 检查是否有基本的模块注释
 """
 import os
 import re
@@ -12,6 +13,7 @@ from pathlib import Path
 # 路径配置
 LENCYC_DIR = Path("lencyc")
 EXCLUDE_DIRS = {".git", "target", "node_modules"}
+MAX_LINES_PER_FILE = 500  # 超过 500 行建议拆分模块
 
 # 正则表达式
 RE_FUNC = re.compile(r'(?:fn|int|string|bool|void|Vec<.*>|Expr|Stmt|Token|Lexer|Parser|Pair<.*>|Box<.*>|Option<.*>)\s+([a-zA-Z0-9_]+)\s*\(')
@@ -64,6 +66,11 @@ def check_file(file_path: Path):
                 name = match.group(1)
                 if not is_pascal_case(name):
                     errors.append((i, f"枚举名 '{name}' 应该使用 PascalCase"))
+
+        # 5. 检查文件行数
+        line_count = len(lines)
+        if line_count > MAX_LINES_PER_FILE:
+            errors.append((0, f"文件行数过多 ({line_count} > {MAX_LINES_PER_FILE})，请考虑拆分模块"))
 
     return errors
 

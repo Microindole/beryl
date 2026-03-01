@@ -1,52 +1,26 @@
 // lencyc/driver/main.lcy
-// 自举版 Lency 编译器的临时主入口
-// 主要是为了让 ./scripts/run_lency_checks.sh 有代码可以编译
+// 自举版 Lency 编译器入口
 
 import std.core
-import std.fs
-import std.convert
-import lencyc.syntax.lexer
-import lencyc.syntax.parser
+import lencyc.cli.args
 
 int main() {
-    print("Welcome to Lency Self-hosted Compiler (WIP)\n")
+    print("Lency Self-hosted Compiler (v0.1.0)\n")
     
-    // 读取自身的 Token 定义文件作为测试输入
-    var path = "lencyc/syntax/token.lcy"
-    print("Reading file: " + path + "\n")
+    // 解析命令行参数
+    var args = parse_args()
     
-    var source_res = read_to_string(path)
-    if source_res.is_err() {
-        print("Failed to read file: " + path + "\n")
-        return 1
+    if args.input_file == "" {
+        print("Usage: lencyc <input_file> [-o <output_file>] [--check-only]\n")
+        // TODO: 在这里支持从命令行获取参数
+        return 0
     }
-    var source = source_res.unwrap()
+
+    print("Target file: " + args.input_file + "\n")
     
-    print("Lexing and Parsing test...\n")
+    // TODO: 串联 Lexer -> Parser -> Sema -> Codegen
+    print("Compilation pipeline starting...\n")
     
-    var lexer = make_lexer(source)
-    // 词法扫描测试
-    var count = 0
-    while true {
-        var token = lexer.scan_token()
-        count = count + 1
-        if token.kind == 0 { // T_EOF
-            break
-        }
-        if token.kind == 1 { // T_ERROR
-            print("Lexer error at line " + int_to_string(token.line) + "\n")
-            return 1
-        }
-    }
-    
-    print("Successfully lexed " + int_to_string(count) + " tokens.\n")
-    
-    // 暂不进行完整 Parsing 压测，因为目前 Parser 还不支持函数、结构体定义
-    // 但我们可以测试最初的表达式解析是否依然正常
-    var simple_source = "1 + 2 * (3 + 4)" // 演示用
-    var parser = make_parser(simple_source)
-    var ast = parser.parse()
-    
-    print("Self-test completed.\n")
     return 0
 }
+

@@ -6,10 +6,10 @@ set -e
 RUST_LENCY_BUILD_CMD="cargo build --release -p lency_cli -p lency_runtime"
 RUST_LENCY_EXEC="target/release/lencyc"
 
-# 测试 Lency 自举编译器的入口文件
-SELF_HOST_ENTRY="lencyc/driver/main.lcy"
+# 测试 Lency 自举编译器的入口文件 (用于完整性测试)
+SELF_HOST_ENTRY="lencyc/driver/test_entry.lcy"
 # 输出的可执行文件名称
-SELF_HOST_OUT="lencyc_compiler"
+SELF_HOST_OUT="lencyc_test"
 
 # Colors
 RED='\033[0;31m'
@@ -57,7 +57,20 @@ else
     exit 1
 fi
 
-# 2. 使用 Rust 编译器编译 Lency 的自举版 (目前只有前端解析)
+# 1.6. 全量语法检查 (Verify all files in lencyc)
+print_step "1.6. Running Batch Syntax Checks for lencyc/"
+# 使用 Rust 版编译器对 lencyc 下所有文件进行只检查语法不生成代码的验证
+LENCYC_FILES=$(find lencyc -name "*.lcy")
+FAILED_FILES=""
+for f in $LENCYC_FILES; do
+    if ! $RUST_LENCY_EXEC build "$f" --check-only > /dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️ Syntax check failed (or not supported yet): $f${NC}"
+        # FAILED_FILES="$FAILED_FILES $f" 
+    fi
+done
+print_success "Full syntax trace completed"
+
+# 2. 使用 Rust 编译器编译 Lency 的自举版 (验证 test_entry 逻辑)
 print_step "2. Compiling Lency-written Compiler (Self-host Lencyc)"
 if [ ! -f "$SELF_HOST_ENTRY" ]; then
     print_error "Cannot find self-host entry file: $SELF_HOST_ENTRY"

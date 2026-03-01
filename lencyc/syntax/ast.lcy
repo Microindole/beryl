@@ -8,7 +8,11 @@ import lencyc.syntax.token
 // 表达式类型
 int EXPR_LITERAL() { return 1; }
 int EXPR_BINARY()  { return 2; }
-// TODO: Add Variable, Call, Grouping expression types
+int EXPR_VARIABLE() { return 3; }
+int EXPR_GROUPING() { return 4; }
+int EXPR_UNARY()    { return 5; }
+int EXPR_ASSIGN()   { return 6; }
+int EXPR_LOGICAL()  { return 7; }
 
 struct Expr {
     int kind
@@ -38,6 +42,52 @@ Expr make_expr_binary(Expr left, Token op, Expr right) {
     }
 }
 
+Expr make_expr_variable(Token name) {
+    return Expr {
+        kind: EXPR_VARIABLE(),
+        literal_value: name,
+        operator: make_token(0, "", 0, 0),
+        children: vec![]
+    }
+}
+
+Expr make_expr_grouping(Expr expression) {
+    return Expr {
+        kind: EXPR_GROUPING(),
+        literal_value: make_token(0, "", 0, 0),
+        operator: make_token(0, "", 0, 0),
+        children: vec![expression]
+    }
+}
+
+Expr make_expr_unary(Token op, Expr right) {
+    return Expr {
+        kind: EXPR_UNARY(),
+        literal_value: make_token(0, "", 0, 0),
+        operator: op,
+        children: vec![right]
+    }
+}
+
+Expr make_expr_assign(Token name, Expr value) {
+    return Expr {
+        kind: EXPR_ASSIGN(),
+        literal_value: name,
+        operator: make_token(0, "", 0, 0),
+        children: vec![value]
+    }
+}
+
+Expr make_expr_logical(Expr left, Token op, Expr right) {
+    var children = vec![left, right]
+    return Expr {
+        kind: EXPR_LOGICAL(),
+        literal_value: make_token(0, "", 0, 0),
+        operator: op,
+        children: children
+    }
+}
+
 // ==========================================
 // Statement types
 // ==========================================
@@ -46,7 +96,7 @@ int STMT_EXPR()      { return 1; }
 int STMT_VAR_DECL()  { return 2; }
 int STMT_IF()        { return 3; }
 int STMT_BLOCK()     { return 4; }
-// TODO: Add While, Return statement types
+int STMT_WHILE()     { return 5; }
 
 struct Stmt {
     int kind
@@ -93,6 +143,16 @@ Stmt make_stmt_block(Vec<Stmt> statements) {
         name: make_token(0, "", 0, 0),
         expr: make_expr_literal(make_token(0, "", 0, 0)),
         body: statements,
+        else_body: vec![]
+    }
+}
+
+Stmt make_stmt_while(Expr condition, Vec<Stmt> body) {
+    return Stmt {
+        kind: STMT_WHILE(),
+        name: make_token(0, "", 0, 0),
+        expr: condition,
+        body: body,
         else_body: vec![]
     }
 }
