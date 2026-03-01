@@ -48,6 +48,8 @@ match shape {
 
 ## 泛型枚举
 
+> **⚠️ 注意:** 当前 Lency 编译器对泛型枚举的全面支持仍有部分限制。
+
 ```lency
 enum Option<T> {
     Some(T),

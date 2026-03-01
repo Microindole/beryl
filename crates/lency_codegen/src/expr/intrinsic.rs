@@ -26,6 +26,8 @@ pub fn gen_print<'ctx>(
     gen_print_value_impl(ctx, arg_val.value, &arg_val.ty)?;
 
     // 2. 打印换行符
+    // FIXME: 这里的 `print` 行为固定附加了换行符，这相当于 `println`。
+    //        而在使用时往往不需要换行以便拼接字符串。未来应该分离 `print` 和 `println` 或在此移除换行。
     gen_print_newline(ctx)?;
 
     Ok(CodegenValue {

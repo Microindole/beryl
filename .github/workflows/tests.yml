@@ -46,6 +46,23 @@ jobs:
       - name: Run .lcy Tests
         run: ./scripts/run_checks.sh --lcy
 
+  # 3. Lency Self-Hosted Compiler Tests
+  self-hosted-tests:
+    name: Self-Hosted Tests (Linux)
+    runs-on: ubuntu-latest
+    env:
+      LLVM_SYS_150_PREFIX: /usr/lib/llvm-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Self-Hosted Tests
+        run: ./scripts/run_lency_checks.sh
+
   # 3. Release Build
   build-release:
     name: Build Release

@@ -72,7 +72,11 @@ impl CompileError {
             }
             CompileError::SemanticErrors(errors) => {
                 for err in errors {
-                    add_diag(err.to_diagnostic());
+                    let mut diag = err.to_diagnostic();
+                    if let Some(path) = file_path {
+                        diag.file_path = Some(path.to_string());
+                    }
+                    add_diag(diag);
                 }
             }
             CompileError::CodegenError(err) => {

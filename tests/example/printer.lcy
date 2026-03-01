@@ -1,0 +1,10 @@
+// printer.lcy - Provides formatting functions
+import std.core
+import std.io
+
+void print_result(string name, int value) {
+    print(name)
+    print(": ")
+    print(int_to_string(value))
+    print("\n")
+}

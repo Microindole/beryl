@@ -231,7 +231,20 @@ impl SemanticError {
 
     /// 转换为统一诊断格式
     pub fn to_diagnostic(&self) -> lency_diagnostics::Diagnostic {
-        lency_diagnostics::Diagnostic::error(self.to_string()).span(self.span().clone())
+        let mut diag =
+            lency_diagnostics::Diagnostic::error(self.to_string()).span(self.span().clone());
+
+        match self {
+            Self::UndefinedVariable { name, .. } => {
+                diag = diag.with_note(format!("Did you declare the variable '{}' before using it? (If this is during Lency bootstrapping, check your definitions in the parser)", name));
+            }
+            Self::UndefinedFunction { name, .. } => {
+                diag = diag.with_note(format!("Did you define the function '{}'? (If this is during Lency bootstrapping, ensure the function is imported or defined locally)", name));
+            }
+            _ => {}
+        }
+
+        diag
     }
 }
 

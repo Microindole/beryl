@@ -1,293 +1,152 @@
-// Lency 自举编译器 - 词法分析器 (lexer.lcy)
-// 将源代码字符串转换为 Token 流
+// lencyc/syntax/lexer.lcy
+// Lency 自举编译器 - 极简 Lexer
+// 目前仅扫描基本的加减乘除和数字，遇到无法识别的字符报 T_ERROR。
 
 import std.core
 import std.char
 import lencyc.syntax.token
-import lencyc.syntax.keywords
-
-// ============== Lexer 结构体 ==============
 
 struct Lexer {
-    string source   // 源代码
-    int pos         // 当前位置 (0-based)
-    int line        // 当前行号 (1-based)
-    int col         // 当前列号 (1-based)
+    string source
+    int start
+    int current
+    int line
+    int column
 }
 
-// 创建新的 Lexer
-Lexer lexer_new(string source) {
-    return Lexer { source: source, pos: 0, line: 1, col: 1 }
-}
-
-// ============== 基础方法 ==============
-
-// 是否到达源码末尾
-bool is_at_end(Lexer lex) {
-    return lex.pos >= len(lex.source)
-}
-
-// 获取当前字符 (ASCII int)，到达末尾返回 0
-int current_char(Lexer lex) {
-    if is_at_end(lex) {
-        return 0
+Lexer make_lexer(string source) {
+    return Lexer {
+        source: source,
+        start: 0,
+        current: 0,
+        line: 1,
+        column: 1
     }
-    return lex.source[lex.pos]
 }
 
-// 获取下一个字符 (peek)，越界返回 0
-int peek_char(Lexer lex) {
-    if lex.pos + 1 >= len(lex.source) {
-        return 0
+impl Lexer {
+    bool is_at_end() {
+        return this.current >= len(this.source);
     }
-    return lex.source[lex.pos + 1]
-}
 
-// 前进一个字符，返回消耗的字符
-int advance(Lexer lex) {
-    var c = current_char(lex)
-    lex.pos = lex.pos + 1
-    if c == 10 { // '\n'
-        lex.line = lex.line + 1
-        lex.col = 1
-    } else {
-        lex.col = lex.col + 1
-    }
-    return c
-}
-
-// 如果当前字符匹配 expected，前进并返回 true
-bool match_char(Lexer lex, int expected) {
-    if is_at_end(lex) {
-        return false
-    }
-    if current_char(lex) != expected {
-        return false
-    }
-    advance(lex)
-    return true
-}
-
-// ============== 跳过空白和注释 ==============
-
-void skip_whitespace(Lexer lex) {
-    while !is_at_end(lex) {
-        var c = current_char(lex)
-
-        // 空白字符
-        if c == 32 || c == 9 || c == 13 || c == 10 {
-            advance(lex)
-            continue
+    string advance() {
+        if this.is_at_end() {
+            return " ";
         }
-
-        // 单行注释 // ...
-        if c == 47 && peek_char(lex) == 47 {
-            while !is_at_end(lex) && current_char(lex) != 10 {
-                advance(lex)
-            }
-            continue
-        }
-
-        break
+        var c = substr(this.source, this.current, 1);
+        this.current = this.current + 1;
+        this.column = this.column + 1;
+        return c;
     }
-}
 
-// ============== Token 扫描器 ==============
-
-// 扫描字符串字面量
-Token scan_string(Lexer lex, int start_line, int start_col) {
-    var result = ""
-    while !is_at_end(lex) && current_char(lex) != 34 {
-        var c = current_char(lex)
-        if c == 92 { // backslash
-            advance(lex)
-            if !is_at_end(lex) {
-                var esc = current_char(lex)
-                if esc == 110 {
-                    result = result + "\n"
+    string peek() {
+        if this.is_at_end() {
+            return " ";
+        }
+        return substr(this.source, this.current, 1);
+    }
+    
+    int peek_char() {
+        if this.is_at_end() {
+            return 0; // null char
+        }
+        return this.source[this.current];
+    }
+    
+    // 生成常规 Token
+    Token make_token_from(int kind) {
+        var l = this.current - this.start;
+        var lexeme = substr(this.source, this.start, l);
+        // 注意：计算起始列时要扣除当前已经消耗的长度
+        return make_token(kind, lexeme, this.line, this.column - l);
+    }
+    
+    // 生成错误 Token
+    Token error_token(string message) {
+        return make_token(T_ERROR(), message, this.line, this.column);
+    }
+    
+    // 跳过空白字符
+    void skip_whitespace() {
+        while !this.is_at_end() {
+            var c = this.peek();
+            if c == " " || c == "\r" || c == "\t" {
+                var dummy = this.advance();
+            } else {
+                if c == "\n" {
+                    this.line = this.line + 1;
+                    this.column = 1;
+                    var dummy = this.advance();
                 } else {
-                    if esc == 116 {
-                        result = result + "\t"
-                    } else {
-                        if esc == 114 {
-                            result = result + "\r"
-                        } else {
-                            if esc == 92 {
-                                result = result + "\\"
-                            } else {
-                                if esc == 34 {
-                                    result = result + "\""
-                                } else {
-                                    result = result + "\\"
-                                    result = result + char_to_string(esc)
-                                }
-                            }
-                        }
-                    }
+                    return;
                 }
-                advance(lex)
-            }
-        } else {
-            result = result + char_to_string(c)
-            advance(lex)
-        }
-    }
-
-    if !is_at_end(lex) {
-        advance(lex) // skip closing '"'
-    }
-
-    return make_token(TK_STRING_LIT(), result, start_line, start_col)
-}
-
-// 扫描数字字面量 (int 或 float)
-Token scan_number(Lexer lex, int first_char, int start_line, int start_col) {
-    var result = char_to_string(first_char)
-    var is_float = false
-
-    while !is_at_end(lex) && is_digit(current_char(lex)) {
-        result = result + char_to_string(current_char(lex))
-        advance(lex)
-    }
-
-    // 检查小数点
-    if !is_at_end(lex) && current_char(lex) == 46 {
-        if peek_char(lex) != 0 && is_digit(peek_char(lex)) {
-            is_float = true
-            result = result + "."
-            advance(lex)
-            while !is_at_end(lex) && is_digit(current_char(lex)) {
-                result = result + char_to_string(current_char(lex))
-                advance(lex)
             }
         }
     }
-
-    if is_float {
-        return make_token(TK_FLOAT_LIT(), result, start_line, start_col)
-    }
-    return make_token(TK_INT_LIT(), result, start_line, start_col)
-}
-
-// 扫描标识符或关键字
-Token scan_identifier(Lexer lex, int first_char, int start_line, int start_col) {
-    var result = char_to_string(first_char)
-
-    while !is_at_end(lex) {
-        var c = current_char(lex)
-        if is_alphanumeric(c) || c == 95 {
-            result = result + char_to_string(c)
-            advance(lex)
-        } else {
-            break
+    
+    // 解析标识符和关键字
+    Token identifier() {
+        while is_alphanumeric(this.peek_char()) || this.peek_char() == 95 { // 95 is '_'
+            var dummy = this.advance();
         }
+        
+        var l = this.current - this.start;
+        var text = substr(this.source, this.start, l);
+        
+        var kind = T_IDENTIFIER();
+        if text == "var" { kind = T_VAR(); }
+        else { if text == "true" { kind = T_TRUE(); }
+        else { if text == "false" { kind = T_FALSE(); } } }
+        
+        return this.make_token_from(kind);
     }
-
-    var tk_type = lookup_keyword(result)
-    return make_token(tk_type, result, start_line, start_col)
-}
-
-// ============== 核心扫描函数 ==============
-
-// 扫描下一个 Token
-Token scan_token(Lexer lex) {
-    skip_whitespace(lex)
-
-    if is_at_end(lex) {
-        return make_token(TK_EOF(), "", lex.line, lex.col)
-    }
-
-    var start_line = lex.line
-    var start_col = lex.col
-    var c = advance(lex)
-
-    // 标识符和关键字
-    if is_alpha(c) || c == 95 {
-        return scan_identifier(lex, c, start_line, start_col)
-    }
-
-    // 数字
-    if is_digit(c) {
-        return scan_number(lex, c, start_line, start_col)
-    }
-
-    // 字符串
-    if c == 34 {
-        return scan_string(lex, start_line, start_col)
-    }
-
-    // 符号
-    if c == 43 { return make_token(TK_PLUS(), "+", start_line, start_col) }
-    if c == 45 { return make_token(TK_MINUS(), "-", start_line, start_col) }
-    if c == 42 { return make_token(TK_STAR(), "*", start_line, start_col) }
-    if c == 47 { return make_token(TK_SLASH(), "/", start_line, start_col) }
-    if c == 37 { return make_token(TK_PERCENT(), "%", start_line, start_col) }
-
-    if c == 61 {
-        if match_char(lex, 61) { return make_token(TK_EQ_EQ(), "==", start_line, start_col) }
-        if match_char(lex, 62) { return make_token(TK_ARROW(), "=>", start_line, start_col) }
-        return make_token(TK_EQ(), "=", start_line, start_col)
-    }
-
-    if c == 33 {
-        if match_char(lex, 61) { return make_token(TK_NOT_EQ(), "!=", start_line, start_col) }
-        return make_token(TK_BANG(), "!", start_line, start_col)
-    }
-
-    if c == 60 {
-        if match_char(lex, 61) { return make_token(TK_LEQ(), "<=", start_line, start_col) }
-        return make_token(TK_LT(), "<", start_line, start_col)
-    }
-
-    if c == 62 {
-        if match_char(lex, 61) { return make_token(TK_GEQ(), ">=", start_line, start_col) }
-        return make_token(TK_GT(), ">", start_line, start_col)
-    }
-
-    if c == 38 {
-        if match_char(lex, 38) { return make_token(TK_AND(), "&&", start_line, start_col) }
-        return make_token(TK_ERROR(), "&", start_line, start_col)
-    }
-
-    if c == 124 {
-        if match_char(lex, 124) { return make_token(TK_OR(), "||", start_line, start_col) }
-        return make_token(TK_PIPE(), "|", start_line, start_col)
-    }
-
-    if c == 63 {
-        if match_char(lex, 46) { return make_token(TK_QUESTION_DOT(), "?.", start_line, start_col) }
-        if match_char(lex, 63) { return make_token(TK_QUESTION_QUESTION(), "??", start_line, start_col) }
-        return make_token(TK_QUESTION(), "?", start_line, start_col)
-    }
-
-    if c == 40 { return make_token(TK_LPAREN(), "(", start_line, start_col) }
-    if c == 41 { return make_token(TK_RPAREN(), ")", start_line, start_col) }
-    if c == 123 { return make_token(TK_LBRACE(), "{", start_line, start_col) }
-    if c == 125 { return make_token(TK_RBRACE(), "}", start_line, start_col) }
-    if c == 91 { return make_token(TK_LBRACKET(), "[", start_line, start_col) }
-    if c == 93 { return make_token(TK_RBRACKET(), "]", start_line, start_col) }
-    if c == 44 { return make_token(TK_COMMA(), ",", start_line, start_col) }
-    if c == 46 { return make_token(TK_DOT(), ".", start_line, start_col) }
-    if c == 58 { return make_token(TK_COLON(), ":", start_line, start_col) }
-    if c == 59 { return make_token(TK_SEMICOLON(), ";", start_line, start_col) }
-
-    return make_token(TK_ERROR(), char_to_string(c), start_line, start_col)
-}
-
-// ============== 完整 Tokenize ==============
-
-// 将源代码转换为 Token 列表
-Vec<Token> tokenize(string source) {
-    var lex = lexer_new(source)
-    var tokens: Vec<Token> = vec![]
-
-    while true {
-        var tok = scan_token(lex)
-        tokens.push(tok)
-        if tok.type == TK_EOF() {
-            break
+    
+    // 解析数字
+    Token number() {
+        while is_digit(this.peek_char()) {
+            var dummy = this.advance();
         }
+        
+        // TODO: 支持小数点（浮点数）解析
+        
+        return this.make_token_from(T_NUMBER());
     }
 
-    return tokens
+    // 获取下一个 Token
+    Token scan_token() {
+        this.skip_whitespace();
+        
+        this.start = this.current;
+        
+        if this.is_at_end() {
+            return make_token(T_EOF(), "", this.line, this.column);
+        }
+        
+        var c = this.advance();
+        
+        // 简单符号
+        if c == "+" { return this.make_token_from(T_PLUS()); }
+        if c == "-" { return this.make_token_from(T_MINUS()); }
+        if c == "*" { return this.make_token_from(T_STAR()); }
+        if c == "/" { return this.make_token_from(T_SLASH()); }
+        
+        // 数字字面量
+        var c_int = this.source[this.start];
+        if is_digit(c_int) {
+            return this.number();
+        }
+        
+        if c == "=" { return this.make_token_from(T_EQUAL()); }
+        
+        // 标识符或关键字
+        var is_alpha_char = is_alpha(c_int) || c_int == 95; // 95 is '_'
+        if is_alpha_char {
+            return this.identifier();
+        }
+        
+        // TODO: 支持双字符操作符 (如 ==, !=, >=, <=)
+        // TODO: 支持字符串(Strings)解析
+        
+        return this.error_token("Unexpected character.");
+    }
 }

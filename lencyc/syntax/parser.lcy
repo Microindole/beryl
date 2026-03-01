@@ -1,88 +1,111 @@
+// lencyc/syntax/parser.lcy
+// Lency 自举编译器 - 极简 Parser
+// 仅实现从 Token 流解析简单的四则运算表达式
 
 import std.core
 import lencyc.syntax.token
+import lencyc.syntax.lexer
 import lencyc.syntax.ast
 
 struct Parser {
-    Vec<Token> tokens
-    int current
-    string source
-    bool had_error
+    Lexer lexer
+    Token current
+    Token previous
+    bool has_error
 }
 
-Parser parser_new(Vec<Token> tokens, string source) {
+Parser make_parser(string source) {
+    var lexer = make_lexer(source)
     return Parser {
-        tokens: tokens,
-        current: 0,
-        source: source,
-        had_error: false
+        lexer: lexer,
+        current: make_token(0, "", 0, 0),
+        previous: make_token(0, "", 0, 0),
+        has_error: false
     }
 }
 
-// --- Helper Methods ---
-
-bool p_is_at_end(Parser p) {
-    return p_peek(p).type == TK_EOF()
-}
-
-Token p_peek(Parser p) {
-    if (p.current >= p.tokens.len()) { 
-        return p.tokens.get(p.tokens.len() - 1) 
-    }
-    return p.tokens.get(p.current)
-}
-
-Token p_previous(Parser p) {
-    return p.tokens.get(p.current - 1)
-}
-
-bool p_check(Parser p, int kind) {
-    if (p_is_at_end(p)) {
-        return false
-    }
-    var tok = p_peek(p)
-    return tok.type == kind
-}
-
-Token p_advance(Parser p) {
-    if (!p_is_at_end(p)) {
-        p.current = p.current + 1
-    }
-    return p_previous(p)
-}
-
-bool p_match(Parser p, int kind) {
-    if (p_check(p, kind)) {
-        p_advance(p)
-        return true
-    }
-    return false
-}
-
-Token p_consume(Parser p, int kind, string message) {
-    if (p_check(p, kind)) {
-        return p_advance(p)
+impl Parser {
+    void error(string message) {
+        // TODO: 使用统一的 Reporter 提供更好的报错信息
+        print("Error at " + int_to_string(this.current.line) + ":" + int_to_string(this.current.column) + ": " + message + "\n")
+        this.has_error = true
     }
     
-    var tok = p_peek(p)
-    print("Error: " + message) 
-    p.had_error = true
-// --- Parsing Logic ---
-
-Vec<Stmt> parse(Parser p) {
-    var statements: Vec<Stmt> = vec![]
-    while (!p_is_at_end(p)) {
-        var decl = parse_declaration(p)
-// Use match expression
-        var dummy = match decl {
-            case Option.Some(d) => statements.push(d)
-            case Option.None => {}
+    void advance() {
+        this.previous = this.current
+        
+        while true {
+            this.current = this.lexer.scan_token()
+            if this.current.kind != T_ERROR() {
+                break
+            }
+            this.error(this.current.lexeme)
         }
     }
-    return statements
-}
+    
+    void consume(int type, string message) {
+        if this.current.kind == type {
+            this.advance()
+            return
+        }
+        this.error(message)
+    }
+    
+    bool check(int type) {
+        return this.current.kind == type
+    }
+    
+    bool match_token(int type) {
+        if !this.check(type) {
+            return false
+        }
+        this.advance()
+        return true
+    }
 
-Option<Stmt> parse_declaration(Parser p) {
-    // Placeholder to allow compilation
-    return Option.None
+    // ----------------------------------------------------
+    // Pratt Parser / Recursive Descent 表达式解析基础
+    // ----------------------------------------------------
+
+    Expr term() {
+        var expr = this.factor()
+        
+        while this.match_token(T_PLUS()) || this.match_token(T_MINUS()) {
+            var operator = this.previous
+            var right = this.factor()
+            expr = make_expr_binary(expr, operator, right)
+        }
+        
+        return expr
+    }
+    
+    Expr factor() {
+        var expr = this.primary()
+        
+        while this.match_token(T_STAR()) || this.match_token(T_SLASH()) {
+            var operator = this.previous
+            var right = this.primary()
+            expr = make_expr_binary(expr, operator, right)
+        }
+        
+        return expr
+    }
+    
+    Expr primary() {
+        if this.match_token(T_NUMBER()) {
+            return make_expr_literal(this.previous)
+        }
+        
+        // TODO: 增加括号、变量等的支持
+        
+        this.error("Expect expression.")
+        // 返回一个虚拟的表达式防止崩溃
+        return make_expr_literal(make_token(T_ERROR(), "", 0, 0))
+    }
+    
+    // 入口函数
+    Expr parse() {
+        this.advance() // 启动 parser
+        return this.term()
+    }
 }

@@ -29,7 +29,7 @@ import std.core
 // 将 Option<int> 转换为可读字符串（调试用）
 string option_int_to_string(int? v) {
     if v != null {
-        return "Some(" + int_to_string(v!!) + ")"
+        return "Some(" + int_to_string(v) + ")"
     }
     return "None"
 }
@@ -37,7 +37,7 @@ string option_int_to_string(int? v) {
 // 将 Option<string> 转换为可读字符串（调试用）
 string option_string_to_string(string? v) {
     if v != null {
-        return "Some(" + v!! + ")"
+        return "Some(" + v + ")"
     }
     return "None"
 }

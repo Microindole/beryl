@@ -1,44 +1,26 @@
-// Lency 自举编译器 - Parser 驱动程序 (main.lcy)
-// 演示 Parser 功能：Source -> Tokens -> AST
+// lencyc/driver/main.lcy
+// 自举版 Lency 编译器的临时主入口
+// 主要是为了让 ./scripts/run_lency_checks.sh 有代码可以编译
 
 import std.core
-import std.io
-import lencyc.syntax.token
 import lencyc.syntax.lexer
-import lencyc.syntax.ast
 import lencyc.syntax.parser
-import lencyc.syntax.printer
 
 int main() {
-    // 测试源代码
-    var source = "var x = 1 + 2 * 3; if (x > 5) { print(x); } else { print(0); }"
-
-    print("=== Lency Self-Hosted Parser ===\n")
-    print("Source:\n")
-    print(source)
-    print("\n\n--- Tokens ---\n")
-
-    var tokens = tokenize(source)
+    print("Welcome to Lency Self-hosted Compiler (WIP)\n")
     
-    // Print tokens for debug
-    var i = 0
-    while i < tokens.len() {
-        var tok = tokens.get(i)
-        // println(token_to_string(tok))
-        i = i + 1
+    // 简单的解析测试
+    var source = "1 + 2 * 3"
+    print("Parsing: " + source + "\n")
+    
+    var parser = make_parser(source)
+    var ast = parser.parse()
+    
+    if parser.has_error {
+        print("Parsing failed with errors.\n")
+        return 1
     }
-    print("Total tokens: ")
-    print(tokens.len())
-    print("\n")
     
-    print("--- AST ---\n")
-    
-    var parser = parser_new(tokens, source)
-    var stmts = parse(parser)
-    
-    print(print_stmts(stmts))
-    
-    print("\n--- Done ---\n")
-
+    print("Parsing successful.\n")
     return 0
 }

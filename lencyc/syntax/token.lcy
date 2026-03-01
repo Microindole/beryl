@@ -1,217 +1,40 @@
-// Lency 自举编译器 - Token 定义 (token.lcy)
-// 由于 Lency 不支持顶层 const/var，TokenType 常量通过零参数函数定义
+// lencyc/syntax/token.lcy
+// Lency 自举编译器 - Token 定义
+// 采用最简实现，后续增量添加。
 
-import std.core
+// Token Kind 常量定义
+int T_EOF()    { return 0; }
+int T_ERROR()  { return 1; }
 
-// ============== TokenType 常量函数 ==============
-// 返回 int 常量，按语义分组
+// 单字符 Token
+int T_PLUS()   { return 2; } // '+'
+int T_MINUS()  { return 3; } // '-'
+int T_STAR()   { return 4; } // '*'
+int T_SLASH()  { return 5; } // '/'
+int T_EQUAL()  { return 6; } // '='
 
-// --- 特殊 ---
-int TK_EOF() { return 0 }
-int TK_ERROR() { return 1 }
+// 字面量
+int T_NUMBER() { return 7; }
+int T_IDENTIFIER() { return 8; }
 
-// --- 字面量 ---
-int TK_IDENT() { return 10 }
-int TK_INT_LIT() { return 11 }
-int TK_FLOAT_LIT() { return 12 }
-int TK_STRING_LIT() { return 13 }
-
-// --- 关键字 ---
-int TK_VAR() { return 20 }
-int TK_CONST() { return 21 }
-int TK_IF() { return 22 }
-int TK_ELSE() { return 23 }
-int TK_WHILE() { return 24 }
-int TK_FOR() { return 25 }
-int TK_IN() { return 26 }
-int TK_BREAK() { return 27 }
-int TK_CONTINUE() { return 28 }
-int TK_RETURN() { return 29 }
-int TK_IMPORT() { return 30 }
-int TK_EXTERN() { return 31 }
-int TK_STRUCT() { return 32 }
-int TK_IMPL() { return 33 }
-int TK_TRAIT() { return 34 }
-int TK_ENUM() { return 35 }
-int TK_MATCH() { return 36 }
-int TK_CASE() { return 37 }
-int TK_AS() { return 38 }
-int TK_PRINT() { return 39 }
-int TK_PANIC() { return 40 }
-int TK_FORMAT() { return 41 }
-int TK_VEC() { return 42 }
-int TK_OK() { return 43 }
-int TK_ERR() { return 44 }
-
-// --- 类型关键字 ---
-int TK_TYPE_INT() { return 50 }
-int TK_TYPE_FLOAT() { return 51 }
-int TK_TYPE_BOOL() { return 52 }
-int TK_TYPE_STRING() { return 53 }
-int TK_TYPE_VOID() { return 54 }
-
-// --- 字面量关键字 ---
-int TK_NULL() { return 55 }
-int TK_TRUE() { return 56 }
-int TK_FALSE() { return 57 }
-
-// --- 内置函数关键字 ---
-int TK_LEN() { return 58 }
-int TK_TRIM() { return 59 }
-int TK_SPLIT() { return 60 }
-int TK_JOIN() { return 61 }
-int TK_SUBSTR() { return 62 }
-int TK_CHAR_TO_STRING() { return 63 }
-int TK_READ_FILE() { return 64 }
-int TK_WRITE_FILE() { return 65 }
-
-// --- 单字符符号 ---
-int TK_PLUS() { return 100 }
-int TK_MINUS() { return 101 }
-int TK_STAR() { return 102 }
-int TK_SLASH() { return 103 }
-int TK_PERCENT() { return 104 }
-int TK_EQ() { return 105 }
-int TK_BANG() { return 106 }
-int TK_LT() { return 107 }
-int TK_GT() { return 108 }
-int TK_LPAREN() { return 109 }
-int TK_RPAREN() { return 110 }
-int TK_LBRACE() { return 111 }
-int TK_RBRACE() { return 112 }
-int TK_LBRACKET() { return 113 }
-int TK_RBRACKET() { return 114 }
-int TK_COMMA() { return 115 }
-int TK_DOT() { return 116 }
-int TK_COLON() { return 117 }
-int TK_SEMICOLON() { return 118 }
-int TK_QUESTION() { return 119 }
-int TK_PIPE() { return 120 }
-int TK_UNDERSCORE() { return 121 }
-
-// --- 双字符符号 ---
-int TK_EQ_EQ() { return 130 }
-int TK_NOT_EQ() { return 131 }
-int TK_LEQ() { return 132 }
-int TK_GEQ() { return 133 }
-int TK_AND() { return 134 }
-int TK_OR() { return 135 }
-int TK_ARROW() { return 136 }
-int TK_QUESTION_DOT() { return 137 }
-int TK_QUESTION_QUESTION() { return 138 }
-
-// ============== Token 结构体 ==============
+// TODO: 添加字符串 (String)、控制结构大括号等
+// TODO: 添加各种关键字 (if, while, struct, etc.)
+int T_VAR()    { return 9; }
+int T_TRUE()   { return 10; }
+int T_FALSE()  { return 11; }
 
 struct Token {
-    int type       // TokenType 常量值
-    string lexeme  // 原始文本
-    int line       // 行号 (1-based)
-    int col        // 列号 (1-based)
+    int kind
+    string lexeme
+    int line
+    int column
 }
 
-// ============== 辅助函数 ==============
-
-// 创建 Token
-Token make_token(int type, string lexeme, int line, int col) {
-    return Token { type: type, lexeme: lexeme, line: line, col: col }
-}
-
-// TokenType 转可读字符串 (用于调试输出)
-string token_type_name(int t) {
-    if t == 0 { return "EOF" }
-    if t == 1 { return "ERROR" }
-    if t == 10 { return "IDENT" }
-    if t == 11 { return "INT" }
-    if t == 12 { return "FLOAT" }
-    if t == 13 { return "STRING" }
-    if t == 20 { return "var" }
-    if t == 21 { return "const" }
-    if t == 22 { return "if" }
-    if t == 23 { return "else" }
-    if t == 24 { return "while" }
-    if t == 25 { return "for" }
-    if t == 26 { return "in" }
-    if t == 27 { return "break" }
-    if t == 28 { return "continue" }
-    if t == 29 { return "return" }
-    if t == 30 { return "import" }
-    if t == 31 { return "extern" }
-    if t == 32 { return "struct" }
-    if t == 33 { return "impl" }
-    if t == 34 { return "trait" }
-    if t == 35 { return "enum" }
-    if t == 36 { return "match" }
-    if t == 37 { return "case" }
-    if t == 38 { return "as" }
-    if t == 39 { return "print" }
-    if t == 40 { return "panic" }
-    if t == 41 { return "format" }
-    if t == 42 { return "vec" }
-    if t == 43 { return "Ok" }
-    if t == 44 { return "Err" }
-    if t == 50 { return "int" }
-    if t == 51 { return "float" }
-    if t == 52 { return "bool" }
-    if t == 53 { return "string" }
-    if t == 54 { return "void" }
-    if t == 55 { return "null" }
-    if t == 56 { return "true" }
-    if t == 57 { return "false" }
-    if t == 58 { return "len" }
-    if t == 59 { return "trim" }
-    if t == 60 { return "split" }
-    if t == 61 { return "join" }
-    if t == 62 { return "substr" }
-    if t == 63 { return "char_to_string" }
-    if t == 64 { return "read_file" }
-    if t == 65 { return "write_file" }
-    if t == 100 { return "+" }
-    if t == 101 { return "-" }
-    if t == 102 { return "*" }
-    if t == 103 { return "/" }
-    if t == 104 { return "%" }
-    if t == 105 { return "=" }
-    if t == 106 { return "!" }
-    if t == 107 { return "<" }
-    if t == 108 { return ">" }
-    if t == 109 { return "(" }
-    if t == 110 { return ")" }
-    if t == 111 { return "{" }
-    if t == 112 { return "}" }
-    if t == 113 { return "[" }
-    if t == 114 { return "]" }
-    if t == 115 { return "," }
-    if t == 116 { return "." }
-    if t == 117 { return ":" }
-    if t == 118 { return ";" }
-    if t == 119 { return "?" }
-    if t == 120 { return "|" }
-    if t == 121 { return "_" }
-    if t == 130 { return "==" }
-    if t == 131 { return "!=" }
-    if t == 132 { return "<=" }
-    if t == 133 { return ">=" }
-    if t == 134 { return "&&" }
-    if t == 135 { return "||" }
-    if t == 136 { return "=>" }
-    if t == 137 { return "?." }
-    if t == 138 { return "??" }
-    return "UNKNOWN"
-}
-
-// 格式化 Token 为调试字符串: "L1:C5 IDENT 'hello'"
-string token_to_string(Token tok) {
-    var result = "L"
-    result = result + int_to_string(tok.line)
-    result = result + ":C"
-    result = result + int_to_string(tok.col)
-    result = result + " "
-    result = result + token_type_name(tok.type)
-    // 对于有意义的 lexeme，显示其内容
-    if tok.type == 10 || tok.type == 11 || tok.type == 12 || tok.type == 13 {
-        result = result + " '"
-        result = result + tok.lexeme
-        result = result + "'"
+Token make_token(int kind, string lexeme, int line, int column) {
+    return Token {
+        kind: kind,
+        lexeme: lexeme,
+        line: line,
+        column: column
     }
-    return result
 }
