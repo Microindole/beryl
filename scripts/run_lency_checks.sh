@@ -3,7 +3,7 @@ set -e
 
 # Configuration
 # 构建 Rust Lency CLI 的命令
-RUST_LENCY_BUILD_CMD="cargo build --release --bin lencyc"
+RUST_LENCY_BUILD_CMD="cargo build --release -p lency_cli -p lency_runtime"
 RUST_LENCY_EXEC="target/release/lencyc"
 
 # 测试 Lency 自举编译器的入口文件
