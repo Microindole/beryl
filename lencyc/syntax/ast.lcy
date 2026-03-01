@@ -1,6 +1,6 @@
 // lencyc/syntax/ast.lcy
-// Lency 自举编译器 - 极简 AST 定义
-// 目前仅支持最基本的表达式
+// Lency Self-hosted Compiler - Minimal AST
+// Currently supports basic expressions and statements.
 
 import std.core
 import lencyc.syntax.token
@@ -8,7 +8,7 @@ import lencyc.syntax.token
 // 表达式类型
 int EXPR_LITERAL() { return 1; }
 int EXPR_BINARY()  { return 2; }
-// TODO: 增加 Variable, Call, Grouping 等表达式类型
+// TODO: Add Variable, Call, Grouping expression types
 
 struct Expr {
     int kind
@@ -17,7 +17,7 @@ struct Expr {
     Vec<Expr> children
 }
 
-// 辅助工厂函数
+// Helper factory functions
 
 Expr make_expr_literal(Token v) {
     return Expr {
@@ -38,4 +38,61 @@ Expr make_expr_binary(Expr left, Token op, Expr right) {
     }
 }
 
-// TODO: 增加 Stmt 相关的支持 (如 ExprStmt, VarDecl, Block 等)
+// ==========================================
+// Statement types
+// ==========================================
+
+int STMT_EXPR()      { return 1; }
+int STMT_VAR_DECL()  { return 2; }
+int STMT_IF()        { return 3; }
+int STMT_BLOCK()     { return 4; }
+// TODO: Add While, Return statement types
+
+struct Stmt {
+    int kind
+    Token name        // 用于 VarDecl, FunctionDecl 等
+    Expr expr         // 用于 ExprStmt 等单一表达式语句, 以及 If 的条件
+    Vec<Stmt> body    // 用于嵌套结构, 以及 If 的 then 分支
+    Vec<Stmt> else_body // 用于 If 的 else 分支
+}
+
+// 辅助工厂函数
+
+Stmt make_stmt_expr(Expr expr) {
+    return Stmt {
+        kind: STMT_EXPR(),
+        name: make_token(0, "", 0, 0),
+        expr: expr,
+        body: vec![]
+    }
+}
+
+Stmt make_stmt_var_decl(Token name, Expr initializer) {
+    return Stmt {
+        kind: STMT_VAR_DECL(),
+        name: name,
+        expr: initializer,
+        body: vec![],
+        else_body: vec![]
+    }
+}
+
+Stmt make_stmt_if(Expr condition, Vec<Stmt> then_branch, Vec<Stmt> else_branch) {
+    return Stmt {
+        kind: STMT_IF(),
+        name: make_token(0, "", 0, 0),
+        expr: condition,
+        body: then_branch,
+        else_body: else_branch
+    }
+}
+
+Stmt make_stmt_block(Vec<Stmt> statements) {
+    return Stmt {
+        kind: STMT_BLOCK(),
+        name: make_token(0, "", 0, 0),
+        expr: make_expr_literal(make_token(0, "", 0, 0)),
+        body: statements,
+        else_body: vec![]
+    }
+}

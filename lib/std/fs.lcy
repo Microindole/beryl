@@ -8,12 +8,12 @@
 import std.core
 
 // 读取文件内容到字符串
-Result<string, string> read_to_string(string path) {
+string! read_to_string(string path) {
     return read_file(path)
 }
 
 // 将字符串写入文件
-Result<void, string> write_string(string path, string content) {
+void! write_string(string path, string content) {
     return write_file(path, content)
 }
 

@@ -1,6 +1,6 @@
 // lencyc/syntax/parser.lcy
-// Lency 自举编译器 - 极简 Parser
-// 仅实现从 Token 流解析简单的四则运算表达式
+// Lency Self-hosted Compiler - Recursive Descent Parser
+// Currently handles basic math and variable declarations.
 
 import std.core
 import lencyc.syntax.token
@@ -26,7 +26,7 @@ Parser make_parser(string source) {
 
 impl Parser {
     void error(string message) {
-        // TODO: 使用统一的 Reporter 提供更好的报错信息
+        // TODO: Use a unified Reporter for better error reporting.
         print("Error at " + int_to_string(this.current.line) + ":" + int_to_string(this.current.column) + ": " + message + "\n")
         this.has_error = true
     }
@@ -64,7 +64,7 @@ impl Parser {
     }
 
     // ----------------------------------------------------
-    // Pratt Parser / Recursive Descent 表达式解析基础
+    // Pratt Parser / Recursive Descent Expression Parsing Basics
     // ----------------------------------------------------
 
     Expr term() {
@@ -96,16 +96,109 @@ impl Parser {
             return make_expr_literal(this.previous)
         }
         
-        // TODO: 增加括号、变量等的支持
+        if this.match_token(T_TRUE()) {
+            return make_expr_literal(this.previous)
+        }
+        if this.match_token(T_FALSE()) {
+            return make_expr_literal(this.previous)
+        }
+        
+        // TODO: Add support for grouping, variables, etc.
         
         this.error("Expect expression.")
-        // 返回一个虚拟的表达式防止崩溃
+        // Return a dummy expression to prevent crashes
         return make_expr_literal(make_token(T_ERROR(), "", 0, 0))
     }
     
-    // 入口函数
-    Expr parse() {
+    // ----------------------------------------------------
+    // Statement parsing
+    // ----------------------------------------------------
+    
+    Stmt var_declaration() {
+        this.consume(T_IDENTIFIER(), "Expect variable name.")
+        var name = this.previous
+        
+        this.consume(T_EQUAL(), "Expect '=' after variable name.")
+        
+        var initializer = this.term() // Currently, the top-level expression parsing is term()
+        
+        return make_stmt_var_decl(name, initializer)
+    }
+
+    Vec<Stmt> block() {
+        var statements = vec![]
+        while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
+            var stmt = this.declaration()
+            statements.push(stmt)
+        }
+        
+        this.consume(T_RIGHT_BRACE(), "Expect '}' after block.")
+        return statements
+    }
+
+    Stmt if_statement() {
+        var condition = this.term()
+        
+        this.consume(T_LEFT_BRACE(), "Expect '{' before then block.")
+        var then_branch = this.block()
+        
+        var else_branch: Vec<Stmt> = vec![]
+        if this.match_token(T_ELSE()) {
+            if this.match_token(T_LEFT_BRACE()) {
+                else_branch = this.block()
+            } else {
+                // Support else if ...
+                if this.check(T_IF()) {
+                    var dummy = this.match_token(T_IF())
+                    var nested_if = this.if_statement()
+                    else_branch.push(nested_if)
+                } else {
+                    this.error("Expect '{' or 'if' after 'else'.")
+                }
+            }
+        }
+        
+        return make_stmt_if(condition, then_branch, else_branch)
+    }
+
+    Stmt statement() {
+        if this.match_token(T_LEFT_BRACE()) {
+            return make_stmt_block(this.block())
+        }
+        
+        // Expression statement
+        var expr = this.term()
+        return make_stmt_expr(expr)
+    }
+
+    Stmt declaration() {
+        if this.match_token(T_VAR()) {
+            return this.var_declaration()
+        }
+        
+        if this.match_token(T_IF()) {
+            return this.if_statement()
+        }
+        
+        return this.statement()
+    }
+    
+    // Parser Entry Point
+    Vec<Stmt> parse() {
+        var statements = vec![]
         this.advance() // 启动 parser
-        return this.term()
+        
+        while !this.is_at_end() {
+            var stmt = this.declaration()
+            statements.push(stmt)
+            if this.has_error {
+                break
+            }
+        }
+        return statements
+    }
+    
+    bool is_at_end() {
+        return this.current.kind == T_EOF()
     }
 }

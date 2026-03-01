@@ -1,24 +1,36 @@
 // lencyc/syntax/token.lcy
-// Lency 自举编译器 - Token 定义
-// 采用最简实现，后续增量添加。
+// Lency Self-hosted Compiler - Token Definitions
+// Minimal implementation for incremental additions.
 
-// Token Kind 常量定义
+// Token Kind Constants
 int T_EOF()    { return 0; }
 int T_ERROR()  { return 1; }
 
-// 单字符 Token
+// Single character tokens
 int T_PLUS()   { return 2; } // '+'
 int T_MINUS()  { return 3; } // '-'
 int T_STAR()   { return 4; } // '*'
 int T_SLASH()  { return 5; } // '/'
 int T_EQUAL()  { return 6; } // '='
+int T_LEFT_BRACE()  { return 12; } // '{'
+int T_RIGHT_BRACE() { return 13; } // '}'
+int T_LEFT_PAREN()  { return 16; } // '('
+int T_RIGHT_PAREN() { return 17; } // ')'
+int T_SEMICOLON()   { return 18; } // ';'
+int T_COLON()       { return 19; } // ':'
+int T_DOT()         { return 20; } // '.'
+int T_COMMA()       { return 21; } // ','
+int T_LESS()        { return 22; } // '<'
+int T_GREATER()     { return 23; } // '>'
 
-// 字面量
+// Literals
 int T_NUMBER() { return 7; }
 int T_IDENTIFIER() { return 8; }
 
-// TODO: 添加字符串 (String)、控制结构大括号等
-// TODO: 添加各种关键字 (if, while, struct, etc.)
+// TODO: Add string literals, blocks, etc.
+// TODO: Add keywords (while, struct, etc.)
+int T_IF()     { return 14; }
+int T_ELSE()    { return 15; }
 int T_VAR()    { return 9; }
 int T_TRUE()   { return 10; }
 int T_FALSE()  { return 11; }

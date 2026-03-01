@@ -1,6 +1,6 @@
 // lencyc/syntax/lexer.lcy
-// Lency 自举编译器 - 极简 Lexer
-// 目前仅扫描基本的加减乘除和数字，遇到无法识别的字符报 T_ERROR。
+// Lency Self-hosted Compiler - Minimal Lexer
+// Scans basic operators and numbers. Unknown characters trigger T_ERROR.
 
 import std.core
 import std.char
@@ -53,38 +53,52 @@ impl Lexer {
         return this.source[this.current];
     }
     
-    // 生成常规 Token
+    // Generate normal token
     Token make_token_from(int kind) {
         var l = this.current - this.start;
         var lexeme = substr(this.source, this.start, l);
-        // 注意：计算起始列时要扣除当前已经消耗的长度
+        // Note: Subtract current length to get start column
         return make_token(kind, lexeme, this.line, this.column - l);
     }
     
-    // 生成错误 Token
+    // Generate error token
     Token error_token(string message) {
         return make_token(T_ERROR(), message, this.line, this.column);
     }
     
-    // 跳过空白字符
+    // Skip whitespace and comments
     void skip_whitespace() {
         while !this.is_at_end() {
             var c = this.peek();
             if c == " " || c == "\r" || c == "\t" {
                 var dummy = this.advance();
-            } else {
+            } else { 
                 if c == "\n" {
                     this.line = this.line + 1;
                     this.column = 1;
                     var dummy = this.advance();
-                } else {
+                } else { 
+                    // Handle // comments
+                    if c == "/" {
+                        // Peek next character
+                        if this.current + 1 < len(this.source) {
+                            var next = substr(this.source, this.current + 1, 1)
+                            if next == "/" {
+                                // Skip until newline
+                                while !this.is_at_end() && this.peek() != "\n" {
+                                    var dummy2 = this.advance()
+                                }
+                                continue // Continue for more whitespace/comments
+                            }
+                        }
+                    }
                     return;
                 }
             }
         }
     }
     
-    // 解析标识符和关键字
+    // Parse identifiers and keywords
     Token identifier() {
         while is_alphanumeric(this.peek_char()) || this.peek_char() == 95 { // 95 is '_'
             var dummy = this.advance();
@@ -96,23 +110,25 @@ impl Lexer {
         var kind = T_IDENTIFIER();
         if text == "var" { kind = T_VAR(); }
         else { if text == "true" { kind = T_TRUE(); }
-        else { if text == "false" { kind = T_FALSE(); } } }
+        else { if text == "false" { kind = T_FALSE(); }
+        else { if text == "if" { kind = T_IF(); }
+        else { if text == "else" { kind = T_ELSE(); } } } } }
         
         return this.make_token_from(kind);
     }
     
-    // 解析数字
+    // Parse numbers
     Token number() {
         while is_digit(this.peek_char()) {
             var dummy = this.advance();
         }
         
-        // TODO: 支持小数点（浮点数）解析
+        // TODO: Support decimal points (floats)
         
         return this.make_token_from(T_NUMBER());
     }
 
-    // 获取下一个 Token
+    // Get next token
     Token scan_token() {
         this.skip_whitespace();
         
@@ -124,13 +140,24 @@ impl Lexer {
         
         var c = this.advance();
         
-        // 简单符号
+        // Simple symbols
         if c == "+" { return this.make_token_from(T_PLUS()); }
         if c == "-" { return this.make_token_from(T_MINUS()); }
-        if c == "*" { return this.make_token_from(T_STAR()); }
         if c == "/" { return this.make_token_from(T_SLASH()); }
+        if c == "=" { return this.make_token_from(T_EQUAL()); }
+        if c == "{" { return this.make_token_from(T_LEFT_BRACE()); }
+        if c == "}" { return this.make_token_from(T_RIGHT_BRACE()); }
+        if c == "*" { return this.make_token_from(T_STAR()); }
+        if c == "(" { return this.make_token_from(T_LEFT_PAREN()); }
+        if c == ")" { return this.make_token_from(T_RIGHT_PAREN()); }
+        if c == ";" { return this.make_token_from(T_SEMICOLON()); }
+        if c == ":" { return this.make_token_from(T_COLON()); }
+        if c == "." { return this.make_token_from(T_DOT()); }
+        if c == "," { return this.make_token_from(T_COMMA()); }
+        if c == "<" { return this.make_token_from(T_LESS()); }
+        if c == ">" { return this.make_token_from(T_GREATER()); }
         
-        // 数字字面量
+        // Number literals
         var c_int = this.source[this.start];
         if is_digit(c_int) {
             return this.number();
@@ -138,14 +165,14 @@ impl Lexer {
         
         if c == "=" { return this.make_token_from(T_EQUAL()); }
         
-        // 标识符或关键字
+        // Identifier or keyword
         var is_alpha_char = is_alpha(c_int) || c_int == 95; // 95 is '_'
         if is_alpha_char {
             return this.identifier();
         }
         
-        // TODO: 支持双字符操作符 (如 ==, !=, >=, <=)
-        // TODO: 支持字符串(Strings)解析
+        // TODO: Support double-char operators (==, !=, etc)
+        // TODO: Support string literals
         
         return this.error_token("Unexpected character.");
     }
