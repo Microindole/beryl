@@ -44,6 +44,7 @@ editors/         # IDE 插件与工具链
 - [DONE] String 格式化 -- `format(string, Vec<string>)` 内置函数
 - [DONE] 标准库清理 -- core 瘦身、去重、Iterator 统一、string→str 重命名
 - [DONE] 标准库增强 -- 24 个新函数 (str/io/collections/math/char)
+- [DONE] 修复 CI 定时任务失败 (升级 bytes 依赖解决 cargo audit 漏洞)
 - [WIP] 自举 Lexer & Parser 重新开始
   - 已完成极简版 Token、Lexer 和 Parser 的骨架，并集成到了 Github CI (`tests.yml` 中的 `self-hosted-tests`)
   - **关键规则**：必须“一步步一点点的新增”关键字和语法特性，每新增一个特性**必须**立即运行 `./scripts/run_lency_checks.sh` 进行验证，防止旧版本 Rust Lency 编译器的隐藏 Bug 导致 LLVM 报错。
