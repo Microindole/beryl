@@ -8,8 +8,10 @@ RUST_LENCY_EXEC="target/release/lencyc"
 
 # 测试 Lency 自举编译器的入口文件 (用于完整性测试)
 SELF_HOST_ENTRY="lencyc/driver/test_entry.lcy"
-# 输出的可执行文件名称
-SELF_HOST_OUT="lencyc_test"
+# 输出目录与可执行文件名称（避免产物落在仓库根目录）
+SELF_HOST_OUT_DIR="target/lencyc_selfhost"
+SELF_HOST_OUT_NAME="lencyc_test"
+SELF_HOST_OUT="$SELF_HOST_OUT_DIR/$SELF_HOST_OUT_NAME"
 
 # Colors
 RED='\033[0;31m'
@@ -77,7 +79,9 @@ if [ ! -f "$SELF_HOST_ENTRY" ]; then
     exit 1
 fi
 
-if $RUST_LENCY_EXEC build $SELF_HOST_ENTRY -o $SELF_HOST_OUT; then
+mkdir -p "$SELF_HOST_OUT_DIR"
+
+if $RUST_LENCY_EXEC build $SELF_HOST_ENTRY -o $SELF_HOST_OUT_NAME --out-dir "$SELF_HOST_OUT_DIR"; then
     print_success "Self-hosted Lencyc compilation"
 else
     print_error "Self-hosted Lencyc compilation"

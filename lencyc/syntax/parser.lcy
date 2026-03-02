@@ -234,9 +234,21 @@ impl Parser {
         return make_stmt_while(condition, body)
     }
 
+    Stmt return_statement() {
+        if this.check(T_RIGHT_BRACE()) || this.check(T_EOF()) {
+            // TODO: 支持 void-return 的专用 AST 节点，避免使用哑元表达式。
+            return make_stmt_return(make_expr_literal(make_token(T_ERROR(), "", 0, 0)))
+        }
+        var value = this.expression()
+        return make_stmt_return(value)
+    }
+
     Stmt statement() {
         if this.match_token(T_LEFT_BRACE()) {
             return make_stmt_block(this.block())
+        }
+        if this.match_token(T_RETURN()) {
+            return this.return_statement()
         }
         
         // Expression statement

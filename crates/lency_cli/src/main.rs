@@ -1,7 +1,10 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
 use lency_driver::compile_file;
-use std::fs;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Parser)]
 #[command(name = "lencyc")]
@@ -33,6 +36,10 @@ enum Commands {
         /// 输出文件 (默认: lencyTemp.ll)
         #[arg(short, long, default_value = "lencyTemp.ll")]
         output: String,
+
+        /// 输出目录 (可选)。设置后，输出文件会写入该目录
+        #[arg(long, value_name = "DIR")]
+        out_dir: Option<String>,
     },
 
     /// 编译并运行 Lency 程序
@@ -60,6 +67,10 @@ enum Commands {
         #[arg(short, long, default_value = "lencyTemp.out")]
         output: String,
 
+        /// 输出目录 (可选)。设置后，输出文件会写入该目录
+        #[arg(long, value_name = "DIR")]
+        out_dir: Option<String>,
+
         /// 优化构建 (Release mode)
         #[arg(long)]
         release: bool,
@@ -79,22 +90,50 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Commands::Compile { input, output } => cmd_compile(&input, &output)?,
+        Commands::Compile {
+            input,
+            output,
+            out_dir,
+        } => cmd_compile(&input, &output, out_dir.as_deref())?,
         Commands::Run { input, args: _ } => cmd_run(&input)?,
         Commands::Check { input } => cmd_check(&input)?,
         Commands::Build {
             input,
             output,
+            out_dir,
             release,
-        } => cmd_build(&input, &output, release)?,
+        } => cmd_build(&input, &output, out_dir.as_deref(), release)?,
         Commands::Repl => cmd_repl()?,
     }
 
     Ok(())
 }
 
+fn resolve_output_path(output: &str, out_dir: Option<&str>) -> Result<PathBuf> {
+    let output_path = PathBuf::from(output);
+
+    if let Some(dir) = out_dir {
+        let dir_path = Path::new(dir);
+        fs::create_dir_all(dir_path)?;
+
+        let file_name = output_path
+            .file_name()
+            .ok_or_else(|| anyhow!("Invalid output file name: {}", output))?;
+
+        return Ok(dir_path.join(file_name));
+    }
+
+    if let Some(parent) = output_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    Ok(output_path)
+}
+
 /// 编译命令
-fn cmd_compile(input: &str, output: &str) -> Result<()> {
+fn cmd_compile(input: &str, output: &str, out_dir: Option<&str>) -> Result<()> {
     println!("Compiling {} ...", input);
 
     let source = fs::read_to_string(input)?;
@@ -106,8 +145,9 @@ fn cmd_compile(input: &str, output: &str) -> Result<()> {
         }
     };
 
-    fs::write(output, result.ir)?;
-    println!("Generated {}", output);
+    let output_path = resolve_output_path(output, out_dir)?;
+    fs::write(&output_path, result.ir)?;
+    println!("Generated {}", output_path.display());
 
     Ok(())
 }
@@ -188,7 +228,7 @@ fn cmd_check(input: &str) -> Result<()> {
 }
 
 /// 构建命令 - 生成可执行文件
-fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
+fn cmd_build(input: &str, output: &str, out_dir: Option<&str>, release: bool) -> Result<()> {
     println!("Building {} (release={}) ...", input, release);
 
     // 1. 编译为 LLVM IR
@@ -245,9 +285,11 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
 
     // 4. 使用 gcc 链接
     println!("  Linking executable...");
+    let output_path = resolve_output_path(output, out_dir)?;
+    let output_str = output_path.to_string_lossy().into_owned();
 
     let mut gcc_cmd = std::process::Command::new("gcc");
-    gcc_cmd.args([temp_obj, "-o", output, "-no-pie"]);
+    gcc_cmd.args([temp_obj, "-o", output_str.as_str(), "-no-pie"]);
 
     if let Some(path) = runtime_path {
         gcc_cmd.arg(format!("-L{}", path.display()));
@@ -262,7 +304,7 @@ fn cmd_build(input: &str, output: &str, release: bool) -> Result<()> {
         anyhow::bail!("Linking failed - please ensure lency_runtime is built");
     }
 
-    println!("Successfully built: {}", output);
+    println!("Successfully built: {}", output_path.display());
     Ok(())
 }
 

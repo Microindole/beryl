@@ -45,8 +45,12 @@ editors/         # IDE 插件与工具链
 - [DONE] 标准库清理 -- core 瘦身、去重、Iterator 统一、string→str 重命名
 - [DONE] 标准库增强 -- 24 个新函数 (str/io/collections/math/char)
 - [DONE] 修复 CI 定时任务失败 (升级 bytes 依赖解决 cargo audit 漏洞)
+- [DONE] CLI 产物路径优化 -- `lencyc compile/build` 支持 `--out-dir`，可将编译结果集中到指定目录
 - [WIP] 自举 Lexer & Parser 重新开始
-  - 已完成极简版 Token、Lexer 和 Parser 的骨架，并集成到了 Github CI (`tests.yml` 中的 `self-hosted-tests`)
+  - 已完成 Token、Lexer 和 Parser 基础骨架，并集成到了 Github CI (`tests.yml` 中的 `self-hosted-tests`)
+  - Parser 已支持表达式优先级链（assignment/logical/comparison/arithmetic/unary/primary）与 `var/if/while/block/return` 语句
+  - 已提供 AST 可观测性：`expr_to_string` / `stmt_to_string` 已在 `lencyc/driver/test_entry.lcy` 接入
+  - 2026-03-02 基线验证：`./scripts/run_checks.sh` 与 `./scripts/run_lency_checks.sh` 均通过
   - **关键规则**：必须“一步步一点点的新增”关键字和语法特性，每新增一个特性**必须**立即运行 `./scripts/run_lency_checks.sh` 进行验证，防止旧版本 Rust Lency 编译器的隐藏 Bug 导致 LLVM 报错。
 ---
 详细设计参考: [design_spec.md](../assets/design_spec.md), [Lency.txt](../assets/Lency.txt)

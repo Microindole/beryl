@@ -8,11 +8,11 @@
 实现一个递归下降解析器 (Recursive Descent Parser)，将 Token 流转换为 AST。
 
 ### 待完成
-- [ ] AST 定义 (Enum/Struct) - `lencyc/syntax/ast.lcy`
-- [ ] Parser 基础架构 - `lencyc/syntax/parser.lcy`
-- [ ] Expression Parsing (优先级, Pratt/Recursive)
-- [ ] Statement/Declaration Parsing
-- [ ] AST Printer (Debug验证)
+- [ ] AST 定义 (Enum/Struct) - `lencyc/syntax/ast.lcy`（已覆盖 Expr/Stmt 基础节点，含 `return`）
+- [x] Parser 基础架构 - `lencyc/syntax/parser.lcy`
+- [ ] Expression Parsing (优先级, Pratt/Recursive)（已支持 assignment/logical/comparison/arithmetic/unary/primary）
+- [ ] Statement/Declaration Parsing（已支持 var/if/while/block/return/expr）
+- [x] AST Printer (Debug验证)
 
 ---
 
@@ -54,8 +54,8 @@
 ## 统计
 | 指标 | 值 |
 |------|-----|
-| 测试通过 | 64 (.lcy) + Rust unit tests |
-| 自举组件 | Lexer (Done), Parser (Todo) |
+| 测试通过 | 69 (.lcy) + Rust unit tests |
+| 自举组件 | Lexer (Done), Parser (WIP) |
 | 自举准备度 | ~98% |
 
-*更新时间: 2026-02-14*
+*更新时间: 2026-03-02*

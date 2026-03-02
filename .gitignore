@@ -11,6 +11,7 @@ target/
 *.swp
 .DS_Store
 .claude/
+/AGENTS.md
 
 # 3. commit 消息
 COMMIT_MSG.txt
