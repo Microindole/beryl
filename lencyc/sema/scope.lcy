@@ -1,0 +1,65 @@
+// lencyc/sema/scope.lcy
+// Minimal scope/symbol table for bootstrap resolver.
+
+import std.core
+import lencyc.sema.symbol
+
+struct SymbolTable {
+    Vec<Symbol> symbols
+    int current_depth
+}
+
+SymbolTable make_symbol_table() {
+    return SymbolTable {
+        symbols: vec![],
+        current_depth: 0
+    }
+}
+
+impl SymbolTable {
+    void begin_scope() {
+        this.current_depth = this.current_depth + 1
+    }
+
+    void end_scope() {
+        while this.symbols.len() > 0 {
+            var i = this.symbols.len() - 1
+            if this.symbols[i].depth != this.current_depth {
+                break
+            }
+            var popped = this.symbols.pop()
+        }
+        this.current_depth = this.current_depth - 1
+    }
+
+    bool is_defined_in_current_scope(string name) {
+        var i = this.symbols.len() - 1
+        while i >= 0 {
+            var symbol = this.symbols[i]
+            if symbol.depth != this.current_depth {
+                break
+            }
+            if symbol.name == name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+
+    void define(string name) {
+        this.symbols.push(make_symbol(name, this.current_depth))
+    }
+
+    bool resolve(string name) {
+        var i = this.symbols.len() - 1
+        while i >= 0 {
+            var symbol = this.symbols[i]
+            if symbol.name == name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+}

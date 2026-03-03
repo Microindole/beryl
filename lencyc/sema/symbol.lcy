@@ -1,0 +1,16 @@
+// lencyc/sema/symbol.lcy
+// Minimal symbol definition for bootstrap resolver.
+
+import std.core
+
+struct Symbol {
+    string name
+    int depth
+}
+
+Symbol make_symbol(string name, int depth) {
+    return Symbol {
+        name: name,
+        depth: depth
+    }
+}

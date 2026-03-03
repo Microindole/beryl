@@ -1,0 +1,30 @@
+// lencyc/driver/test_cases.lcy
+// Structured test case sources for self-host bootstrap checks.
+
+import std.core
+
+string src_valid_main_program() {
+    return "var sum = 0\nvar i = 0\nfor i = 0; i < 6; i = i + 1 {\n    if i == 2 {\n        continue\n    }\n    sum = sum + i\n    if i == 4 {\n        break\n    }\n}\nif sum > 0 {\n    return\n}\nreturn sum"
+}
+
+string src_call_member_program() {
+    return "var obj = 1\nfoo(obj, 2)\nobj.to_string()"
+}
+
+string src_nested_loop_continue_safety() {
+    return "for var i = 0; i < 4; i = i + 1 {\n    while i < 3 {\n        continue\n    }\n    continue\n}"
+}
+
+string src_invalid_break_top_level() { return "break"; }
+string src_invalid_continue_top_level() { return "continue"; }
+string src_invalid_for_missing_first_semicolon_expr_init() { return "for i = 0 i < 3; i = i + 1 { }"; }
+string src_invalid_for_missing_first_semicolon_var_init() { return "for var i = 0 i < 3; i = i + 1 { }"; }
+string src_invalid_for_missing_second_semicolon() { return "for var i = 0; i < 3 i = i + 1 { }"; }
+string src_invalid_for_missing_left_brace() { return "for var i = 0; i < 3; i = i + 1 i = i + 2 }"; }
+
+string src_resolver_undefined_in_initializer() { return "var x = y"; }
+string src_resolver_undefined_assignment() { return "x = 1"; }
+string src_resolver_duplicate_same_scope() { return "var x = 1\nvar x = 2"; }
+string src_resolver_out_of_scope_after_block() { return "{ var y = 1 }\ny = 2"; }
+string src_resolver_shadowing_ok() { return "var x = 1\n{ var x = 2\n  x = x + 1\n}\nx = x + 1"; }
+string src_resolver_function_body_ok() { return "var x = p\nx = x + 1\nreturn x"; }

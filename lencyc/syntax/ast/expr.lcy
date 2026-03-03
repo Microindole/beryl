@@ -12,6 +12,8 @@ int EXPR_GROUPING() { return 4; }
 int EXPR_UNARY()    { return 5; }
 int EXPR_ASSIGN()   { return 6; }
 int EXPR_LOGICAL()  { return 7; }
+int EXPR_CALL()     { return 8; }
+int EXPR_GET()      { return 9; }
 
 Expr make_expr_literal(Token v) {
     return Expr {
@@ -75,5 +77,29 @@ Expr make_expr_logical(Expr left, Token op, Expr right) {
         literal_value: make_token(0, "", 0, 0),
         operator: op,
         children: children
+    }
+}
+
+Expr make_expr_call(Expr callee, Vec<Expr> args) {
+    var children = vec![callee]
+    var i = 0
+    while i < args.len() {
+        children.push(args[i])
+        i = i + 1
+    }
+    return Expr {
+        kind: EXPR_CALL(),
+        literal_value: make_token(0, "", 0, 0),
+        operator: make_token(0, "", 0, 0),
+        children: children
+    }
+}
+
+Expr make_expr_get(Expr object, Token name) {
+    return Expr {
+        kind: EXPR_GET(),
+        literal_value: name,
+        operator: make_token(0, "", 0, 0),
+        children: vec![object]
     }
 }

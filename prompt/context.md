@@ -20,6 +20,7 @@
 - 进度状态：只更新 `prompt/sprint/status.md`。
 - 任务过程：写入 `prompt/artifacts/` 对应文件。
 - 架构变化：必要时补充到本文件“长期约定”，不要写流水账。
+- Lency 语法检查约定：`run_lency_checks.sh` 的“入口语法检查”仅在 `lencyc build --check-only` 可用时启用；当前 CLI 尚不支持该参数，脚本会自动跳过并由完整 build 覆盖语法路径。
 - 每次改动结束必须运行：
   - `./scripts/run_checks.sh`
   - `./scripts/run_lency_checks.sh`
@@ -34,5 +35,11 @@
 - 已完成：Parser/AST 模块化拆分（`lencyc/syntax/{parser,ast}/...`）。
 - 已支持：`break/continue` 语句及循环外非法位置约束（parser 直接报错）。
 - 已支持：C 风格 `for` 语句基础解析（当前通过 parser 反糖到 `while`）。
+- 语义修正：`for` 反糖路径下，`continue` 已确保先执行 `increment`（且不影响嵌套循环）。
+- 解析边界：`for` 当前支持 `var` 或表达式初始化（如 `for var i = ...;` / `for i = ...;`）。
+- 表达式能力：parser 已支持 `call` 与 `member` 链（`foo(a,b)`、`obj.method()`）。
+- 自举语义骨架：已添加最小 `name resolution`（变量定义/引用检查）并接入 `test_entry` 烟雾验证。
+- 语义测试：`test_entry` 已补 resolver 负例（undefined/duplicate），不再只测正例。
+- 回归结构化：测试样例已抽离到 `lencyc/driver/test_cases.lcy`，`test_entry` 改为用例编排执行。
 - 当前策略：按语法特性小步增量推进，每次增量后立刻跑 Lency 检查，避免回归。
 - 下一阶段：在保持可运行的前提下逐步补齐语句与语义能力。

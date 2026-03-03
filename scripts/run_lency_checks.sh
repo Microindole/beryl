@@ -65,18 +65,28 @@ else
     exit 1
 fi
 
-# 1.6. 全量语法检查 (Verify all files in lencyc)
-print_step "1.6. Running Batch Syntax Checks for lencyc/"
-# 使用 Rust 版编译器对 lencyc 下所有文件进行只检查语法不生成代码的验证
-LENCYC_FILES=$(find lencyc -name "*.lcy")
-FAILED_FILES=""
-for f in $LENCYC_FILES; do
-    if ! $RUST_LENCY_EXEC build "$f" --check-only > /dev/null 2>&1; then
-        echo -e "${YELLOW}⚠️ Syntax check failed (or not supported yet): $f${NC}"
-        # FAILED_FILES="$FAILED_FILES $f" 
-    fi
-done
-print_success "Full syntax trace completed"
+# 1.6. 入口级语法检查（仅在 CLI 支持 --check-only 时启用）
+print_step "1.6. Running Entry Syntax Checks for lencyc/"
+if $RUST_LENCY_EXEC build --help | grep -q -- "--check-only"; then
+    CHECK_ENTRIES=(
+        "lencyc/driver/test_entry.lcy"
+    )
+    # FIXME: 恢复对 lencyc/driver/main.lcy 的 --check-only 检查，当前主入口尚未自举完备。
+    for entry in "${CHECK_ENTRIES[@]}"; do
+        if [ ! -f "$entry" ]; then
+            print_error "Missing check entry: $entry"
+            exit 1
+        fi
+        if ! $RUST_LENCY_EXEC build "$entry" --check-only > /dev/null 2>&1; then
+            print_error "Syntax check failed: $entry"
+            exit 1
+        fi
+    done
+    print_success "Entry syntax checks"
+else
+    # FIXME: lency_cli::build 子命令尚未实现 --check-only，当前仅能通过完整 build 间接覆盖语法。
+    echo -e "${YELLOW}⚠️ Skipped entry syntax checks: '--check-only' is not supported by current lencyc build command.${NC}"
+fi
 
 # 2. 使用 Rust 编译器编译 Lency 的自举版 (验证 test_entry 逻辑)
 print_step "2. Compiling Lency-written Compiler (Self-host Lencyc)"

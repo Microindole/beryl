@@ -90,7 +90,38 @@ impl Parser {
             var right = this.unary()
             return make_expr_unary(operator, right)
         }
-        return this.primary()
+        return this.call()
+    }
+
+    Expr finish_call(Expr callee) {
+        var args = vec![]
+        if !this.check(T_RIGHT_PAREN()) {
+            while true {
+                args.push(this.expression())
+                if !this.match_token(T_COMMA()) {
+                    break
+                }
+            }
+        }
+        this.consume(T_RIGHT_PAREN(), "Expect ')' after arguments.")
+        return make_expr_call(callee, args)
+    }
+
+    Expr call() {
+        var expr = this.primary()
+        while true {
+            if this.match_token(T_LEFT_PAREN()) {
+                expr = this.finish_call(expr)
+            } else {
+                if this.match_token(T_DOT()) {
+                    this.consume(T_IDENTIFIER(), "Expect property name after '.'.")
+                    expr = make_expr_get(expr, this.previous)
+                } else {
+                    break
+                }
+            }
+        }
+        return expr
     }
     
     Expr primary() {

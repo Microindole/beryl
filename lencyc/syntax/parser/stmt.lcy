@@ -7,6 +7,41 @@ import lencyc.syntax.ast
 import lencyc.syntax.parser
 
 impl Parser {
+    Vec<Stmt> rewrite_continue_for_increment(Vec<Stmt> statements, Expr increment) {
+        var rewritten = vec![]
+        var i = 0
+        while i < statements.len() {
+            var stmt = statements[i]
+            if stmt.kind == STMT_CONTINUE() {
+                var with_increment = vec![make_stmt_expr(increment), make_stmt_continue()]
+                rewritten.push(make_stmt_block(with_increment))
+            } else {
+                if stmt.kind == STMT_BLOCK() {
+                    var nested_block = this.rewrite_continue_for_increment(stmt.body, increment)
+                    rewritten.push(make_stmt_block(nested_block))
+                } else {
+                    if stmt.kind == STMT_IF() {
+                        var then_branch = this.rewrite_continue_for_increment(stmt.body, increment)
+                        var else_branch = this.rewrite_continue_for_increment(stmt.else_body, increment)
+                        rewritten.push(make_stmt_if(stmt.expr, then_branch, else_branch))
+                    } else {
+                        // 不进入 while 体，避免误改内部循环的 continue 语义。
+                        rewritten.push(stmt)
+                    }
+                }
+            }
+            i = i + 1
+        }
+        return rewritten
+    }
+
+    Stmt lower_for_statement(Stmt initializer, Expr condition, Expr increment, Vec<Stmt> body) {
+        body = this.rewrite_continue_for_increment(body, increment)
+        body.push(make_stmt_expr(increment))
+        var while_stmt = make_stmt_while(condition, body)
+        return make_stmt_block(vec![initializer, while_stmt])
+    }
+
     Vec<Stmt> block() {
         var statements = vec![]
         while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
@@ -53,12 +88,14 @@ impl Parser {
     }
 
     Stmt for_statement() {
-        if !this.match_token(T_VAR()) {
-            this.error("Expect 'var' in for initializer.")
-            return make_stmt_block(vec![])
+        // 支持 C 风格 for 的两种初始化：`var` 声明或表达式初始化。
+        var initializer = make_stmt_block(vec![])
+        if this.match_token(T_VAR()) {
+            initializer = this.var_declaration()
+        } else {
+            var init_expr = this.expression()
+            initializer = make_stmt_expr(init_expr)
         }
-
-        var initializer = this.var_declaration()
         this.consume(T_SEMICOLON(), "Expect ';' after for initializer.")
 
         var condition = this.expression()
@@ -71,11 +108,7 @@ impl Parser {
         var body = this.block()
         this.loop_depth = this.loop_depth - 1
 
-        // FIXME: for->while 反糖下，continue 不会先执行 increment；需后续专门重写 continue 路径。
-        body.push(make_stmt_expr(increment))
-        var while_stmt = make_stmt_while(condition, body)
-
-        return make_stmt_block(vec![initializer, while_stmt])
+        return this.lower_for_statement(initializer, condition, increment, body)
     }
 
     Stmt break_statement() {

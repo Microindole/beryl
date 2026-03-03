@@ -71,3 +71,13 @@
 2. `prompt/context.md` 已重构为“目录地图+职责说明”，移除逐条流水账。
 3. 自举 Parser 新增 `continue` 语句，并补充 `break/continue` 循环外非法位置负例测试。
 4. 自举 Parser 新增 C 风格 `for` 语句解析（先反糖为 `while` 路径）。
+5. 修复 `for` 反糖语义：`continue` 现在会先执行 `increment`，并避免污染嵌套循环的 `continue`。
+6. 自举测试扩展：补齐 `for` 非法语法负例（缺 `var` / `;` / `{`）与嵌套循环重写安全性断言。
+7. 新增最小 `name resolution` 骨架（`lencyc/sema/{symbol,scope,resolver}.lcy`），并在 `test_entry` 中加入 smoke test。
+8. 为 resolver 新增负例断言：未定义变量、未定义赋值、同作用域重复定义。
+9. `for` 初始化扩展：从仅 `var` 扩展为支持表达式初始化（`for i = ...;`）。
+10. resolver 测试扩展：新增“块退出后不可见”负例与“作用域遮蔽合法”正例。
+11. parser 表达式链扩展：新增 `call/member` 解析与 AST 节点（`EXPR_CALL` / `EXPR_GET`）。
+12. parser 架构收敛：抽出 `lower_for_statement`，集中管理 for 反糖规则。
+13. resolver 扩展：新增函数体级入口 `resolve_function_body(params, body)`，并补函数样式作用域测试。
+14. 自举回归集结构化：新增 `lencyc/driver/test_cases.lcy` 管理测试源码，`test_entry` 仅负责编排与断言。

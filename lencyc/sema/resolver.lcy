@@ -1,0 +1,165 @@
+// lencyc/sema/resolver.lcy
+// Minimal name resolution for bootstrap parser AST.
+
+import std.core
+import lencyc.syntax.ast
+import lencyc.sema.scope
+
+struct ResolveResult {
+    bool has_error
+    int error_count
+}
+
+struct Resolver {
+    SymbolTable table
+    bool has_error
+    int error_count
+}
+
+Resolver make_resolver() {
+    return Resolver {
+        table: make_symbol_table(),
+        has_error: false,
+        error_count: 0
+    }
+}
+
+ResolveResult resolve_statements(Vec<Stmt> statements) {
+    var resolver = make_resolver()
+    var i = 0
+    while i < statements.len() {
+        resolver.resolve_stmt(statements[i])
+        i = i + 1
+    }
+    return ResolveResult {
+        has_error: resolver.has_error,
+        error_count: resolver.error_count
+    }
+}
+
+ResolveResult resolve_function_body(Vec<string> params, Vec<Stmt> body) {
+    var resolver = make_resolver()
+    resolver.resolve_function(params, body)
+    return ResolveResult {
+        has_error: resolver.has_error,
+        error_count: resolver.error_count
+    }
+}
+
+impl Resolver {
+    void error(string message) {
+        print("Resolver error: " + message + "\n")
+        this.has_error = true
+        this.error_count = this.error_count + 1
+    }
+
+    void resolve_stmt_list(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            this.resolve_stmt(statements[i])
+            i = i + 1
+        }
+    }
+
+    void resolve_in_new_scope(Vec<Stmt> statements) {
+        this.table.begin_scope()
+        this.resolve_stmt_list(statements)
+        this.table.end_scope()
+    }
+
+    void resolve_function(Vec<string> params, Vec<Stmt> body) {
+        this.table.begin_scope()
+        var i = 0
+        while i < params.len() {
+            if this.table.is_defined_in_current_scope(params[i]) {
+                this.error("duplicate parameter in function scope: " + params[i])
+            } else {
+                this.table.define(params[i])
+            }
+            i = i + 1
+        }
+        this.resolve_stmt_list(body)
+        this.table.end_scope()
+    }
+
+    void resolve_stmt(Stmt stmt) {
+        if stmt.kind == STMT_VAR_DECL() {
+            this.resolve_expr(stmt.expr)
+            if this.table.is_defined_in_current_scope(stmt.name.lexeme) {
+                this.error("duplicate variable in same scope: " + stmt.name.lexeme)
+            } else {
+                this.table.define(stmt.name.lexeme)
+            }
+            return
+        }
+        if stmt.kind == STMT_EXPR() {
+            this.resolve_expr(stmt.expr)
+            return
+        }
+        if stmt.kind == STMT_RETURN() {
+            this.resolve_expr(stmt.expr)
+            return
+        }
+        if stmt.kind == STMT_RETURN_VOID() || stmt.kind == STMT_BREAK() || stmt.kind == STMT_CONTINUE() {
+            return
+        }
+        if stmt.kind == STMT_BLOCK() {
+            this.resolve_in_new_scope(stmt.body)
+            return
+        }
+        if stmt.kind == STMT_WHILE() {
+            this.resolve_expr(stmt.expr)
+            this.resolve_in_new_scope(stmt.body)
+            return
+        }
+        if stmt.kind == STMT_IF() {
+            this.resolve_expr(stmt.expr)
+            this.resolve_in_new_scope(stmt.body)
+            this.resolve_in_new_scope(stmt.else_body)
+            return
+        }
+        // TODO: add function/struct/impl statement kinds after parser grows.
+    }
+
+    void resolve_expr(Expr expr) {
+        if expr.kind == EXPR_LITERAL() {
+            return
+        }
+        if expr.kind == EXPR_VARIABLE() {
+            if !this.table.resolve(expr.literal_value.lexeme) {
+                this.error("undefined variable: " + expr.literal_value.lexeme)
+            }
+            return
+        }
+        if expr.kind == EXPR_ASSIGN() {
+            if !this.table.resolve(expr.literal_value.lexeme) {
+                this.error("assignment to undefined variable: " + expr.literal_value.lexeme)
+            }
+            if expr.children.len() > 0 {
+                this.resolve_expr(expr.children[0])
+            }
+            return
+        }
+        if expr.kind == EXPR_GET() {
+            if expr.children.len() > 0 {
+                this.resolve_expr(expr.children[0])
+            }
+            return
+        }
+        if expr.kind == EXPR_CALL() {
+            var j = 0
+            while j < expr.children.len() {
+                this.resolve_expr(expr.children[j])
+                j = j + 1
+            }
+            return
+        }
+
+        var i = 0
+        while i < expr.children.len() {
+            this.resolve_expr(expr.children[i])
+            i = i + 1
+        }
+        // TODO: split expression visitor by kind when index/subscript is added.
+    }
+}
