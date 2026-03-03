@@ -1,0 +1,36 @@
+// lencyc/syntax/parser/decl.lcy
+// Declaration parsing methods for self-hosted parser.
+
+import std.core
+import lencyc.syntax.token
+import lencyc.syntax.ast
+import lencyc.syntax.parser
+
+impl Parser {
+    Stmt var_declaration() {
+        this.consume(T_IDENTIFIER(), "Expect variable name.")
+        var name = this.previous
+        
+        this.consume(T_EQUAL(), "Expect '=' after variable name.")
+        
+        var initializer = this.expression()
+        
+        return make_stmt_var_decl(name, initializer)
+    }
+
+    Stmt declaration() {
+        if this.match_token(T_VAR()) {
+            return this.var_declaration()
+        }
+        
+        if this.match_token(T_IF()) {
+            return this.if_statement()
+        }
+        
+        if this.match_token(T_WHILE()) {
+            return this.while_statement()
+        }
+        
+        return this.statement()
+    }
+}

@@ -50,6 +50,8 @@ editors/         # IDE 插件与工具链
   - 已完成 Token、Lexer 和 Parser 基础骨架，并集成到了 Github CI (`tests.yml` 中的 `self-hosted-tests`)
   - Parser 已支持表达式优先级链（assignment/logical/comparison/arithmetic/unary/primary）与 `var/if/while/block/return` 语句
   - 2026-03-03 增量：`primary` 已补齐 `false` 字面量解析，并在 `lencyc/driver/test_entry.lcy` 加入布尔逻辑用例
+  - 2026-03-03 增量：`return` 语句新增无值专用 AST 节点 `STMT_RETURN_VOID`，去除 parser 中的哑元 return 表达式分支
+  - 2026-03-03 架构整理：Parser D&D 已从单文件拆分为 `lencyc/syntax/parser/{expr,stmt,decl}.lcy`，`parser.lcy` 保留状态与入口
   - 2026-03-03 工具链修正：`run_checks.sh` / `run_lency_checks.sh` 改为无参数固定职责；前者仅 Rust 侧检查，后者仅 Lency 侧检查；作用域规则固定为 `lib/` 同时属于 rust/lency，`tests/example/` 归 lency，`tests/integration/` 归 rust
   - 2026-03-03 CI 策略修正：Github Actions 先做变更路径判定，再按 rust/lency 作用域触发对应 job；未命中改动的侧不运行，减少无效 CI 消耗
   - 已提供 AST 可观测性：`expr_to_string` / `stmt_to_string` 已在 `lencyc/driver/test_entry.lcy` 接入

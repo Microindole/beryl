@@ -98,11 +98,13 @@ int STMT_IF()        { return 3; }
 int STMT_BLOCK()     { return 4; }
 int STMT_WHILE()     { return 5; }
 int STMT_RETURN()    { return 6; }
+int STMT_RETURN_VOID() { return 7; }
 
 struct Stmt {
     int kind
     Token name        // 用于 VarDecl, FunctionDecl 等
     Expr expr         // 用于 ExprStmt 等单一表达式语句, 以及 If 的条件
+    bool has_expr     // expr 字段是否有效（用于 return void 等节点）
     Vec<Stmt> body    // 用于嵌套结构, 以及 If 的 then 分支
     Vec<Stmt> else_body // 用于 If 的 else 分支
 }
@@ -114,6 +116,7 @@ Stmt make_stmt_expr(Expr expr) {
         kind: STMT_EXPR(),
         name: make_token(0, "", 0, 0),
         expr: expr,
+        has_expr: true,
         body: vec![]
     }
 }
@@ -123,6 +126,7 @@ Stmt make_stmt_var_decl(Token name, Expr initializer) {
         kind: STMT_VAR_DECL(),
         name: name,
         expr: initializer,
+        has_expr: true,
         body: vec![],
         else_body: vec![]
     }
@@ -133,6 +137,7 @@ Stmt make_stmt_if(Expr condition, Vec<Stmt> then_branch, Vec<Stmt> else_branch) 
         kind: STMT_IF(),
         name: make_token(0, "", 0, 0),
         expr: condition,
+        has_expr: true,
         body: then_branch,
         else_body: else_branch
     }
@@ -143,6 +148,7 @@ Stmt make_stmt_block(Vec<Stmt> statements) {
         kind: STMT_BLOCK(),
         name: make_token(0, "", 0, 0),
         expr: make_expr_literal(make_token(0, "", 0, 0)),
+        has_expr: false,
         body: statements,
         else_body: vec![]
     }
@@ -153,6 +159,7 @@ Stmt make_stmt_while(Expr condition, Vec<Stmt> body) {
         kind: STMT_WHILE(),
         name: make_token(0, "", 0, 0),
         expr: condition,
+        has_expr: true,
         body: body,
         else_body: vec![]
     }
@@ -163,6 +170,18 @@ Stmt make_stmt_return(Expr value) {
         kind: STMT_RETURN(),
         name: make_token(0, "", 0, 0),
         expr: value,
+        has_expr: true,
+        body: vec![],
+        else_body: vec![]
+    }
+}
+
+Stmt make_stmt_return_void() {
+    return Stmt {
+        kind: STMT_RETURN_VOID(),
+        name: make_token(0, "", 0, 0),
+        expr: make_expr_literal(make_token(0, "", 0, 0)),
+        has_expr: false,
         body: vec![],
         else_body: vec![]
     }
@@ -225,6 +244,9 @@ string stmt_to_string(Stmt stmt) {
     }
     if stmt.kind == STMT_RETURN() {
         return "(return " + expr_to_string(stmt.expr) + ")"
+    }
+    if stmt.kind == STMT_RETURN_VOID() {
+        return "(return)"
     }
     if stmt.kind == STMT_BLOCK() {
         return "(block " + stmt_list_to_string(stmt.body) + ")"

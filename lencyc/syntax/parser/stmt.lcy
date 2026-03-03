@@ -1,0 +1,73 @@
+// lencyc/syntax/parser/stmt.lcy
+// Statement parsing methods for self-hosted parser.
+
+import std.core
+import lencyc.syntax.token
+import lencyc.syntax.ast
+import lencyc.syntax.parser
+
+impl Parser {
+    Vec<Stmt> block() {
+        var statements = vec![]
+        while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
+            var stmt = this.declaration()
+            statements.push(stmt)
+        }
+        
+        this.consume(T_RIGHT_BRACE(), "Expect '}' after block.")
+        return statements
+    }
+
+    Stmt if_statement() {
+        var condition = this.expression()
+        
+        this.consume(T_LEFT_BRACE(), "Expect '{' before then block.")
+        var then_branch = this.block()
+        
+        var else_branch: Vec<Stmt> = vec![]
+        if this.match_token(T_ELSE()) {
+            if this.match_token(T_LEFT_BRACE()) {
+                else_branch = this.block()
+            } else {
+                // Support else if ...
+                if this.check(T_IF()) {
+                    var dummy = this.match_token(T_IF())
+                    var nested_if = this.if_statement()
+                    else_branch.push(nested_if)
+                } else {
+                    this.error("Expect '{' or 'if' after 'else'.")
+                }
+            }
+        }
+        
+        return make_stmt_if(condition, then_branch, else_branch)
+    }
+
+    Stmt while_statement() {
+        var condition = this.expression()
+        this.consume(T_LEFT_BRACE(), "Expect '{' before while body.")
+        var body = this.block()
+        return make_stmt_while(condition, body)
+    }
+
+    Stmt return_statement() {
+        if this.check(T_RIGHT_BRACE()) || this.check(T_EOF()) {
+            return make_stmt_return_void()
+        }
+        var value = this.expression()
+        return make_stmt_return(value)
+    }
+
+    Stmt statement() {
+        if this.match_token(T_LEFT_BRACE()) {
+            return make_stmt_block(this.block())
+        }
+        if this.match_token(T_RETURN()) {
+            return this.return_statement()
+        }
+        
+        // Expression statement
+        var expr = this.expression()
+        return make_stmt_expr(expr)
+    }
+}

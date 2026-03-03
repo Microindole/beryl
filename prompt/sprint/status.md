@@ -11,8 +11,9 @@
 - [ ] AST 定义 (Enum/Struct) - `lencyc/syntax/ast.lcy`（已覆盖 Expr/Stmt 基础节点，含 `return`）
 - [x] Parser 基础架构 - `lencyc/syntax/parser.lcy`
 - [ ] Expression Parsing (优先级, Pratt/Recursive)（已支持 assignment/logical/comparison/arithmetic/unary/primary，含 `true/false` 字面量）
-- [ ] Statement/Declaration Parsing（已支持 var/if/while/block/return/expr）
+- [ ] Statement/Declaration Parsing（已支持 var/if/while/block/return/return-void/expr）
 - [x] AST Printer (Debug验证)
+- [x] Parser 模块化拆分（D&D）：`lencyc/syntax/parser/{expr,stmt,decl}.lcy`
 
 ---
 
