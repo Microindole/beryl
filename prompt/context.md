@@ -30,6 +30,7 @@
 - Rust 作用域：`crates/**`、`tests/integration/**`、以及共享项（如 `lib/**`、部分脚本/workflow）。
 - Lency 作用域：`lencyc/**`、`tests/example/**`、以及共享项（如 `lib/**`、部分脚本/workflow）。
 - `macos-check` 当前仅跟随 Rust 作用域触发（main 分支或手动触发）。
+- Release 自动化：新增 `.github/workflows/release.yml`，当 push `v*` tag 时自动构建 Linux 产物并创建 GitHub Release（附 `tar.gz` 与 `sha256`）。
 
 ## 4. 当前工作焦点（自举）
 - 已完成：Parser/AST 模块化拆分（`lencyc/syntax/{parser,ast}/...`）。

@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (例如 v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  LLVM_SYS_150_PREFIX: /usr/lib/llvm-15
+
+jobs:
+  linux-release:
+    name: Build Linux Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: resolve_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Release tag: ${TAG}"
+
+      - name: Install LLVM 15
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build binaries
+        run: cargo build --release -p lency_cli -p lency_runtime
+
+      - name: Prepare release bundle
+        run: |
+          TAG="${{ steps.resolve_tag.outputs.tag }}"
+          BUNDLE_DIR="dist/lency-linux-x86_64"
+          mkdir -p "$BUNDLE_DIR"
+
+          cp target/release/lencyc "$BUNDLE_DIR/"
+          cp target/release/liblency_runtime.so "$BUNDLE_DIR/"
+
+          chmod +x "$BUNDLE_DIR/lencyc"
+
+          tar -C dist -czf "dist/lency-linux-x86_64-${TAG}.tar.gz" "lency-linux-x86_64"
+          (cd dist && sha256sum "lency-linux-x86_64-${TAG}.tar.gz" > "lency-linux-x86_64-${TAG}.sha256")
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/lency-linux-x86_64-${{ steps.resolve_tag.outputs.tag }}.tar.gz
+            dist/lency-linux-x86_64-${{ steps.resolve_tag.outputs.tag }}.sha256
