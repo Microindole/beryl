@@ -1,0 +1,12 @@
+// tests/example/lencyc_lir_exit0.lcy
+// End-to-end LIR->LLVM smoke test source (must exit with code 0).
+
+var acc = 0
+var i = 0
+
+while i < 3 {
+    acc = acc + i
+    i = i + 1
+}
+
+return 0

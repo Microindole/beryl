@@ -18,7 +18,10 @@ SELF_HOST_MAIN_OUT="$SELF_HOST_OUT_DIR/$SELF_HOST_MAIN_OUT_NAME"
 SELF_HOST_MAIN_EMIT="lencyc_selfhost_ast.txt"
 LIR_TEST_CASES=(
     "tests/example/lencyc_lir_basic.lcy"
+    "tests/example/lencyc_lir_exit0.lcy"
     "tests/example/lencyc_lir_loop_if.lcy"
+    "tests/example/lencyc_lir_unary_logic.lcy"
+    "tests/example/lencyc_lir_break_continue.lcy"
 )
 
 # Colors
@@ -185,6 +188,26 @@ for case_file in "${LIR_TEST_CASES[@]}"; do
     fi
 done
 print_success "Self-host LIR emit regression"
+
+print_step "8. Running Rust LIR->LLVM Build Smoke Test"
+LIR_E2E_CASE="tests/example/lencyc_lir_exit0.lcy"
+LIR_E2E_OUT="$SELF_HOST_OUT_DIR/lir_e2e_exit0.lir"
+LIR_E2E_BIN_NAME="lir_e2e_exit0"
+LIR_E2E_BIN="$SELF_HOST_OUT_DIR/$LIR_E2E_BIN_NAME"
+
+if ! ./$SELF_HOST_MAIN_OUT "$LIR_E2E_CASE" --emit-lir -o "$LIR_E2E_OUT" > /dev/null 2>&1; then
+    print_error "Failed to emit LIR for Rust backend smoke test: $LIR_E2E_CASE"
+    exit 1
+fi
+if ! $RUST_LENCY_EXEC build "$LIR_E2E_OUT" -o "$LIR_E2E_BIN_NAME" --out-dir "$SELF_HOST_OUT_DIR" > /dev/null 2>&1; then
+    print_error "Rust LIR build smoke test failed: $LIR_E2E_OUT"
+    exit 1
+fi
+if ! ./$LIR_E2E_BIN > /dev/null 2>&1; then
+    print_error "Rust LIR smoke executable failed: $LIR_E2E_BIN"
+    exit 1
+fi
+print_success "Rust LIR->LLVM smoke test"
 
 echo -e "\n${BLUE}=====================================${NC}"
 echo -e "${GREEN}🎉 All self-hosted checks passed!${NC}"

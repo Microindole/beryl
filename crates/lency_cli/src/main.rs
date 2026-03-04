@@ -6,6 +6,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+mod lir_backend;
+
 #[derive(Parser)]
 #[command(name = "lencyc")]
 #[command(
@@ -141,17 +143,23 @@ fn resolve_output_path(output: &str, out_dir: Option<&str>) -> Result<PathBuf> {
 fn cmd_compile(input: &str, output: &str, out_dir: Option<&str>) -> Result<()> {
     println!("Compiling {} ...", input);
 
-    let source = fs::read_to_string(input)?;
-    let result = match lency_driver::compile(&source) {
-        Ok(res) => res,
-        Err(e) => {
-            e.emit(Some(input), Some(&source));
-            std::process::exit(1);
-        }
+    let result_ir = if input.ends_with(".lir") {
+        let source = fs::read_to_string(input)?;
+        lir_backend::compile_lir_to_llvm_ir(&source)?
+    } else {
+        let source = fs::read_to_string(input)?;
+        let result = match lency_driver::compile(&source) {
+            Ok(res) => res,
+            Err(e) => {
+                e.emit(Some(input), Some(&source));
+                std::process::exit(1);
+            }
+        };
+        result.ir
     };
 
     let output_path = resolve_output_path(output, out_dir)?;
-    fs::write(&output_path, result.ir)?;
+    fs::write(&output_path, result_ir)?;
     println!("Generated {}", output_path.display());
 
     Ok(())
@@ -219,6 +227,13 @@ fn cmd_run(input: &str) -> Result<()> {
 fn cmd_check(input: &str) -> Result<()> {
     println!("Checking {} ...", input);
 
+    if input.ends_with(".lir") {
+        let source = fs::read_to_string(input)?;
+        lir_backend::compile_lir_to_llvm_ir(&source)?;
+        println!("No errors found");
+        return Ok(());
+    }
+
     let source = fs::read_to_string(input)?;
     match lency_driver::compile(&source) {
         Ok(_) => {
@@ -248,17 +263,24 @@ fn cmd_build(
     println!("Building {} (release={}) ...", input, release);
 
     // 1. 编译为 LLVM IR
-    let result = compile_file(input)?;
+    let ir = if input.ends_with(".lir") {
+        let source = fs::read_to_string(input)?;
+        lir_backend::compile_lir_to_llvm_ir(&source)?
+    } else {
+        compile_file(input)?.ir
+    };
     let temp_ll = "/tmp/lency_temp.ll";
-    fs::write(temp_ll, result.ir)?;
+    fs::write(temp_ll, ir)?;
 
     // 2. 使用 llc 生成目标文件
     println!("  Generating object file...");
     let temp_obj = "/tmp/lency_temp.o";
-    // TODO: Pass optimization flags to llc if release is true
-    let llc_status = std::process::Command::new("llc-15")
-        .args(["-filetype=obj", temp_ll, "-o", temp_obj])
-        .status()?;
+    let mut llc_cmd = std::process::Command::new("llc-15");
+    llc_cmd.args(["-filetype=obj"]);
+    if release {
+        llc_cmd.arg("-O2");
+    }
+    let llc_status = llc_cmd.args([temp_ll, "-o", temp_obj]).status()?;
 
     if !llc_status.success() {
         anyhow::bail!("llc compilation failed");

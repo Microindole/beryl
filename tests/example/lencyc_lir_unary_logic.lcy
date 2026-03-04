@@ -1,0 +1,13 @@
+// tests/example/lencyc_lir_unary_logic.lcy
+// Unary/logical expression regression case for self-host LIR emission.
+
+var x = 1
+var y = 0
+var neg_x = -x
+var flag = x > y && !(y > x)
+
+if flag {
+    return neg_x
+}
+
+return 0

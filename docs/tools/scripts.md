@@ -106,7 +106,8 @@ python3 scripts/check_todos.py
 3. 编译并运行 `lencyc/driver/test_entry.lcy` 回归入口
 4. 编译并运行 `lencyc/driver/main.lcy` 最小主流程入口
 5. 校验主流程产物 `lencyc_selfhost_ast.txt` 非空且格式正确
-6. 运行 `tests/example/lencyc_lir_*.lcy` 用例并校验 `--emit-lir` 产物结构
+6. 运行 `tests/example/lencyc_lir_*.lcy` 用例并校验 `--emit-lir` 产物结构（含 `basic/loop_if/exit0/unary_logic/break_continue`）
+7. 用 `tests/example/lencyc_lir_exit0.lcy` 做 LIR 端到端冒烟：`self-host --emit-lir` -> `Rust lencyc build .lir` -> 执行产物
 
 **用法**:
 ```bash
