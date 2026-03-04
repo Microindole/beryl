@@ -50,5 +50,7 @@
 - Rust 后端进展：`crates/lency_cli` 已支持最小 `.lir -> LLVM IR -> executable` 构建路径（`lencyc build file.lir`），并接入 Lency 侧脚本的端到端冒烟。
 - Rust `.lir` backend 能力增量：已支持最小外部函数调用 lowering（`call %foo(...)` -> LLVM `declare i64 @foo(...)` + `call`）。
 - LIR 回归样例扩展：`tests/example` 新增 `lencyc_lir_unary_logic.lcy` 与 `lencyc_lir_break_continue.lcy`，已纳入 `run_lency_checks.sh`。
+- 可用性打通：新增 `scripts/lency_selfhost_build.sh`，提供 `.lcy -> self-host emit-lir -> Rust backend build` 的一键构建路径，并已接入 Lency 检查脚本闭环验证。
+- 运行闭环：新增 `scripts/lency_selfhost_run.sh`，提供 `.lcy -> self-host build -> run` 一键运行路径（支持参数透传与期望退出码校验），并已接入 Lency 检查脚本。
 - 当前策略：按语法特性小步增量推进，每次增量后立刻跑 Lency 检查，避免回归。
 - 下一阶段：在保持可运行的前提下逐步补齐语句与语义能力。

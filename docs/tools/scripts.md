@@ -108,10 +108,38 @@ python3 scripts/check_todos.py
 5. 校验主流程产物 `lencyc_selfhost_ast.txt` 非空且格式正确
 6. 运行 `tests/example/lencyc_lir_*.lcy` 用例并校验 `--emit-lir` 产物结构（含 `basic/loop_if/exit0/unary_logic/break_continue`）
 7. 用 `tests/example/lencyc_lir_exit0.lcy` 做 LIR 端到端冒烟：`self-host --emit-lir` -> `Rust lencyc build .lir` -> 执行产物
+8. 用 `scripts/lency_selfhost_build.sh` 跑一键流程：`.lcy -> self-host emit-lir -> Rust build -> executable`
+9. 用 `scripts/lency_selfhost_run.sh` 跑一键运行流程：`.lcy -> self-host build -> run(支持参数透传)`
 
 **用法**:
 ```bash
 ./scripts/run_lency_checks.sh
+```
+
+## 6. 自举一键构建脚本
+
+**脚本**: `scripts/lency_selfhost_build.sh`
+
+用于把 `.lcy` 源文件通过自举编译器和 Rust backend 一次性构建为可执行文件：
+- 阶段1：构建 Rust `lencyc` 与 runtime
+- 阶段2：构建自举入口 `lencyc/driver/main.lcy`
+- 阶段3：自举入口输出 LIR (`--emit-lir`)
+- 阶段4：Rust `lencyc build <emitted.lir>` 生成可执行
+
+**用法**:
+```bash
+./scripts/lency_selfhost_build.sh <input.lcy> [-o output] [--out-dir DIR] [--check-only] [--release]
+```
+
+## 7. 自举一键运行脚本
+
+**脚本**: `scripts/lency_selfhost_run.sh`
+
+用于把 `.lcy` 源文件通过自举链路构建并立即运行，支持参数透传。
+
+**用法**:
+```bash
+./scripts/lency_selfhost_run.sh <input.lcy> [--release] [--out-dir DIR] [--expect-exit N] [--] [program args...]
 ```
 
 ## 为何需要这些脚本？

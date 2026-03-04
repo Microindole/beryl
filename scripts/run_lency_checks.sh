@@ -209,6 +209,29 @@ if ! ./$LIR_E2E_BIN > /dev/null 2>&1; then
 fi
 print_success "Rust LIR->LLVM smoke test"
 
+print_step "9. Running Self-host One-step Build Flow"
+SELFHOST_FLOW_BIN_NAME="selfhost_flow_exit0"
+SELFHOST_FLOW_BIN="$SELF_HOST_OUT_DIR/$SELFHOST_FLOW_BIN_NAME"
+if ! ./scripts/lency_selfhost_build.sh "$LIR_E2E_CASE" -o "$SELFHOST_FLOW_BIN_NAME" --out-dir "$SELF_HOST_OUT_DIR" > /dev/null 2>&1; then
+    print_error "Self-host one-step build flow failed"
+    exit 1
+fi
+if ! ./"$SELFHOST_FLOW_BIN" > /dev/null 2>&1; then
+    print_error "Self-host one-step executable failed: $SELFHOST_FLOW_BIN"
+    exit 1
+fi
+print_success "Self-host one-step build flow"
+
+print_step "10. Running Self-host One-step Run Flow"
+SELFHOST_RUN_CASE="tests/example/lencyc_run_args.lcy"
+# FIXME: self-host pipeline currently doesn't auto-load std/prelude symbols for target source.
+# Keep this run smoke case free of unresolved builtin symbol references (e.g. arg_count()).
+if ! ./scripts/lency_selfhost_run.sh "$SELFHOST_RUN_CASE" --expect-exit 0 -- sample_arg > /dev/null 2>&1; then
+    print_error "Self-host one-step run flow failed"
+    exit 1
+fi
+print_success "Self-host one-step run flow"
+
 echo -e "\n${BLUE}=====================================${NC}"
 echo -e "${GREEN}🎉 All self-hosted checks passed!${NC}"
 echo -e "${BLUE}=====================================${NC}"
