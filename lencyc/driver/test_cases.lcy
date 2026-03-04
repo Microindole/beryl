@@ -19,6 +19,18 @@ string src_float_literal_program() {
     return "var pi = 3.14\nvar half = 0.5\nprint(pi + half)"
 }
 
+string src_scientific_number_program() {
+    return "var av = 1.23e-4\nvar bv = 9E+2\nprint(av + bv)"
+}
+
+string src_string_escape_program() {
+    return "var msg = \"he said \\\"ok\\\"\"\nprint(msg)"
+}
+
+string src_char_literal_program() {
+    return "var ch = 'a'\nprint(ch)"
+}
+
 string src_nested_loop_continue_safety() {
     return "for var i = 0; i < 4; i = i + 1 {\n    while i < 3 {\n        continue\n    }\n    continue\n}"
 }

@@ -9,6 +9,7 @@ import lencyc.syntax.lexer
 import lencyc.syntax.parser
 import lencyc.syntax.ast
 import lencyc.sema.resolver
+import lencyc.codegen.lir
 
 string render_ast_program(Vec<Stmt> statements) {
     var out = ""
@@ -27,7 +28,7 @@ int main() {
     var args = parse_args()
     
     if args.input_file == "" {
-        print("Usage: lencyc <input_file> [-o <output_file>] [--check-only]\n")
+        print("Usage: lencyc <input_file> [-o <output_file>] [--check-only] [--emit-lir]\n")
         return 1
     }
 
@@ -79,9 +80,15 @@ int main() {
         return 0
     }
 
-    // Bootstrap emit target: stable AST text output for regression and debugging.
-    var ast_text = render_ast_program(statements)
-    var write_result = write_string(args.output_file, ast_text)
+    var emit_text = ""
+    if args.emit_lir {
+        emit_text = emit_lir_program(statements)
+    } else {
+        // Bootstrap emit target: stable AST text output for regression and debugging.
+        emit_text = render_ast_program(statements)
+    }
+
+    var write_result = write_string(args.output_file, emit_text)
     if write_result.is_err() {
         print("Emit failed: " + args.output_file + "\n")
         return 1

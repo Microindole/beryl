@@ -16,6 +16,10 @@ SELF_HOST_MAIN_ENTRY="lencyc/driver/main.lcy"
 SELF_HOST_MAIN_OUT_NAME="lencyc_main"
 SELF_HOST_MAIN_OUT="$SELF_HOST_OUT_DIR/$SELF_HOST_MAIN_OUT_NAME"
 SELF_HOST_MAIN_EMIT="lencyc_selfhost_ast.txt"
+LIR_TEST_CASES=(
+    "tests/example/lencyc_lir_basic.lcy"
+    "tests/example/lencyc_lir_loop_if.lcy"
+)
 
 # Colors
 RED='\033[0;31m'
@@ -148,6 +152,39 @@ if ! grep -q "AST\\[0\\]:" "$SELF_HOST_MAIN_EMIT"; then
     exit 1
 fi
 print_success "Self-host main emit output"
+
+print_step "7. Running Self-host LIR Emit Regression Cases"
+for case_file in "${LIR_TEST_CASES[@]}"; do
+    if [ ! -f "$case_file" ]; then
+        print_error "Missing LIR test case: $case_file"
+        exit 1
+    fi
+
+    case_name="$(basename "$case_file" .lcy)"
+    case_out="$SELF_HOST_OUT_DIR/${case_name}.lir"
+    if ! ./$SELF_HOST_MAIN_OUT "$case_file" --emit-lir -o "$case_out" > /dev/null 2>&1; then
+        print_error "Self-host LIR emit failed: $case_file"
+        exit 1
+    fi
+
+    if [ ! -s "$case_out" ]; then
+        print_error "Self-host LIR output missing or empty: $case_out"
+        exit 1
+    fi
+    if ! grep -q "^; lencyc-lir v0" "$case_out"; then
+        print_error "Self-host LIR header mismatch: $case_out"
+        exit 1
+    fi
+    if ! grep -q "^func main {" "$case_out"; then
+        print_error "Self-host LIR function header missing: $case_out"
+        exit 1
+    fi
+    if ! grep -q "ret" "$case_out"; then
+        print_error "Self-host LIR has no return instruction: $case_out"
+        exit 1
+    fi
+done
+print_success "Self-host LIR emit regression"
 
 echo -e "\n${BLUE}=====================================${NC}"
 echo -e "${GREEN}🎉 All self-hosted checks passed!${NC}"

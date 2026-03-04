@@ -1,0 +1,16 @@
+// tests/example/lencyc_lir_loop_if.lcy
+// Loop-heavy source for self-host LIR branch/loop shape checks.
+
+var sum = 0
+var i = 0
+
+while i < 4 {
+    sum = sum + i
+    i = i + 1
+}
+
+if sum > 3 {
+    return sum
+}
+
+return 0

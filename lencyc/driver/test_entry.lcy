@@ -182,7 +182,49 @@ int main() {
         return 1
     }
 
-    print("Step 8: Nested loop rewrite safety tests...\n")
+    print("Step 8: Scientific notation parsing tests...\n")
+    var scientific_source = src_scientific_number_program()
+    var scientific_parser = make_parser(scientific_source)
+    var scientific_stmts = scientific_parser.parse()
+    if scientific_parser.has_error {
+        print("Scientific notation parse failed unexpectedly.\n")
+        return 1
+    }
+    if !contains(stmt_to_string(scientific_stmts[0]), "(var av = 1.23e-4)") {
+        print("Scientific notation AST shape mismatch (av).\n")
+        return 1
+    }
+    if !contains(stmt_to_string(scientific_stmts[1]), "(var bv = 9E+2)") {
+        print("Scientific notation AST shape mismatch (bv).\n")
+        return 1
+    }
+
+    print("Step 9: Escaped string and char literal parsing tests...\n")
+    var escape_source = src_string_escape_program()
+    var escape_parser = make_parser(escape_source)
+    var escape_stmts = escape_parser.parse()
+    if escape_parser.has_error {
+        print("Escaped string parse failed unexpectedly.\n")
+        return 1
+    }
+    if !contains(stmt_to_string(escape_stmts[0]), "(var msg = \"he said \\\"ok\\\"\")") {
+        print("Escaped string AST shape mismatch.\n")
+        return 1
+    }
+
+    var char_source = src_char_literal_program()
+    var char_parser = make_parser(char_source)
+    var char_stmts = char_parser.parse()
+    if char_parser.has_error {
+        print("Char literal parse failed unexpectedly.\n")
+        return 1
+    }
+    if !contains(stmt_to_string(char_stmts[0]), "(var ch = 'a')") {
+        print("Char literal AST shape mismatch.\n")
+        return 1
+    }
+
+    print("Step 10: Nested loop rewrite safety tests...\n")
     var nested_source = src_nested_loop_continue_safety()
     var nested_parser = make_parser(nested_source)
     var nested_stmts = nested_parser.parse()
@@ -205,7 +247,7 @@ int main() {
         return 1
     }
 
-    print("Step 9: Name resolution smoke test...\n")
+    print("Step 11: Name resolution smoke test...\n")
     var resolve_result = resolve_statements(statements)
     if resolve_result.has_error {
         print("Resolver failed unexpectedly on valid sample.\n")
@@ -213,7 +255,7 @@ int main() {
     }
     print("Resolver smoke test passed.\n")
 
-    print("Step 10: Name resolution negative tests...\n")
+    print("Step 12: Name resolution negative tests...\n")
     if !expect_resolve_error(src_resolver_undefined_in_initializer(), "undefined variable in initializer") {
         return 1
     }
@@ -227,12 +269,12 @@ int main() {
         return 1
     }
 
-    print("Step 11: Name resolution positive scope tests...\n")
+    print("Step 13: Name resolution positive scope tests...\n")
     if !expect_resolve_success(src_resolver_shadowing_ok(), "shadowing in inner block is legal") {
         return 1
     }
 
-    print("Step 12: Function-like scope resolution tests...\n")
+    print("Step 14: Function-like scope resolution tests...\n")
     var fn_body_parser = make_parser(src_resolver_function_body_ok())
     var fn_body = fn_body_parser.parse()
     if fn_body_parser.has_error {

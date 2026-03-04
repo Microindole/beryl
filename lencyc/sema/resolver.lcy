@@ -118,7 +118,7 @@ impl Resolver {
             this.resolve_in_new_scope(stmt.else_body)
             return
         }
-        // TODO: add function/struct/impl statement kinds after parser grows.
+        this.error("unsupported statement kind: " + int_to_string(stmt.kind))
     }
 
     void resolve_expr(Expr expr) {
@@ -160,6 +160,5 @@ impl Resolver {
             this.resolve_expr(expr.children[i])
             i = i + 1
         }
-        // TODO: split expression visitor by kind when index/subscript is added.
     }
 }

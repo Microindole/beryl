@@ -106,6 +106,7 @@ python3 scripts/check_todos.py
 3. 编译并运行 `lencyc/driver/test_entry.lcy` 回归入口
 4. 编译并运行 `lencyc/driver/main.lcy` 最小主流程入口
 5. 校验主流程产物 `lencyc_selfhost_ast.txt` 非空且格式正确
+6. 运行 `tests/example/lencyc_lir_*.lcy` 用例并校验 `--emit-lir` 产物结构
 
 **用法**:
 ```bash

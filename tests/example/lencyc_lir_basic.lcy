@@ -1,0 +1,12 @@
+// tests/example/lencyc_lir_basic.lcy
+// Minimal statement-only source for self-host LIR emission smoke test.
+
+var x = 1
+var y = 2
+var z = x + y
+
+if z > 0 {
+    return z
+}
+
+return 0

@@ -1,0 +1,279 @@
+// lencyc/codegen/lir.lcy
+// Minimal LIR emitter for self-host pipeline.
+
+import std.core
+import std.convert
+import lencyc.syntax.ast
+
+struct LirBuilder {
+    string out
+    int temp_counter
+    int label_counter
+    Vec<string> break_targets
+    Vec<string> continue_targets
+    int loop_depth
+}
+
+LirBuilder make_lir_builder() {
+    return LirBuilder {
+        out: "",
+        temp_counter: 0,
+        label_counter: 0,
+        break_targets: vec![],
+        continue_targets: vec![],
+        loop_depth: 0
+    }
+}
+
+string emit_lir_program(Vec<Stmt> statements) {
+    var builder = make_lir_builder()
+    builder.emit_line("; lencyc-lir v0")
+    builder.emit_line("func main {")
+    builder.emit_line("entry:")
+    builder.emit_stmt_list(statements)
+    builder.emit_line("  ret 0")
+    builder.emit_line("}")
+    return builder.out
+}
+
+impl LirBuilder {
+    void emit_line(string line) {
+        this.out = this.out + line + "\n"
+    }
+
+    string new_temp() {
+        var name = "%t" + int_to_string(this.temp_counter)
+        this.temp_counter = this.temp_counter + 1
+        return name
+    }
+
+    string new_label(string prefix) {
+        var label = prefix + "_" + int_to_string(this.label_counter)
+        this.label_counter = this.label_counter + 1
+        return label
+    }
+
+    void push_loop_targets(string break_label, string continue_label) {
+        this.break_targets.push(break_label)
+        this.continue_targets.push(continue_label)
+        this.loop_depth = this.loop_depth + 1
+    }
+
+    void pop_loop_targets() {
+        if this.loop_depth > 0 {
+            this.loop_depth = this.loop_depth - 1
+        }
+    }
+
+    string current_break_target() {
+        if this.loop_depth == 0 {
+            return ""
+        }
+        return this.break_targets[this.loop_depth - 1]
+    }
+
+    string current_continue_target() {
+        if this.loop_depth == 0 {
+            return ""
+        }
+        return this.continue_targets[this.loop_depth - 1]
+    }
+
+    string binary_opcode(string op) {
+        if op == "+" { return "add" }
+        if op == "-" { return "sub" }
+        if op == "*" { return "mul" }
+        if op == "/" { return "div" }
+        if op == "==" { return "cmp_eq" }
+        if op == "!=" { return "cmp_ne" }
+        if op == "<" { return "cmp_lt" }
+        if op == "<=" { return "cmp_le" }
+        if op == ">" { return "cmp_gt" }
+        if op == ">=" { return "cmp_ge" }
+        if op == "&&" { return "and" }
+        if op == "||" { return "or" }
+        return "op_unknown"
+    }
+
+    string unary_opcode(string op) {
+        if op == "-" { return "neg" }
+        if op == "!" { return "not" }
+        return "uop_unknown"
+    }
+
+    string join_args(Vec<string> args) {
+        var out = ""
+        var i = 0
+        while i < args.len() {
+            out = out + args[i]
+            if i + 1 < args.len() {
+                out = out + ", "
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    void emit_stmt_list(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            this.emit_stmt(statements[i])
+            i = i + 1
+        }
+    }
+
+    void emit_stmt(Stmt stmt) {
+        if stmt.kind == STMT_VAR_DECL() {
+            var init_val = this.emit_expr(stmt.expr)
+            this.emit_line("  var %" + stmt.name.lexeme + " = " + init_val)
+            return
+        }
+        if stmt.kind == STMT_EXPR() {
+            var unused = this.emit_expr(stmt.expr)
+            return
+        }
+        if stmt.kind == STMT_RETURN() {
+            var val = this.emit_expr(stmt.expr)
+            this.emit_line("  ret " + val)
+            return
+        }
+        if stmt.kind == STMT_RETURN_VOID() {
+            this.emit_line("  ret")
+            return
+        }
+        if stmt.kind == STMT_BLOCK() {
+            this.emit_stmt_list(stmt.body)
+            return
+        }
+        if stmt.kind == STMT_IF() {
+            var then_label = this.new_label("if_then")
+            var else_label = this.new_label("if_else")
+            var end_label = this.new_label("if_end")
+
+            var cond = this.emit_expr(stmt.expr)
+            this.emit_line("  br " + cond + ", " + then_label + ", " + else_label)
+            this.emit_line(then_label + ":")
+            this.emit_stmt_list(stmt.body)
+            this.emit_line("  jmp " + end_label)
+            this.emit_line(else_label + ":")
+            this.emit_stmt_list(stmt.else_body)
+            this.emit_line("  jmp " + end_label)
+            this.emit_line(end_label + ":")
+            return
+        }
+        if stmt.kind == STMT_WHILE() {
+            var cond_label = this.new_label("while_cond")
+            var body_label = this.new_label("while_body")
+            var end_label = this.new_label("while_end")
+
+            this.emit_line("  jmp " + cond_label)
+            this.emit_line(cond_label + ":")
+            var cond = this.emit_expr(stmt.expr)
+            this.emit_line("  br " + cond + ", " + body_label + ", " + end_label)
+            this.emit_line(body_label + ":")
+            this.push_loop_targets(end_label, cond_label)
+            this.emit_stmt_list(stmt.body)
+            this.pop_loop_targets()
+            this.emit_line("  jmp " + cond_label)
+            this.emit_line(end_label + ":")
+            return
+        }
+        if stmt.kind == STMT_BREAK() {
+            var break_label = this.current_break_target()
+            if break_label == "" {
+                this.emit_line("  ; invalid break (no loop context)")
+            } else {
+                this.emit_line("  jmp " + break_label)
+            }
+            return
+        }
+        if stmt.kind == STMT_CONTINUE() {
+            var continue_label = this.current_continue_target()
+            if continue_label == "" {
+                this.emit_line("  ; invalid continue (no loop context)")
+            } else {
+                this.emit_line("  jmp " + continue_label)
+            }
+            return
+        }
+
+        this.emit_line("  ; unsupported stmt kind " + int_to_string(stmt.kind))
+    }
+
+    string emit_expr(Expr expr) {
+        if expr.kind == EXPR_LITERAL() {
+            return expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_VARIABLE() {
+            return "%" + expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_GROUPING() {
+            if expr.children.len() == 0 {
+                return "0"
+            }
+            return this.emit_expr(expr.children[0])
+        }
+        if expr.kind == EXPR_ASSIGN() {
+            var val = "0"
+            if expr.children.len() > 0 {
+                val = this.emit_expr(expr.children[0])
+            }
+            this.emit_line("  store %" + expr.literal_value.lexeme + ", " + val)
+            return val
+        }
+        if expr.kind == EXPR_UNARY() {
+            var rhs = "0"
+            if expr.children.len() > 0 {
+                rhs = this.emit_expr(expr.children[0])
+            }
+            var dst = this.new_temp()
+            this.emit_line("  " + dst + " = " + this.unary_opcode(expr.operator.lexeme) + " " + rhs)
+            return dst
+        }
+        if expr.kind == EXPR_BINARY() || expr.kind == EXPR_LOGICAL() {
+            var lhs = "0"
+            var rhs = "0"
+            if expr.children.len() > 0 {
+                lhs = this.emit_expr(expr.children[0])
+            }
+            if expr.children.len() > 1 {
+                rhs = this.emit_expr(expr.children[1])
+            }
+            var dst = this.new_temp()
+            this.emit_line("  " + dst + " = " + this.binary_opcode(expr.operator.lexeme) + " " + lhs + ", " + rhs)
+            return dst
+        }
+        if expr.kind == EXPR_GET() {
+            var obj = "?"
+            if expr.children.len() > 0 {
+                obj = this.emit_expr(expr.children[0])
+            }
+            var dst = this.new_temp()
+            this.emit_line("  " + dst + " = get " + obj + "." + expr.literal_value.lexeme)
+            return dst
+        }
+        if expr.kind == EXPR_CALL() {
+            if expr.children.len() == 0 {
+                var dst0 = this.new_temp()
+                this.emit_line("  " + dst0 + " = call ?()")
+                return dst0
+            }
+
+            var callee = this.emit_expr(expr.children[0])
+            var args = vec![]
+            var i = 1
+            while i < expr.children.len() {
+                args.push(this.emit_expr(expr.children[i]))
+                i = i + 1
+            }
+
+            var dst = this.new_temp()
+            this.emit_line("  " + dst + " = call " + callee + "(" + this.join_args(args) + ")")
+            return dst
+        }
+
+        var fallback = this.new_temp()
+        this.emit_line("  " + fallback + " = expr_unknown")
+        return fallback
+    }
+}

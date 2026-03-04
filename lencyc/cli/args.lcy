@@ -8,6 +8,7 @@ struct Args {
     string input_file
     string output_file
     bool check_only
+    bool emit_lir
 }
 
 bool is_option(string arg) {
@@ -23,11 +24,13 @@ string parse_inline_value(string arg, string prefix) {
 
 // 解析命令行参数：
 //   lencyc <input_file> [-o <output_file>] [--check-only]
-//   lencyc <input_file> [--output=<output_file>] [--check-only]
+//   lencyc <input_file> [--output=<output_file>] [--check-only] [--emit-lir]
 Args parse_args() {
     var input_file = ""
     var output_file = "lencyc_selfhost_ast.txt"
     var check_only = false
+    var emit_lir = false
+    var output_overridden = false
 
     var argc = arg_count()
     var i = 1
@@ -39,12 +42,18 @@ Args parse_args() {
             i = i + 1
             continue
         }
+        if arg == "--emit-lir" {
+            emit_lir = true
+            i = i + 1
+            continue
+        }
 
         if arg == "-o" || arg == "--output" {
             if i + 1 >= argc {
-                return Args { input_file: "", output_file: output_file, check_only: check_only }
+                return Args { input_file: "", output_file: output_file, check_only: check_only, emit_lir: emit_lir }
             }
             output_file = arg_at(i + 1)
+            output_overridden = true
             i = i + 2
             continue
         }
@@ -52,6 +61,7 @@ Args parse_args() {
         var short_inline = parse_inline_value(arg, "-o=")
         if short_inline != "" {
             output_file = short_inline
+            output_overridden = true
             i = i + 1
             continue
         }
@@ -59,6 +69,7 @@ Args parse_args() {
         var long_inline = parse_inline_value(arg, "--output=")
         if long_inline != "" {
             output_file = long_inline
+            output_overridden = true
             i = i + 1
             continue
         }
@@ -74,9 +85,14 @@ Args parse_args() {
         i = i + 1
     }
 
+    if emit_lir && !output_overridden {
+        output_file = "lencyc_selfhost.lir"
+    }
+
     return Args {
         input_file: input_file,
         output_file: output_file,
-        check_only: check_only
+        check_only: check_only,
+        emit_lir: emit_lir
     }
 }

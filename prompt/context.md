@@ -38,10 +38,14 @@
 - 语义修正：`for` 反糖路径下，`continue` 已确保先执行 `increment`（且不影响嵌套循环）。
 - 解析边界：`for` 当前支持 `var` 或表达式初始化（如 `for var i = ...;` / `for i = ...;`）。
 - 表达式能力：parser 已支持 `call` 与 `member` 链（`foo(a,b)`、`obj.method()`），并支持字符串字面量（`"text"`）。
-- 数字字面量：lexer 已支持 `int/float`（如 `1`、`3.14`），当前 `float` 采用 `digits '.' digits` 形式。
+- 数字字面量：lexer 已支持 `int/float/scientific`（如 `1`、`3.14`、`1.23e-4`、`9E+2`）。
+- 字符串/字符字面量：lexer 已支持字符串转义扫描（如 `\"`、`\\n`）与字符字面量（如 `'a'`、`'\\n'`）。
+- Lency 自举 TODO 状态：`lencyc/` 目录内 `TODO` 已清零；当前剩余 TODO 仅在 `lib/std` 与 Rust 编译器路径。
 - 自举语义骨架：已添加最小 `name resolution`（变量定义/引用检查）并接入 `test_entry` 烟雾验证。
 - 语义测试：`test_entry` 已补 resolver 负例（undefined/duplicate），不再只测正例。
 - 回归结构化：测试样例已抽离到 `lencyc/driver/test_cases.lcy`，`test_entry` 改为用例编排执行。
 - 最小完整链路：`lencyc/driver/main.lcy` 已串联 `Read -> Lex -> Parse -> Resolve -> Emit(AST 文本)`，默认输入 `lencyc/driver/pipeline_sample.lcy`。
+- 后端演进：`lencyc` 已增加最小 LIR 文本发射（`--emit-lir`），用于对接后续 Rust LLVM backend；当前默认 emit 仍为 AST 文本以保持自举稳定。
+- 回归约束：`run_lency_checks.sh` 已纳入 `tests/example/lencyc_lir_*.lcy` 用例，固定校验自举 `--emit-lir` 输出结构。
 - 当前策略：按语法特性小步增量推进，每次增量后立刻跑 Lency 检查，避免回归。
 - 下一阶段：在保持可运行的前提下逐步补齐语句与语义能力。

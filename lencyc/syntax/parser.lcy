@@ -30,9 +30,12 @@ Parser make_parser(string source) {
 }
 
 impl Parser {
+    string format_error(string message) {
+        return "Error at " + int_to_string(this.current.line) + ":" + int_to_string(this.current.column) + ": " + message
+    }
+
     void error(string message) {
-        // TODO: Use a unified Reporter for better error reporting.
-        print("Error at " + int_to_string(this.current.line) + ":" + int_to_string(this.current.column) + ": " + message + "\n")
+        print(this.format_error(message) + "\n")
         this.has_error = true
     }
     
