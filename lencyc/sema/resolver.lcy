@@ -17,11 +17,13 @@ struct Resolver {
 }
 
 Resolver make_resolver() {
-    return Resolver {
+    var resolver = Resolver {
         table: make_symbol_table(),
         has_error: false,
         error_count: 0
     }
+    resolver.preload_prelude_symbols()
+    return resolver
 }
 
 ResolveResult resolve_statements(Vec<Stmt> statements) {
@@ -47,6 +49,34 @@ ResolveResult resolve_function_body(Vec<string> params, Vec<Stmt> body) {
 }
 
 impl Resolver {
+    void preload_prelude_symbol(string name) {
+        if !this.table.resolve(name) {
+            this.table.define(name)
+        }
+    }
+
+    void preload_prelude_symbols() {
+        // Bootstrap prelude: keep target source usable without explicit import handling.
+        this.preload_prelude_symbol("int")
+        this.preload_prelude_symbol("bool")
+        this.preload_prelude_symbol("string")
+        this.preload_prelude_symbol("float")
+        this.preload_prelude_symbol("Result")
+
+        this.preload_prelude_symbol("int_to_string")
+        this.preload_prelude_symbol("float_to_string")
+        this.preload_prelude_symbol("parse_int")
+        this.preload_prelude_symbol("parse_float")
+        this.preload_prelude_symbol("file_exists")
+        this.preload_prelude_symbol("is_dir")
+        this.preload_prelude_symbol("arg_count")
+        this.preload_prelude_symbol("arg_at")
+        this.preload_prelude_symbol("read_to_string")
+        this.preload_prelude_symbol("write_string")
+        this.preload_prelude_symbol("bool_to_string")
+        this.preload_prelude_symbol("int_to_bool")
+    }
+
     void error(string message) {
         print("Resolver error: " + message + "\n")
         this.has_error = true

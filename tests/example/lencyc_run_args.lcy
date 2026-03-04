@@ -1,9 +1,10 @@
 // tests/example/lencyc_run_args.lcy
 // Runtime run smoke case for self-host run flow.
-// NOTE: this case intentionally avoids std symbol references.
+// Ensure both arg_count() and arg_at() builtins are wired in self-host pipeline.
 
-var x = 1
-if x == 1 {
-    return 0
+var argc = arg_count()
+var argv0 = arg_at(0)
+if argv0 == 0 {
+    return 125
 }
-return 1
+return argc - 1

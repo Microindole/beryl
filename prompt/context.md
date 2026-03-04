@@ -49,8 +49,14 @@
 - 回归约束：`run_lency_checks.sh` 已纳入 `tests/example/lencyc_lir_*.lcy` 用例，固定校验自举 `--emit-lir` 输出结构。
 - Rust 后端进展：`crates/lency_cli` 已支持最小 `.lir -> LLVM IR -> executable` 构建路径（`lencyc build file.lir`），并接入 Lency 侧脚本的端到端冒烟。
 - Rust `.lir` backend 能力增量：已支持最小外部函数调用 lowering（`call %foo(...)` -> LLVM `declare i64 @foo(...)` + `call`）。
+- Rust `.lir` backend 内建符号映射：`arg_count` 已映射 `@lency_arg_count`，`arg_at` 已映射 `@lency_arg_at`（最小 backend 以 pointer-as-value 方式承载）。
+- Rust `.lir` backend builtin 映射已扩展：`int_to_string` -> `@lency_int_to_string`、`file_exists/is_dir` -> `@lency_file_exists/@lency_file_is_dir`。
+- Rust CLI 模块化：`crates/lency_cli/src/main.rs`、`lir_backend` 已拆分为目录模块，入口文件不再承载大段实现逻辑。
 - LIR 回归样例扩展：`tests/example` 新增 `lencyc_lir_unary_logic.lcy` 与 `lencyc_lir_break_continue.lcy`，已纳入 `run_lency_checks.sh`。
 - 可用性打通：新增 `scripts/lency_selfhost_build.sh`，提供 `.lcy -> self-host emit-lir -> Rust backend build` 的一键构建路径，并已接入 Lency 检查脚本闭环验证。
 - 运行闭环：新增 `scripts/lency_selfhost_run.sh`，提供 `.lcy -> self-host build -> run` 一键运行路径（支持参数透传与期望退出码校验），并已接入 Lency 检查脚本。
+- 运行闭环回归：`tests/example/lencyc_run_args.lcy` 已覆盖 `arg_count + arg_at`，`run_lency_checks.sh` 第 10 步不再依赖绕过用例。
+- 运行时映射回归：`tests/example/lencyc_run_int_to_string.lcy` 已接入 `run_lency_checks.sh` 第 11 步，固定校验最小 runtime builtin 映射链路。
+- 解析可用性修复：`lencyc` resolver 已预载最小 prelude 符号，目标源码中的 `arg_count()/arg_at()` 等内建符号不再因未声明而解析失败。
 - 当前策略：按语法特性小步增量推进，每次增量后立刻跑 Lency 检查，避免回归。
 - 下一阶段：在保持可运行的前提下逐步补齐语句与语义能力。

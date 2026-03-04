@@ -224,13 +224,19 @@ print_success "Self-host one-step build flow"
 
 print_step "10. Running Self-host One-step Run Flow"
 SELFHOST_RUN_CASE="tests/example/lencyc_run_args.lcy"
-# FIXME: self-host pipeline currently doesn't auto-load std/prelude symbols for target source.
-# Keep this run smoke case free of unresolved builtin symbol references (e.g. arg_count()).
-if ! ./scripts/lency_selfhost_run.sh "$SELFHOST_RUN_CASE" --expect-exit 0 -- sample_arg > /dev/null 2>&1; then
+if ! ./scripts/lency_selfhost_run.sh "$SELFHOST_RUN_CASE" --expect-exit 1 -- sample_arg > /dev/null 2>&1; then
     print_error "Self-host one-step run flow failed"
     exit 1
 fi
 print_success "Self-host one-step run flow"
+
+print_step "11. Running Self-host Runtime Builtin Mapping Flow"
+SELFHOST_RUNTIME_CASE="tests/example/lencyc_run_int_to_string.lcy"
+if ! ./scripts/lency_selfhost_run.sh "$SELFHOST_RUNTIME_CASE" --expect-exit 0 > /dev/null 2>&1; then
+    print_error "Self-host runtime builtin mapping flow failed"
+    exit 1
+fi
+print_success "Self-host runtime builtin mapping flow"
 
 echo -e "\n${BLUE}=====================================${NC}"
 echo -e "${GREEN}🎉 All self-hosted checks passed!${NC}"
