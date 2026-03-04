@@ -20,7 +20,7 @@
 - 进度状态：只更新 `prompt/sprint/status.md`。
 - 任务过程：写入 `prompt/artifacts/` 对应文件。
 - 架构变化：必要时补充到本文件“长期约定”，不要写流水账。
-- Lency 语法检查约定：`run_lency_checks.sh` 的“入口语法检查”仅在 `lencyc build --check-only` 可用时启用；当前 CLI 尚不支持该参数，脚本会自动跳过并由完整 build 覆盖语法路径。
+- Lency 语法检查约定：`run_lency_checks.sh` 会优先使用 `lencyc build --check-only` 对 `lencyc/driver/test_entry.lcy` 与 `lencyc/driver/main.lcy` 做入口级语法检查；若未来该参数缺失，脚本才会回退为跳过并由完整 build 覆盖。
 - 每次改动结束必须运行：
   - `./scripts/run_checks.sh`
   - `./scripts/run_lency_checks.sh`

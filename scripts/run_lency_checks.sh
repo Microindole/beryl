@@ -88,7 +88,6 @@ if $RUST_LENCY_EXEC build --help | grep -q -- "--check-only"; then
     done
     print_success "Entry syntax checks"
 else
-    # FIXME: lency_cli::build 子命令尚未实现 --check-only，当前仅能通过完整 build 间接覆盖语法。
     echo -e "${YELLOW}⚠️ Skipped entry syntax checks: '--check-only' is not supported by current lencyc build command.${NC}"
 fi
 
@@ -132,7 +131,7 @@ else
 fi
 
 print_step "5. Running Self-host Main Pipeline"
-if ./$SELF_HOST_MAIN_OUT; then
+if ./$SELF_HOST_MAIN_OUT "lencyc/driver/pipeline_sample.lcy" -o "$SELF_HOST_MAIN_EMIT"; then
     print_success "Self-host main execution"
 else
     print_error "Self-host main execution"

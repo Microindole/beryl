@@ -2,7 +2,7 @@
 // 命令行参数处理模块
 
 import std.core
-import std.collections
+import std.str
 
 struct Args {
     string input_file
@@ -10,12 +10,73 @@ struct Args {
     bool check_only
 }
 
-// 暂时简单的解析逻辑，后续根据需要扩展
+bool is_option(string arg) {
+    return starts_with(arg, "-")
+}
+
+string parse_inline_value(string arg, string prefix) {
+    if !starts_with(arg, prefix) {
+        return ""
+    }
+    return substr(arg, len(prefix), len(arg) - len(prefix))
+}
+
+// 解析命令行参数：
+//   lencyc <input_file> [-o <output_file>] [--check-only]
+//   lencyc <input_file> [--output=<output_file>] [--check-only]
 Args parse_args() {
-    // FIXME: 暂时返回硬编码或默认值，直到 std/runtime 支持 argv 获取
+    var input_file = ""
+    var output_file = "lencyc_selfhost_ast.txt"
+    var check_only = false
+
+    var argc = arg_count()
+    var i = 1
+    while i < argc {
+        var arg = arg_at(i)
+
+        if arg == "--check-only" {
+            check_only = true
+            i = i + 1
+            continue
+        }
+
+        if arg == "-o" || arg == "--output" {
+            if i + 1 >= argc {
+                return Args { input_file: "", output_file: output_file, check_only: check_only }
+            }
+            output_file = arg_at(i + 1)
+            i = i + 2
+            continue
+        }
+
+        var short_inline = parse_inline_value(arg, "-o=")
+        if short_inline != "" {
+            output_file = short_inline
+            i = i + 1
+            continue
+        }
+
+        var long_inline = parse_inline_value(arg, "--output=")
+        if long_inline != "" {
+            output_file = long_inline
+            i = i + 1
+            continue
+        }
+
+        if is_option(arg) {
+            i = i + 1
+            continue
+        }
+
+        if input_file == "" {
+            input_file = arg
+        }
+        i = i + 1
+    }
+
     return Args {
-        input_file: "lencyc/driver/pipeline_sample.lcy",
-        output_file: "lencyc_selfhost_ast.txt",
-        check_only: false
+        input_file: input_file,
+        output_file: output_file,
+        check_only: check_only
     }
 }

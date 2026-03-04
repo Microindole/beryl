@@ -74,6 +74,10 @@ enum Commands {
         /// 优化构建 (Release mode)
         #[arg(long)]
         release: bool,
+
+        /// 仅做语法/语义检查，不产出可执行文件
+        #[arg(long)]
+        check_only: bool,
     },
 
     /// 交互式 REPL (实验性)
@@ -102,7 +106,8 @@ fn main() -> Result<()> {
             output,
             out_dir,
             release,
-        } => cmd_build(&input, &output, out_dir.as_deref(), release)?,
+            check_only,
+        } => cmd_build(&input, &output, out_dir.as_deref(), release, check_only)?,
         Commands::Repl => cmd_repl()?,
     }
 
@@ -228,7 +233,18 @@ fn cmd_check(input: &str) -> Result<()> {
 }
 
 /// 构建命令 - 生成可执行文件
-fn cmd_build(input: &str, output: &str, out_dir: Option<&str>, release: bool) -> Result<()> {
+fn cmd_build(
+    input: &str,
+    output: &str,
+    out_dir: Option<&str>,
+    release: bool,
+    check_only: bool,
+) -> Result<()> {
+    if check_only {
+        println!("Building {} (check-only=true) ...", input);
+        return cmd_check(input);
+    }
+
     println!("Building {} (release={}) ...", input, release);
 
     // 1. 编译为 LLVM IR
@@ -251,12 +267,8 @@ fn cmd_build(input: &str, output: &str, out_dir: Option<&str>, release: bool) ->
     // 3. 查找运行时库
     let mut runtime_path = None;
     if let Ok(cwd) = std::env::current_dir() {
-        // Defines search order based on release flag
-        let dirs = if release {
-            vec!["target/release", "target/debug"]
-        } else {
-            vec!["target/debug", "target/release"]
-        };
+        // Always prefer release runtime to avoid stale debug artifacts causing symbol mismatch.
+        let dirs = vec!["target/release", "target/debug"];
 
         // Note: lency_runtime might be compiled as rlib (static) or dylib
         let libs = [

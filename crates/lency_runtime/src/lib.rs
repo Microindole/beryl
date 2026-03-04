@@ -339,6 +339,30 @@ pub unsafe extern "C" fn lency_free_string(s: *mut i8) {
     }
 }
 
+/// Return process argument count (including executable path).
+#[no_mangle]
+pub extern "C" fn lency_arg_count() -> i64 {
+    std::env::args().count() as i64
+}
+
+/// Return process argument at index as newly allocated C string.
+///
+/// # Safety
+/// Caller must eventually free returned string with `lency_free_string`.
+#[no_mangle]
+pub unsafe extern "C" fn lency_arg_at(index: i64) -> *mut i8 {
+    if index < 0 {
+        return std::ptr::null_mut();
+    }
+    match std::env::args().nth(index as usize) {
+        Some(s) => match CString::new(s) {
+            Ok(cs) => cs.into_raw(),
+            Err(_) => std::ptr::null_mut(),
+        },
+        None => std::ptr::null_mut(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

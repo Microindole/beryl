@@ -28,7 +28,6 @@ int main() {
     
     if args.input_file == "" {
         print("Usage: lencyc <input_file> [-o <output_file>] [--check-only]\n")
-        // FIXME: 在 std/runtime 支持 argv 前，CLI 只能依赖 parse_args() 的默认值。
         return 1
     }
 
@@ -80,7 +79,7 @@ int main() {
         return 0
     }
 
-    // FIXME: 当前 emit 仅输出 AST 文本，不是正式代码生成产物。
+    // Bootstrap emit target: stable AST text output for regression and debugging.
     var ast_text = render_ast_program(statements)
     var write_result = write_string(args.output_file, ast_text)
     if write_result.is_err() {

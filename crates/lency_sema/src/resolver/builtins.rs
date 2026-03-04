@@ -58,4 +58,8 @@ pub fn register_builtins(scopes: &mut ScopeStack) {
     // File system FFI functions
     define_extern_fn("file_exists", vec![("path", Type::String)], Type::Bool);
     define_extern_fn("is_dir", vec![("path", Type::String)], Type::Bool);
+
+    // CLI/runtime argument FFI functions
+    define_extern_fn("arg_count", vec![], Type::Int);
+    define_extern_fn("arg_at", vec![("index", Type::Int)], Type::String);
 }

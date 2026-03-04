@@ -19,6 +19,8 @@ pub fn is_type_conversion_fn(name: &str) -> bool {
             | "parse_float"
             | "file_exists"
             | "is_dir"
+            | "arg_count"
+            | "arg_at"
     )
 }
 
@@ -36,8 +38,79 @@ pub fn gen_type_conversion_call<'ctx>(
         "parse_float" => gen_parse_float(ctx, locals, args),
         "file_exists" => gen_file_exists(ctx, locals, args),
         "is_dir" => gen_is_dir(ctx, locals, args),
+        "arg_count" => gen_arg_count(ctx, args),
+        "arg_at" => gen_arg_at(ctx, locals, args),
         _ => Err(CodegenError::FunctionNotFound(func_name.to_string())),
     }
+}
+
+/// Generate code for arg_count() -> int
+fn gen_arg_count<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    args: &[Expr],
+) -> CodegenResult<CodegenValue<'ctx>> {
+    if !args.is_empty() {
+        return Err(CodegenError::UnsupportedFeature(
+            "arg_count expects 0 argument".to_string(),
+        ));
+    }
+
+    let func = if let Some(f) = ctx.module.get_function("lency_arg_count") {
+        f
+    } else {
+        let i64_type = ctx.context.i64_type();
+        let fn_type = i64_type.fn_type(&[], false);
+        ctx.module.add_function("lency_arg_count", fn_type, None)
+    };
+
+    let call = ctx
+        .builder
+        .build_call(func, &[], "arg_count")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+    let result = call.try_as_basic_value().left().unwrap();
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::Int,
+    })
+}
+
+/// Generate code for arg_at(int index) -> string
+fn gen_arg_at<'ctx>(
+    ctx: &CodegenContext<'ctx>,
+    locals: &HashMap<String, (inkwell::values::PointerValue<'ctx>, Type)>,
+    args: &[Expr],
+) -> CodegenResult<CodegenValue<'ctx>> {
+    if args.len() != 1 {
+        return Err(CodegenError::UnsupportedFeature(
+            "arg_at expects 1 argument".to_string(),
+        ));
+    }
+
+    let func = if let Some(f) = ctx.module.get_function("lency_arg_at") {
+        f
+    } else {
+        let i64_type = ctx.context.i64_type();
+        let ptr_type = ctx.context.i8_type().ptr_type(AddressSpace::default());
+        let fn_type = ptr_type.fn_type(&[i64_type.into()], false);
+        ctx.module.add_function("lency_arg_at", fn_type, None)
+    };
+
+    let arg_val = generate_expr(ctx, locals, &args[0])?;
+    if arg_val.ty != Type::Int {
+        return Err(CodegenError::TypeMismatch);
+    }
+
+    let call = ctx
+        .builder
+        .build_call(func, &[arg_val.value.into()], "arg_at")
+        .map_err(|e| CodegenError::LLVMBuildError(e.to_string()))?;
+    let result = call.try_as_basic_value().left().unwrap();
+
+    Ok(CodegenValue {
+        value: result,
+        ty: Type::String,
+    })
 }
 
 /// Generate code for int_to_string(int) -> string
