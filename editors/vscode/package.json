@@ -24,6 +24,16 @@
         "typescript": "^4.4.0"
     },
     "contributes": {
+        "configuration": {
+            "title": "Lency",
+            "properties": {
+                "lency.serverPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to lency_ls executable. Supports ${workspaceFolder}. Empty means auto-detect under target/{debug,release}/lency_ls."
+                }
+            }
+        },
         "languages": [
             {
                 "id": "lency",

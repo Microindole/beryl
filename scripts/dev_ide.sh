@@ -16,16 +16,16 @@ fi
 # 2. 检查编译产物
 if [ ! -f "$EXT_PATH/dist/extension.js" ]; then
     echo "⚠️ 警告: 未找到编译产物 ($EXT_PATH/dist/extension.js)。"
-    echo "如果是通过 Antigravity 运行，请确保您在主窗口运行了 'npm run build'。"
+    echo "如果是通过 VSCode 运行，请确保您在主窗口运行了 'npm run build'。"
 fi
 
 # 3. 确定编辑器命令
-if command -v antigravity >/dev/null 2>&1; then
-    IDE_CMD="antigravity"
+if command -v code >/dev/null 2>&1; then
+    IDE_CMD="code"
 elif command -v cursor >/dev/null 2>&1; then
     IDE_CMD="cursor"
-elif command -v code >/dev/null 2>&1; then
-    IDE_CMD="code"
+elif command -v antigravity >/dev/null 2>&1; then
+    IDE_CMD="antigravity"
 else
     echo "❌ 错误: 未找到 IDE 命令。"
     exit 1
