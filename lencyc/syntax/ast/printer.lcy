@@ -99,5 +99,8 @@ string stmt_to_string(Stmt stmt) {
     if stmt.kind == STMT_IF() {
         return "(if " + expr_to_string(stmt.expr) + " then " + stmt_list_to_string(stmt.body) + " else " + stmt_list_to_string(stmt.else_body) + ")"
     }
+    if stmt.kind == STMT_FUNCTION() {
+        return "(func " + stmt.name.lexeme + "/" + int_to_string(stmt.params.len()) + " " + stmt_list_to_string(stmt.body) + ")"
+    }
     return "(stmt_unknown)"
 }

@@ -7,6 +7,37 @@ import lencyc.syntax.ast
 import lencyc.syntax.parser
 
 impl Parser {
+    bool is_function_return_type_start() {
+        return this.check(T_INT()) || this.check(T_STRING()) || this.check(T_BOOL()) || this.check(T_VOID())
+    }
+
+    Stmt function_declaration(Token return_type) {
+        this.consume(T_IDENTIFIER(), "Expect function name.")
+        var name = this.previous
+        this.consume(T_LEFT_PAREN(), "Expect '(' after function name.")
+
+        var params = vec![]
+        if !this.check(T_RIGHT_PAREN()) {
+            while true {
+                // TODO: 当前仅做最小函数签名骨架；参数类型 token 先消费但暂不进入语义类型系统。
+                if this.check(T_INT()) || this.check(T_STRING()) || this.check(T_BOOL()) || this.check(T_VOID()) || this.check(T_IDENTIFIER()) {
+                    this.advance()
+                } else {
+                    this.error("Expect parameter type.")
+                }
+                this.consume(T_IDENTIFIER(), "Expect parameter name.")
+                params.push(this.previous.lexeme)
+                if !this.match_token(T_COMMA()) {
+                    break
+                }
+            }
+        }
+        this.consume(T_RIGHT_PAREN(), "Expect ')' after parameters.")
+        this.consume(T_LEFT_BRACE(), "Expect '{' before function body.")
+        var body = this.block()
+        return make_stmt_function(name, return_type.kind, params, body)
+    }
+
     Stmt var_declaration() {
         this.consume(T_IDENTIFIER(), "Expect variable name.")
         var name = this.previous
@@ -19,6 +50,11 @@ impl Parser {
     }
 
     Stmt declaration() {
+        if this.is_function_return_type_start() {
+            this.advance()
+            return this.function_declaration(this.previous)
+        }
+
         if this.match_token(T_VAR()) {
             return this.var_declaration()
         }
