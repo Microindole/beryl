@@ -55,3 +55,9 @@ string src_resolver_function_body_void_return_bad() { return "if p > 0 {\n  retu
 string src_resolver_function_body_if_else_return_ok() { return "if p > 0 {\n  return p\n} else {\n  return p + 1\n}"; }
 string src_resolver_builtin_arity_ok() { return "var n = arg_count()\nvar s = arg_at(0)\nvar ok = write_string(\"out.txt\", s)\nreturn n"; }
 string src_resolver_builtin_arity_bad() { return "var a = arg_count(1)\nvar b = write_string(\"x\")\nreturn a + b"; }
+string src_resolver_type_consistency_ok() { return "var n = 1\nn = n + 2\nvar flag = true\nflag = false\nvar f = 1.5\nf = f + 0.5\nvar s = \"a\"\ns = \"b\""; }
+string src_resolver_type_assignment_bad() { return "var n = 1\nn = true"; }
+string src_resolver_type_arithmetic_bad() { return "var n = 1\nvar s = \"x\"\nvar y = n + s"; }
+string src_resolver_type_logical_bad() { return "var n = 1\nvar bad = n && true"; }
+string src_resolver_user_function_arity_ok() { return "var x = add(1, 2)\nint add(int a, int b) {\n  return a + b\n}\nreturn x"; }
+string src_resolver_user_function_arity_bad() { return "int add(int a, int b) {\n  return a + b\n}\nvar x = add(1)\nreturn x"; }

@@ -329,6 +329,28 @@ int main() {
         return 1
     }
 
+    print("Step 16: Type consistency resolution tests...\n")
+    if !expect_resolve_success(src_resolver_type_consistency_ok(), "type consistency positive") {
+        return 1
+    }
+    if !expect_resolve_error(src_resolver_type_assignment_bad(), "assignment type mismatch negative") {
+        return 1
+    }
+    if !expect_resolve_error(src_resolver_type_arithmetic_bad(), "arithmetic type mismatch negative") {
+        return 1
+    }
+    if !expect_resolve_error(src_resolver_type_logical_bad(), "logical type mismatch negative") {
+        return 1
+    }
+
+    print("Step 17: User function call arity resolution tests...\n")
+    if !expect_resolve_success(src_resolver_user_function_arity_ok(), "user function arity positive") {
+        return 1
+    }
+    if !expect_resolve_error(src_resolver_user_function_arity_bad(), "user function arity mismatch negative") {
+        return 1
+    }
+
     print("Tests completed successfully.\n")
     return 0
 }
