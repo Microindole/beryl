@@ -3,8 +3,16 @@ name: Lints & Docs
 on:
   push:
     branches: [ "main", "dev" ]
+    paths-ignore:
+      - 'editors/**'
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches: [ "main", "dev" ]
+    paths-ignore:
+      - 'editors/**'
+      - 'docs/**'
+      - '**.md'
 
 env:
   CARGO_TERM_COLOR: always
@@ -33,6 +41,13 @@ jobs:
               - 'Cargo.lock'
               - 'scripts/check_*.py'
               - '.github/workflows/lints.yml'
+      - name: Scope Summary
+        run: |
+          {
+            echo "### CI Scope"
+            echo "- workflow: lints.yml"
+            echo "- rust: ${{ steps.filter.outputs.rust }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # 1. Linux Static Checks & Lints
   static-checks:

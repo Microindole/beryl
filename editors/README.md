@@ -28,7 +28,7 @@
 ## 开发与调试
 
 ```bash
-./scripts/dev_ide.sh
+./editors/scripts/dev_ide.sh
 ```
 
 该脚本用于本地扩展开发调试。
@@ -45,7 +45,7 @@ npm run build
 
 1. 启动扩展开发宿主：
 ```bash
-./scripts/dev_ide.sh
+./editors/scripts/dev_ide.sh
 ```
 2. 在新开的 VS Code/Cursor 窗口打开任意 `.lcy` 文件，状态栏看到语言为 `Lency` 即已启用扩展。
 3. 看左下角状态栏模式：
@@ -59,6 +59,25 @@ cargo build -p lency_ls
 ```json
 "lency.serverPath": "/home/indolyn/beryl/target/debug/lency_ls"
 ```
+6. 现在支持热更新：修改 `lency.serverPath` 后会自动重连并切换模式，不再要求手动 Reload Window。
+
+## 故障排查
+
+1. 只有语法高亮，没有跳转/重命名  
+看左下角是否为 `Lency: Fallback`。若是，先执行：
+```bash
+cargo build -p lency_ls
+```
+并设置 `lency.serverPath`。
+
+2. `lency.serverPath` 已设置但仍是 `Fallback`  
+确认路径存在且可执行：
+```bash
+ls -l /home/indolyn/beryl/target/debug/lency_ls
+```
+
+3. 修改 `lency.serverPath` 后模式没切换  
+查看 `Output -> Lency Language Server`，确认重连日志；若无日志，检查扩展是否在运行（Running Extensions）。
 
 ## 目录结构
 
@@ -69,12 +88,12 @@ cargo build -p lency_ls
 - `vscode/dist/`: 编译产物。
 - `vscode/syntaxes/`: 语法高亮定义。
 - `vscode/snippets/`: 代码片段。
-- `FUTURE_PLAN.md`: 编辑器能力演进路线。
+- `docs/FUTURE_PLAN.md`: 编辑器能力演进路线。
 
 ## 检查
 
 ```bash
-./scripts/run_checks.sh
+./editors/scripts/run_checks.sh
 ```
 
-Rust 侧检查会覆盖编辑器构建/类型检查链路。
+Editors 任务只运行这一个检查入口，不和自举/Rust 主流程混跑。

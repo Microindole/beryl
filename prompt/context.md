@@ -22,9 +22,9 @@
 - 架构变化：必要时补充到本文件“长期约定”，不要写流水账。
 - 冲刺治理约束：`prompt/sprint/` 仅保留 `status.md` 作为当前真相来源；历史 `plan_*.md` / `roadmap.md` 不再维护，过期即删除。
 - Lency 语法检查约定：`run_lency_checks.sh` 会优先使用 `lencyc build --check-only` 对 `lencyc/driver/test_entry.lcy` 与 `lencyc/driver/main.lcy` 做入口级语法检查；若未来该参数缺失，脚本才会回退为跳过并由完整 build 覆盖。
-- 每次改动结束必须运行：
-  - `./scripts/run_checks.sh`
-  - `./scripts/run_lency_checks.sh`
+- 按作用域运行检查（不要混跑）：
+  - Rust 侧改动：`./scripts/run_checks.sh`
+  - Lency 自举侧改动：`./scripts/run_lency_checks.sh`
 
 ## 3. CI 触发约定（摘要）
 - CI 先按路径判定改动作用域，再触发对应 job。
@@ -34,11 +34,6 @@
 - Release 自动化：新增 `.github/workflows/release.yml`，当 push `v*` tag 时自动构建 Linux 产物并创建 GitHub Release（附 `tar.gz` 与 `sha256`）。
 
 ## 4. 当前工作焦点（自举）
-- 阶段切换：在 Rust 母体版 release 后，当前进入 `editors/` 能力补强阶段；自举主线改为“低频维护 + 回归不退化”。
-- 编辑器 Phase-1：`editors/vscode` 已落地 LSP 启动降级（`lency_ls` 可用则启用，不可用则 fallback），并补齐单文件定义/重命名/符号、内建补全/悬停/签名、基础格式化与 fallback 括号诊断。
-- 编辑器配置增量：VS Code 扩展已支持 `lency.serverPath` 配置项，可显式指定 `lency_ls` 路径（支持 `${workspaceFolder}`）。
-- 编辑器架构增量：`editors/vscode/src` 已模块化为 `core/* + providers/* + extension.ts(装配入口)`；状态栏新增 `Lency: LSP/Fallback`，用于快速判定是否仅高亮模式。
-- 编辑器已知边界：格式化器对字符串/注释中的花括号仍有误缩进风险（见 `FIXME`）；跨文件重命名与语义诊断仍待 LSP 化（见 `TODO`）。
 - 已完成：Parser/AST 模块化拆分（`lencyc/syntax/{parser,ast}/...`）。
 - 已支持：`break/continue` 语句及循环外非法位置约束（parser 直接报错）。
 - 已支持：C 风格 `for` 语句基础解析（当前通过 parser 反糖到 `while`）。

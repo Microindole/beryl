@@ -42,9 +42,8 @@ export function validateBraces(document: vscode.TextDocument, collection: vscode
     collection.set(document.uri, diagnostics);
 }
 
-export function registerFallbackDiagnostics(context: vscode.ExtensionContext): void {
+export function registerFallbackDiagnostics(context: vscode.ExtensionContext): vscode.Disposable {
     const localDiagnostics = vscode.languages.createDiagnosticCollection('lency-local');
-    context.subscriptions.push(localDiagnostics);
 
     const refresh = (doc: vscode.TextDocument): void => {
         if (doc.languageId !== 'lency') {
@@ -53,14 +52,22 @@ export function registerFallbackDiagnostics(context: vscode.ExtensionContext): v
         validateBraces(doc, localDiagnostics);
     };
 
-    context.subscriptions.push(
-        vscode.workspace.onDidOpenTextDocument(refresh),
-        vscode.workspace.onDidChangeTextDocument(e => refresh(e.document)),
-        vscode.workspace.onDidSaveTextDocument(refresh),
-        vscode.workspace.onDidCloseTextDocument(doc => localDiagnostics.delete(doc.uri))
-    );
+    const openDisposable = vscode.workspace.onDidOpenTextDocument(refresh);
+    const changeDisposable = vscode.workspace.onDidChangeTextDocument(e => refresh(e.document));
+    const saveDisposable = vscode.workspace.onDidSaveTextDocument(refresh);
+    const closeDisposable = vscode.workspace.onDidCloseTextDocument(doc => localDiagnostics.delete(doc.uri));
 
     for (const document of vscode.workspace.textDocuments) {
         refresh(document);
     }
+
+    const disposable = vscode.Disposable.from(
+        localDiagnostics,
+        openDisposable,
+        changeDisposable,
+        saveDisposable,
+        closeDisposable
+    );
+    context.subscriptions.push(disposable);
+    return disposable;
 }

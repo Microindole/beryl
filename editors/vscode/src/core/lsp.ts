@@ -72,6 +72,5 @@ export function startLanguageClient(
     );
 
     client.start();
-    context.subscriptions.push(client);
     return { client, started: true };
 }

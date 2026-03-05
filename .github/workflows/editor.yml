@@ -5,13 +5,11 @@ on:
     branches: [ "main" ]
     paths:
       - 'editors/**'
-      - 'scripts/check_editor.sh'
       - '.github/workflows/editor.yml'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'editors/**'
-      - 'scripts/check_editor.sh'
       - '.github/workflows/editor.yml'
   workflow_dispatch:
 
@@ -30,4 +28,13 @@ jobs:
         cache-dependency-path: editors/vscode/package-lock.json
 
     - name: Run Editor Check
-      run: bash scripts/check_editor.sh
+      run: bash editors/scripts/run_checks.sh
+
+    - name: Scope Summary
+      run: |
+        {
+          echo "### CI Scope"
+          echo "- workflow: editor.yml"
+          echo "- scope: editors"
+          echo "- command: \`editors/scripts/run_checks.sh\`"
+        } >> "$GITHUB_STEP_SUMMARY"

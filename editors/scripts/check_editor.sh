@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
-EXT_DIR="$ROOT_DIR/editors/vscode"
+EXT_DIR="$ROOT_DIR/vscode"
 
 echo "🔍 Starting Editor Extension Checks..."
 

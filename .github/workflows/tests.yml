@@ -6,6 +6,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'assets/**'
+      - 'editors/**'
       - '**.md'
       - '.gitignore'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths-ignore:
       - 'docs/**'
       - 'assets/**'
+      - 'editors/**'
       - '**.md'
       - '.gitignore'
   workflow_dispatch:
@@ -52,6 +54,14 @@ jobs:
               - 'scripts/run_lency_checks.sh'
               - 'scripts/check_*.py'
               - '.github/workflows/tests.yml'
+      - name: Scope Summary
+        run: |
+          {
+            echo "### CI Scope"
+            echo "- workflow: tests.yml"
+            echo "- rust: ${{ steps.filter.outputs.rust }}"
+            echo "- lency: ${{ steps.filter.outputs.lency }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   rust-checks:
     name: Rust Checks (Linux)

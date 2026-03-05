@@ -7,6 +7,7 @@ import { registerProviders } from './providers';
 
 let client: LanguageClient | undefined;
 let modeStatusBarItem: vscode.StatusBarItem | undefined;
+let fallbackDiagnosticsDisposable: vscode.Disposable | undefined;
 
 function updateModeStatus(mode: 'LSP' | 'Fallback'): void {
     if (!modeStatusBarItem) {
@@ -22,26 +23,63 @@ function updateModeStatus(mode: 'LSP' | 'Fallback'): void {
 export function activate(context: vscode.ExtensionContext): void {
     const selector: vscode.DocumentSelector = [{ language: 'lency', scheme: 'file' }];
 
+    if (!modeStatusBarItem) {
+        modeStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    }
+    context.subscriptions.push(modeStatusBarItem);
+
     registerProviders(context, selector);
+    void syncLanguageMode(context, true);
+
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(event => {
+            if (!event.affectsConfiguration('lency.serverPath')) {
+                return;
+            }
+            void syncLanguageMode(context, false);
+        })
+    );
+
+}
+
+async function stopLanguageClient(): Promise<void> {
+    if (!client) {
+        return;
+    }
+    await client.stop();
+    client = undefined;
+}
+
+function disposeFallbackDiagnostics(): void {
+    if (!fallbackDiagnosticsDisposable) {
+        return;
+    }
+    fallbackDiagnosticsDisposable.dispose();
+    fallbackDiagnosticsDisposable = undefined;
+}
+
+async function syncLanguageMode(context: vscode.ExtensionContext, showMissingServerWarning: boolean): Promise<void> {
+    await stopLanguageClient();
+    disposeFallbackDiagnostics();
 
     const lspResult = startLanguageClient(context);
     client = lspResult.client;
 
     if (lspResult.started) {
         updateModeStatus('LSP');
-    } else {
-        updateModeStatus('Fallback');
-        // TODO: 接入独立设置项，允许用户明确指定 lency_ls 路径。
-        void vscode.window.showWarningMessage('未找到 lency_ls，可用本地降级能力已启用（单文件语义）。');
-        registerFallbackDiagnostics(context);
+        return;
     }
 
-    if (modeStatusBarItem) {
-        context.subscriptions.push(modeStatusBarItem);
+    updateModeStatus('Fallback');
+    if (showMissingServerWarning) {
+        // TODO: 接入独立设置项，允许用户明确指定 lency_ls 路径。
+        void vscode.window.showWarningMessage('未找到 lency_ls，可用本地降级能力已启用（单文件语义）。');
     }
+    fallbackDiagnosticsDisposable = registerFallbackDiagnostics(context);
 }
 
 export function deactivate(): Thenable<void> | undefined {
+    disposeFallbackDiagnostics();
     if (!client) {
         return undefined;
     }
