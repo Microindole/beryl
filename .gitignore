@@ -18,6 +18,7 @@ COMMIT_MSG.txt
 
 # 4. 临时文件
 tmp/
+/tmp/
 *.log
 
 # 5. 根目录临时文件

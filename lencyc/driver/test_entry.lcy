@@ -160,6 +160,18 @@ int main() {
     if !expect_parse_error(src_invalid_float_missing_fraction_digits(), "float missing fraction digits") {
         return 1
     }
+    var recovery_source = src_parser_recovery_invalid_then_valid()
+    var recovery_parser = make_parser(recovery_source)
+    var recovery_stmts = recovery_parser.parse()
+    if !recovery_parser.has_error {
+        print("Parser recovery test failed: expected parse error for invalid prefix.\n")
+        return 1
+    }
+    if recovery_stmts.len() < 2 {
+        print("Parser recovery test failed: expected parser to continue after recovery.\n")
+        return 1
+    }
+    print("Parser recovery test passed: parser continued after first error.\n")
 
     print("Step 5: Call/member parsing tests...\n")
     var call_member_source = src_call_member_program()
@@ -362,6 +374,14 @@ int main() {
         return 1
     }
     if !expect_resolve_error(src_resolver_user_function_return_type_bad(), "user function return type mismatch negative") {
+        return 1
+    }
+
+    print("Step 19: Custom type signature resolution tests...\n")
+    if !expect_resolve_success(src_resolver_custom_type_signature_ok(), "custom type signature positive") {
+        return 1
+    }
+    if !expect_resolve_error(src_resolver_custom_type_signature_bad(), "custom type signature unknown type negative") {
         return 1
     }
 

@@ -133,7 +133,6 @@ fn parse_source(source: &str) -> CompileResult<Program> {
 pub fn compile(source: &str) -> CompileResult<CompilationOutput> {
     // 1. 词法 + 语法分析
     let mut ast = parse_source(source)?;
-    eprintln!("Parsed ast");
 
     // 2. 语义分析
     let _analysis_result = analyze(&mut ast).map_err(CompileError::SemanticErrors)?;

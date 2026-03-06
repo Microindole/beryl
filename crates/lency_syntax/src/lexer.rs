@@ -2,7 +2,7 @@ use logos::Logos;
 use std::fmt;
 
 #[derive(Logos, Debug, PartialEq, Eq, Hash, Clone)] // 关键：加上 Eq 和 Hash
-#[logos(skip r"[ \t\n\f]+")]
+#[logos(skip r"[ \t\r\n\f]+")]
 pub enum Token {
     // --- 关键字 (Keywords) ---
     #[token("var")]

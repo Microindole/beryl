@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::fs;
 
-use super::common::find_runtime_dir;
+use super::common::{find_runtime_dir, require_tool, temp_artifact_path};
 
 /// 运行命令
 pub fn cmd_run(input: &str) -> Result<()> {
@@ -9,10 +9,11 @@ pub fn cmd_run(input: &str) -> Result<()> {
 
     let result = lency_driver::compile_file(input)?;
 
-    let temp_ir = "/tmp/lency_temp.ll";
-    fs::write(temp_ir, result.ir)?;
+    let temp_ir = temp_artifact_path("ll")?;
+    fs::write(&temp_ir, result.ir)?;
 
-    let mut cmd = std::process::Command::new("lli-15");
+    let lli = require_tool(&["lli-15", "lli"], "LLVM IR interpreter (lli)")?;
+    let mut cmd = std::process::Command::new(lli);
     if let Some(runtime_dir) = find_runtime_dir() {
         let libs = ["liblency_runtime.so", "liblency_runtime.dylib"];
         for lib in libs {
@@ -26,7 +27,7 @@ pub fn cmd_run(input: &str) -> Result<()> {
         eprintln!("Warning: lency_runtime library not found. I/O operations may fail.");
     }
 
-    let output = cmd.arg(temp_ir).output()?;
+    let output = cmd.arg(&temp_ir).output()?;
 
     print!("{}", String::from_utf8_lossy(&output.stdout));
     eprint!("{}", String::from_utf8_lossy(&output.stderr));
@@ -39,6 +40,8 @@ pub fn cmd_run(input: &str) -> Result<()> {
         }
         std::process::exit(output.status.code().unwrap_or(1));
     }
+
+    let _ = fs::remove_file(&temp_ir);
 
     Ok(())
 }

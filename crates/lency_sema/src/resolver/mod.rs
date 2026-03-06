@@ -92,8 +92,6 @@ impl Resolver {
 
     /// 解析整个程序
     pub fn resolve(&mut self, program: &mut Program) -> Result<(), Vec<SemanticError>> {
-        eprintln!("Resolver::resolve started");
-
         // Pass 1: 收集顶层声明
         let mut synthetics_to_add = Vec::new();
         for decl in &program.decls {

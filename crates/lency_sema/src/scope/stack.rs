@@ -69,7 +69,6 @@ impl ScopeStack {
         let id = self.symbols.len();
         self.symbols.push(symbol);
         self.scopes[self.current].define(name.clone(), id);
-        eprintln!("DEFINED: {} in scope {}", name, self.current);
         Ok(id)
     }
 

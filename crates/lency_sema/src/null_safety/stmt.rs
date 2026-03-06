@@ -4,7 +4,6 @@ use crate::type_infer::TypeInferer;
 use lency_syntax::ast::{Expr, Stmt, Type};
 
 pub fn check_stmt(checker: &mut NullSafetyChecker, stmt: &mut Stmt) {
-    eprintln!("Checking stmt: {:?}", stmt);
     match stmt {
         Stmt::VarDecl {
             name,

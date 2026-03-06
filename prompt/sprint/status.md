@@ -18,7 +18,7 @@
 - [x] 用户函数类型签名校验（参数类型 + 返回类型）
 
 ### 待完成
-- [ ] 自定义类型签名接入（`T_IDENTIFIER` 类型名的参数/返回类型解析与校验）
+- [x] 自定义类型签名接入（`T_IDENTIFIER` 类型名的参数/返回类型解析与校验）
 
 ---
 
@@ -30,7 +30,7 @@
 ### 收尾项
 - [ ] AST 定义补全（Type representation 等未落地部分）
 - [ ] 声明解析扩展（`func/struct/impl` 最小骨架）
-- [ ] Parser 错误恢复同步点（当前仍偏 fail-fast）
+- [x] Parser 错误恢复同步点（当前仍偏 fail-fast）
 
 ### 已完成摘要
 - [x] Parser/AST 模块化拆分：`lencyc/syntax/{parser,ast}/...`
@@ -108,3 +108,8 @@
 21. resolver 新增用户函数类型签名预扫描与调用参数类型校验，并新增 return 返回类型校验。
 22. `test_cases` + `test_entry` 新增 Step 18（用户函数签名正/负例），全链路通过。
 23. resolver 模块拆分为 `resolver.lcy + resolver/core.lcy + resolver/expr.lcy`，满足单文件行数约束。
+24. parser 函数声明签名接入 `T_IDENTIFIER`（自定义类型名），并增加安全判定避免误判普通表达式语句。
+25. AST 函数声明节点新增 `return_type_name/param_type_names`，保留签名中的类型名信息供 resolver 校验。
+26. resolver 新增签名类型校验：`T_IDENTIFIER` 类型名需已声明（未声明报 `unknown type in signature`）。
+27. `test_cases` + `test_entry` 新增 Step 19（自定义类型签名正/负例），`check-lency` 全链路通过。
+28. parser 新增最小错误恢复同步点（declaration 级 recover），不再首错即终止；新增回归用例验证“前一条语句错误后仍可继续解析后续语句”。

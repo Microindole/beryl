@@ -4,7 +4,6 @@ use crate::symbol::{Symbol, VariableSymbol};
 use lency_syntax::ast::{Stmt, Type};
 
 pub fn resolve_stmt(resolver: &mut Resolver, stmt: &mut Stmt) {
-    eprintln!("Resolving stmt: {:?}", stmt);
     match stmt {
         Stmt::VarDecl {
             name,

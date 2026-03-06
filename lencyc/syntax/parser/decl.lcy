@@ -8,12 +8,21 @@ import lencyc.syntax.parser
 
 impl Parser {
     bool is_signature_type_token(int kind) {
-        // TODO: 后续接入自定义类型签名（T_IDENTIFIER 作为参数/返回类型）。
-        return kind == T_INT() || kind == T_STRING() || kind == T_BOOL() || kind == T_VOID() || kind == T_FLOAT()
+        return kind == T_INT() || kind == T_STRING() || kind == T_BOOL() || kind == T_VOID() || kind == T_FLOAT() || kind == T_IDENTIFIER()
     }
 
     bool is_function_return_type_start() {
-        return this.is_signature_type_token(this.current.kind)
+        if this.current.kind == T_INT() || this.current.kind == T_STRING() || this.current.kind == T_BOOL() || this.current.kind == T_VOID() || this.current.kind == T_FLOAT() {
+            return true
+        }
+        if this.current.kind == T_IDENTIFIER() {
+            if len(this.current.lexeme) == 0 {
+                return false
+            }
+            var c0 = this.current.lexeme[0]
+            return c0 >= 65 && c0 <= 90
+        }
+        return false
     }
 
     Stmt function_declaration(Token return_type) {
@@ -23,10 +32,12 @@ impl Parser {
 
         var params = vec![]
         var param_kinds = vec![]
+        var param_type_names = vec![]
         if !this.check(T_RIGHT_PAREN()) {
             while true {
                 if this.is_signature_type_token(this.current.kind) {
                     param_kinds.push(this.current.kind)
+                    param_type_names.push(this.current.lexeme)
                     this.advance()
                 } else {
                     this.error("Expect parameter type.")
@@ -41,7 +52,15 @@ impl Parser {
         this.consume(T_RIGHT_PAREN(), "Expect ')' after parameters.")
         this.consume(T_LEFT_BRACE(), "Expect '{' before function body.")
         var body = this.block()
-        return make_stmt_function(name, return_type.kind, params, param_kinds, body)
+        return make_stmt_function(
+            name,
+            return_type.kind,
+            return_type.lexeme,
+            params,
+            param_kinds,
+            param_type_names,
+            body
+        )
     }
 
     Stmt var_declaration() {

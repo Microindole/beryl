@@ -9,11 +9,6 @@ pub fn resolve_expr(resolver: &mut Resolver, expr: &mut Expr) {
         ExprKind::Variable(name) => {
             // 检查变量是否已定义
             if resolver.scopes.lookup(name).is_none() {
-                eprintln!(
-                    "UNDEFINED: {} in scope {}",
-                    name,
-                    resolver.scopes.current_scope()
-                );
                 resolver.errors.push(SemanticError::UndefinedVariable {
                     name: name.clone(),
                     span: expr.span.clone(),

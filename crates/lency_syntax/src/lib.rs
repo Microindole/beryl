@@ -22,6 +22,16 @@ mod tests {
         assert_eq!(lexer.next(), Some(Ok(Token::Int(20))));
     }
 
+    #[test]
+    fn test_lexer_crlf_whitespace() {
+        let code = "var a = 1;\r\nvar b = 2;\r\n";
+        let tokens: Vec<Token> = Token::lexer(code).filter_map(Result::ok).collect();
+
+        assert!(tokens.contains(&Token::Var));
+        assert!(tokens.contains(&Token::Ident("a".to_string())));
+        assert!(tokens.contains(&Token::Ident("b".to_string())));
+    }
+
     // 注意：此测试在某些配置下可能栈溢出
     // 功能已通过 examples/test_parser.rs 验证
     // 如需运行，请确保 .cargo/config.toml 中设置了足够的栈大小

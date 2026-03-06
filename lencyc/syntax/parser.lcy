@@ -15,6 +15,7 @@ struct Parser {
     Token current
     Token previous
     bool has_error
+    int error_count
     int loop_depth
 }
 
@@ -25,6 +26,7 @@ Parser make_parser(string source) {
         current: make_token(0, "", 0, 0),
         previous: make_token(0, "", 0, 0),
         has_error: false,
+        error_count: 0,
         loop_depth: 0
     }
 }
@@ -37,6 +39,7 @@ impl Parser {
     void error(string message) {
         print(this.format_error(message) + "\n")
         this.has_error = true
+        this.error_count = this.error_count + 1
     }
     
     void advance() {
@@ -77,10 +80,11 @@ impl Parser {
         this.advance() // 启动 parser
         
         while !this.is_at_end() {
+            var before_error_count = this.error_count
             var stmt = this.declaration()
             statements.push(stmt)
-            if this.has_error {
-                break
+            if this.error_count > before_error_count {
+                this.synchronize()
             }
         }
         return statements
@@ -88,5 +92,19 @@ impl Parser {
     
     bool is_at_end() {
         return this.current.kind == T_EOF()
+    }
+
+    // Recover to next plausible statement boundary after a parse error.
+    void synchronize() {
+        while !this.is_at_end() {
+            if this.current.kind == T_VAR() || this.current.kind == T_IF() || this.current.kind == T_WHILE() || this.current.kind == T_FOR() || this.current.kind == T_RETURN() || this.current.kind == T_BREAK() || this.current.kind == T_CONTINUE() || this.current.kind == T_STRUCT() || this.current.kind == T_IMPL() || this.current.kind == T_IDENTIFIER() || this.is_function_return_type_start() {
+                return
+            }
+            this.advance()
+        }
+    }
+
+    bool had_error() {
+        return this.error_count > 0
     }
 }
