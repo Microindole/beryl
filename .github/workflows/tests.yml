@@ -82,7 +82,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Rust Workflow
-        run: ./scripts/linux/run_checks.sh
+        run: bash scripts/linux/run_checks.sh
 
   lency-checks:
     name: Lency Checks (Linux)
@@ -100,7 +100,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Lency Workflow
-        run: ./scripts/linux/run_lency_checks.sh
+        run: bash scripts/linux/run_lency_checks.sh
 
   # 3. Release Build
   build-release:
