@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EXCLUDES = {'node_modules', 'dist', '.git', '.vscode'}
+EXCLUDES = {'node_modules', 'dist', '.git', '.vscode', 'test'}
 
 patterns = [
     (re.compile(r'\bconsole\.log\('), 'warning', 'Avoid console.log in extension source.'),

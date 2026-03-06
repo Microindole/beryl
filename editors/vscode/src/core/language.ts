@@ -2,8 +2,10 @@ import { BuiltinSpec } from './types';
 
 export const KEYWORDS = new Set([
     'var', 'const', 'struct', 'impl', 'trait', 'enum', 'if', 'else', 'while', 'for', 'in',
-    'break', 'continue', 'return', 'import', 'extern', 'match', 'case', 'as', 'this', 'null',
-    'true', 'false', 'void', 'int', 'float', 'bool', 'string'
+    'break', 'continue', 'return', 'import', 'extern', 'match', 'case', 'as', 'null',
+    'true', 'false', 'void', 'int', 'float', 'bool', 'string',
+    // vec / Result 类型关键字（lexer.rs 中的独立 token）
+    'vec', 'Ok', 'Err'
 ]);
 
 export const BUILTIN_SPECS: Record<string, BuiltinSpec> = {
@@ -46,6 +48,21 @@ export const BUILTIN_SPECS: Record<string, BuiltinSpec> = {
         signatureLabel: 'substr(s, start, length)',
         markdown: '`string substr(string s, int start, int length)`\n\n提取子字符串。',
         parameters: ['s', 'start', 'length']
+    },
+    char_to_string: {
+        signatureLabel: 'char_to_string(code)',
+        markdown: '`string char_to_string(int code)`\n\n将 Unicode 码点转换为字符串（如 65 -> "A"）。',
+        parameters: ['code']
+    },
+    panic: {
+        signatureLabel: 'panic(msg)',
+        markdown: '`void panic(string msg)`\n\n抛出运行时错误并终止程序。',
+        parameters: ['msg']
+    },
+    format: {
+        signatureLabel: 'format(template, args)',
+        markdown: '`string format(string template, vec<string> args)`\n\n将占位符 `{}` 依次替换为 args 中的元素。',
+        parameters: ['template', 'args']
     }
 };
 

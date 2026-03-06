@@ -22,6 +22,6 @@
 - 配置热更新：修改 `lency.serverPath` 后自动重连并切换模式。
 
 ## 4. 已知边界
-- `FIXME`: 格式化器对字符串/注释中的花括号仍可能误缩进。
-- `TODO`: `rename/definition` 仍为单文件模型，跨文件安全语义待迁移到 LSP-first。
-- `TODO`: 增加最小自动化回归（completion/definition/rename/signature/fallback diagnostics）。
+
+无待处理的 FIXME / TODO。
+

@@ -1,30 +1,26 @@
 # Lency 编辑器演进路线
 
-本路线遵循 Lency 设计哲学：简洁、规范、清晰、安全优先。编辑器侧不做“黑魔法”推断，能力以可解释、可验证为准。
+本路线遵循 Lency 设计哲学：简洁、规范、清晰、安全优先。编辑器侧不做"黑魔法"推断，能力以可解释、可验证为准。
 
-## Phase 1（当前）
+## Phase 1（已完成）
 
-目标：稳定的 VS Code 基础体验。
+- LSP 启动降级（有 `lency_ls` 则启用，无则本地 fallback）
+- 单文件定义跳转/重命名/符号
+- 内建函数补全、hover、签名提示
+- 基础格式化
+- fallback 括号匹配诊断
+- 格式化器字符串/注释花括号误缩进修复
 
-- 已完成：
-  - LSP 启动降级（有 `lency_ls` 则启用，无则本地 fallback）
-  - 单文件定义跳转/重命名/符号
-  - 内建函数补全、hover、签名提示
-  - 基础格式化
-  - fallback 括号匹配诊断
-- `FIXME`: 格式化器在字符串/注释含花括号时会误判缩进。
-- `TODO`: fallback 诊断暂未覆盖语法级错误（仅括号匹配）。
+## Phase 2（已完成）
 
-## Phase 2（近期）
+目标：把"单文件正则能力"替换为"可复用语法层"。
 
-目标：把“单文件正则能力”替换为“可复用语法层”。
+- 格式化器升级为 token-aware（字符串/注释内花括号不再误判）
+- 补齐语法诊断：未闭合字符串、全角标点误用
+- fallback rename/definition 升级为跨工作区文件
+- 最小自动化回归测试 19 个用例（completion/signature/definition/rename/fallback diagnostics）
 
-- 引入轻量语法树或可复用 parser 接口，替代扩展内正则匹配。
-- 补齐语法诊断：未闭合字符串、非法 token、关键字误用等。
-- 格式化器升级为 token-aware，消除已知 `FIXME`。
-- `TODO`: 为扩展增加最小自动化测试（completion/rename/definition 的回归样例）。
-
-## Phase 3（中期）
+## Phase 3（近期）
 
 目标：以 Rust LLS 为主，VS Code 扩展只做客户端壳层。
 

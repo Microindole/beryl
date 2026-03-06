@@ -29,4 +29,7 @@ npm install --silent
 echo "🏗️ Building extension..."
 npm run build
 
+echo "🧪 Running regression tests..."
+node dist/test/index.js
+
 echo "✅ Editor extension check passed!"
