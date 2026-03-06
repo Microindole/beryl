@@ -15,8 +15,8 @@ description: 项目节奏控制与质量门禁。
 ## 2. 质量门禁 (Quality Gates)
 > [!IMPORTANT]
 > 交付前必须通过：
-> 1. `./scripts/run_checks.sh --fast` (格式/Clippy/单元测试)。
-> 2. `scripts/run_lcy_tests.sh` (集成测试零回归)。
+> 1. `cargo run -p xtask -- check-rust` (格式/Clippy/单元测试)。
+> 2. `scripts/linux/run_lcy_tests.sh` 或 `scripts/win/run_lcy_tests.ps1` (集成测试零回归)。
 
 ## 3. 测试标记
 - **✅ Pass**: 结果符合预期。

@@ -207,8 +207,9 @@ mod tests {
 
     #[test]
     fn test_file_write_read() {
-        // 写入
-        let path = CString::new("/tmp/lency_test.txt").unwrap();
+        // 写入（跨平台临时目录）
+        let test_file = std::env::temp_dir().join("lency_test.txt");
+        let path = CString::new(test_file.to_string_lossy().as_bytes()).unwrap();
         let write_handle = unsafe { lency_file_open(path.as_ptr(), 1) };
         assert!(!write_handle.is_null());
 
@@ -227,5 +228,7 @@ mod tests {
         assert!(read_bytes > 0);
 
         unsafe { lency_file_close(read_handle) };
+
+        let _ = std::fs::remove_file(test_file);
     }
 }

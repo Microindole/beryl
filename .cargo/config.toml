@@ -1,8 +1,7 @@
 # Cargo 配置
-# 设置 LLVM 路径，供 inkwell 使用
+# LLVM 路径请通过系统环境变量设置（推荐运行 scripts/setup-dev.ps1 / scripts/setup-dev.sh）
 
 [env]
-LLVM_SYS_150_PREFIX = "/usr/lib/llvm-15"
 # 增加测试线程栈大小 (8MB)
 # Parser组合子在深度递归时需要更大的栈
 RUST_MIN_STACK = "8388608"

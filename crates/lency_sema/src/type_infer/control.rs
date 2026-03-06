@@ -212,7 +212,7 @@ impl<'a> TypeInferer<'a> {
 
                     // Subst
                     let concrete_field_ty = if !generic_args.is_empty() {
-                        self.substitute_generics(field_ty, &enum_generic_params, &generic_args)
+                        Self::substitute_generics(field_ty, &enum_generic_params, &generic_args)
                     } else {
                         field_ty.clone()
                     };
@@ -227,7 +227,6 @@ impl<'a> TypeInferer<'a> {
 
     /// 泛型类型替换辅助函数
     fn substitute_generics(
-        &self,
         ty: &Type,
         params: &[crate::symbol::GenericParamSymbol],
         args: &[Type],
@@ -256,17 +255,17 @@ impl<'a> TypeInferer<'a> {
                 // Substitute args recursively
                 let new_args: Vec<Type> = inner_args
                     .iter()
-                    .map(|arg| self.substitute_generics(arg, params, args))
+                    .map(|arg| Self::substitute_generics(arg, params, args))
                     .collect();
                 Type::Generic(name.clone(), new_args)
             }
-            Type::Vec(inner) => Type::Vec(Box::new(self.substitute_generics(inner, params, args))),
+            Type::Vec(inner) => Type::Vec(Box::new(Self::substitute_generics(inner, params, args))),
             Type::Array { element_type, size } => Type::Array {
-                element_type: Box::new(self.substitute_generics(element_type, params, args)),
+                element_type: Box::new(Self::substitute_generics(element_type, params, args)),
                 size: *size,
             },
             Type::Nullable(inner) => {
-                Type::Nullable(Box::new(self.substitute_generics(inner, params, args)))
+                Type::Nullable(Box::new(Self::substitute_generics(inner, params, args)))
             }
             // ... handle other types
             _ => ty.clone(),

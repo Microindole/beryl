@@ -24,7 +24,7 @@ description: 全链路开发与调试手册。
 ## 3. 快速调试实验室
 - **语义自检**: `cargo run --bin lencyc -- check <file>`
 - **产出生成器**: `cargo run --bin lencyc -- compile <file> -o <name>.ll --out-dir <dir>`
-- **全量回归**: `./scripts/run_checks.sh --fast`
+- **全量回归**: `cargo run -p xtask -- check-rust`
 
 ## 4. 核心菜谱库 (Recipe Bank)
 | ID | 任务 | 操作路径 |

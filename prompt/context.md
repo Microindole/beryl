@@ -10,8 +10,13 @@
 - `lib/`：标准库源码（Rust/Lency 两侧都会受影响）。
 - `tests/integration/`：Rust 侧集成测试。
 - `tests/example/`：Lency 侧示例/实验测试。
-- `scripts/run_checks.sh`：Rust 侧固定检查入口（不接收参数）。
-- `scripts/run_lency_checks.sh`：Lency 侧固定检查入口（不接收参数）。
+- `scripts/linux/run_checks.sh`：Rust 侧 Linux/macOS 检查入口（不接收参数）。
+- `scripts/linux/run_lency_checks.sh`：Lency 侧 Linux/macOS 检查入口（不接收参数）。
+- `scripts/win/run_checks.ps1`：Rust 侧 Windows 检查入口（不依赖 WSL）。
+- `scripts/win/run_lency_checks.ps1`：Lency 侧 Windows 检查入口（不依赖 WSL）。
+- `scripts/linux/`：Linux/macOS 脚本实现目录。
+- `scripts/win/`：Windows 脚本实现目录。
+- `xtask/`：跨平台检查主入口（`check-rust` / `check-lency`）。
 - `prompt/sprint/status.md`：当前 sprint 状态与里程碑。
 - `prompt/artifacts/`：任务记录（task / plan / walkthrough）。
 - `docs/`：用户文档（语言行为变化时必须同步）。
@@ -23,8 +28,9 @@
 - 冲刺治理约束：`prompt/sprint/` 仅保留 `status.md` 作为当前真相来源；历史 `plan_*.md` / `roadmap.md` 不再维护，过期即删除。
 - Lency 语法检查约定：`run_lency_checks.sh` 会优先使用 `lencyc build --check-only` 对 `lencyc/driver/test_entry.lcy` 与 `lencyc/driver/main.lcy` 做入口级语法检查；若未来该参数缺失，脚本才会回退为跳过并由完整 build 覆盖。
 - 按作用域运行检查（不要混跑）：
-  - Rust 侧改动：`./scripts/run_checks.sh`
-  - Lency 自举侧改动：`./scripts/run_lency_checks.sh`
+  - Rust 侧改动：`cargo run -p xtask -- check-rust`
+  - Lency 自举侧改动：`cargo run -p xtask -- check-lency`
+  - 平台入口：`./scripts/linux/run_checks.sh`、`./scripts/linux/run_lency_checks.sh`、`.\scripts\win\run_checks.ps1`、`.\scripts\win\run_lency_checks.ps1`
 
 ## 3. CI 触发约定（摘要）
 - CI 先按路径判定改动作用域，再触发对应 job。
@@ -57,8 +63,8 @@
 - Rust `.lir` backend builtin 映射已扩展：`int_to_string` -> `@lency_int_to_string`、`file_exists/is_dir` -> `@lency_file_exists/@lency_file_is_dir`。
 - Rust CLI 模块化：`crates/lency_cli/src/main.rs`、`lir_backend` 已拆分为目录模块，入口文件不再承载大段实现逻辑。
 - LIR 回归样例扩展：`tests/example` 新增 `lencyc_lir_unary_logic.lcy` 与 `lencyc_lir_break_continue.lcy`，已纳入 `run_lency_checks.sh`。
-- 可用性打通：新增 `scripts/lency_selfhost_build.sh`，提供 `.lcy -> self-host emit-lir -> Rust backend build` 的一键构建路径，并已接入 Lency 检查脚本闭环验证。
-- 运行闭环：新增 `scripts/lency_selfhost_run.sh`，提供 `.lcy -> self-host build -> run` 一键运行路径（支持参数透传与期望退出码校验），并已接入 Lency 检查脚本。
+- 可用性打通：已提供 `xtask selfhost-build`（脚本入口为 `scripts/linux/lency_selfhost_build.sh`），用于 `.lcy -> self-host emit-lir -> Rust backend build`，并接入 Lency 检查脚本闭环验证。
+- 运行闭环：已提供 `xtask selfhost-run`（脚本入口为 `scripts/linux/lency_selfhost_run.sh`），用于 `.lcy -> self-host build -> run`（支持参数透传与期望退出码校验），并接入 Lency 检查脚本。
 - 运行闭环回归：`tests/example/lencyc_run_args.lcy` 已覆盖 `arg_count + arg_at`，`run_lency_checks.sh` 第 10 步不再依赖绕过用例。
 - 运行时映射回归：`tests/example/lencyc_run_int_to_string.lcy` 已接入 `run_lency_checks.sh` 第 11 步，固定校验最小 runtime builtin 映射链路。
 - 解析可用性修复：`lencyc` resolver 已预载最小 prelude 符号，目标源码中的 `arg_count()/arg_at()` 等内建符号不再因未声明而解析失败。

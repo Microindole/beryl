@@ -20,6 +20,10 @@ impl Rewriter {
     }
 
     pub fn rewrite_type(&self, ty: &Type) -> Type {
+        Self::rewrite_type_impl(ty)
+    }
+
+    fn rewrite_type_impl(ty: &Type) -> Type {
         match ty {
             // Box<int> -> Type::Struct("Box__int")
             Type::Generic(_, args) if !args.is_empty() => {
@@ -37,15 +41,15 @@ impl Rewriter {
                 // 之前的假设是 Vec 是 Primitive。
                 // Type::Vec 是 AST 的一种变体。
                 // 目前保持 Type::Vec，只是递归 rewrite inner type。
-                Type::Vec(Box::new(self.rewrite_type(inner)))
+                Type::Vec(Box::new(Self::rewrite_type_impl(inner)))
             }
 
             Type::Array { element_type, size } => Type::Array {
-                element_type: Box::new(self.rewrite_type(element_type)),
+                element_type: Box::new(Self::rewrite_type_impl(element_type)),
                 size: *size,
             },
 
-            Type::Nullable(inner) => Type::Nullable(Box::new(self.rewrite_type(inner))),
+            Type::Nullable(inner) => Type::Nullable(Box::new(Self::rewrite_type_impl(inner))),
 
             _ => ty.clone(),
         }

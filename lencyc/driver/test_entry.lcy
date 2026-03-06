@@ -1,5 +1,5 @@
 // lencyc/driver/test_entry.lcy
-// 自举版 Lency 编译器的词法与语法测试入口
+// Self-host lencyc lexer/parser test entry.
 
 import std.core
 import std.fs

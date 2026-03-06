@@ -44,14 +44,17 @@ jobs:
               - 'tests/integration/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
-              - 'scripts/run_checks.sh'
+              - 'xtask/**'
+              - 'scripts/linux/run_checks.sh'
               - 'scripts/check_*.py'
               - '.github/workflows/tests.yml'
             lency:
               - 'lencyc/**'
               - 'lib/**'
               - 'tests/example/**'
-              - 'scripts/run_lency_checks.sh'
+              - 'xtask/**'
+              - 'scripts/linux/run_lency_checks.sh'
+              - 'scripts/linux/lency_selfhost_*.sh'
               - 'scripts/check_*.py'
               - '.github/workflows/tests.yml'
       - name: Scope Summary
@@ -79,7 +82,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Rust Workflow
-        run: ./scripts/run_checks.sh
+        run: ./scripts/linux/run_checks.sh
 
   lency-checks:
     name: Lency Checks (Linux)
@@ -97,7 +100,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run Lency Workflow
-        run: ./scripts/run_lency_checks.sh
+        run: ./scripts/linux/run_lency_checks.sh
 
   # 3. Release Build
   build-release:

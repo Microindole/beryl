@@ -76,6 +76,10 @@ impl<'a> TypeChecker<'a> {
 
     /// 检查代码块是否有返回语句
     pub(crate) fn has_return(&self, stmts: &[Stmt]) -> bool {
+        Self::has_return_impl(stmts)
+    }
+
+    fn has_return_impl(stmts: &[Stmt]) -> bool {
         for stmt in stmts {
             match stmt {
                 Stmt::Return { .. } => return true,
@@ -85,16 +89,16 @@ impl<'a> TypeChecker<'a> {
                     ..
                 } => {
                     // 只有两个分支都有 return 才算完整覆盖
-                    if self.has_return(then_block) {
+                    if Self::has_return_impl(then_block) {
                         if let Some(else_stmts) = else_block {
-                            if self.has_return(else_stmts) {
+                            if Self::has_return_impl(else_stmts) {
                                 return true;
                             }
                         }
                     }
                 }
                 Stmt::Block(inner) => {
-                    if self.has_return(inner) {
+                    if Self::has_return_impl(inner) {
                         return true;
                     }
                 }
