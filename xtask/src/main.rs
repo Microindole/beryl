@@ -43,7 +43,7 @@ fn ensure_no_args(cmd: &str, rest: &[String]) -> Result<()> {
 }
 
 fn print_usage() {
-    eprintln!("Usage:");
+eprintln!("Usage:");
     eprintln!("  cargo run -p xtask -- auto-check");
     eprintln!("  cargo run -p xtask -- check-rust");
     eprintln!("  cargo run -p xtask -- check-lency");
