@@ -1,146 +1,161 @@
 # Sprint 状态总结
 
-## Sprint 18: 自举 - Semantic Analysis (进行中)
+更新时间：2026-03-08
 
-**工作记录**: [task](../artifacts/task.md) | [implementation_plan](../artifacts/implementation_plan.md) | [walkthrough](../artifacts/walkthrough.md)
+## 0. 当前结论（先看）
+- `lencyc` 已完成最小自举闭环：`Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
+- 与 Rust 主链路仍有显著差距，不能再使用“~98% 准备度”这类失真数字。
+- 当前主线：先收尾 Parser/Decl 可用性，再补 Sema 深度，最后扩后端能力。
 
-### 目标
-在保持自举链路可运行的前提下，逐步补齐语义约束（解析后尽早失败，避免错误进入后端）。
+## 1. 双链路现状基线
+- Rust 主链路：
+  - `crates/` 源码文件：175
+  - `tests/integration/` 文件：74
+  - 能力层级：语法/语义/单态化/LLVM codegen/CLI 已成体系
+- Lency 自举链路：
+  - `lencyc/` 源码文件：27
+  - `tests/example/` 文件：10
+  - 能力层级：最小语法与最小语义可运行，后端与类型系统仍是子集
 
-### 已完成
-- [x] 最小 name resolution：变量定义/引用检查（undefined / duplicate / out-of-scope / shadowing）
-- [x] 函数体作用域入口：`resolve_function_body(params, body)`
-- [x] 内建符号 prelude 预载（`arg_count/arg_at/...`）
-- [x] 内建函数调用参数个数校验（builtin arity）
-- [x] 函数体 return 约束（禁止 void-return，要求可达 value-return）
-- [x] 基础类型一致性校验（最小 `int/bool/string/float`，覆盖赋值/一元/二元/逻辑）
-- [x] 用户函数最小 arity 校验（含“先调用后声明”）
-- [x] 用户函数类型签名校验（参数类型 + 返回类型）
+## 2. Sprint 状态
 
-### 待完成
-- [x] 自定义类型签名接入（`T_IDENTIFIER` 类型名的参数/返回类型解析与校验）
+### Sprint 17：自举 Parser（收尾中）
+目标：声明解析从“最小骨架”推进到“可用级”。
 
----
-
-## Sprint 17: 自举 - Parser (收尾中)
-
-### 目标
-实现递归下降解析器，将 Token 流转换为 AST，并维持可测试的模块化结构。
-
-### 收尾项
-- [x] AST 定义补全（Type representation 已落地：`TypeRef` 已接入函数签名）
-- [ ] 声明解析扩展（`func/struct/impl` 最小骨架）
-- [x] Parser 错误恢复同步点（当前仍偏 fail-fast）
-
-### 已完成摘要
-- [x] Parser/AST 模块化拆分：`lencyc/syntax/{parser,ast}/...`
-- [x] 表达式优先级链、`call/member`、`string/char/int/float/scientific` 字面量
+已完成：
+- [x] Parser/AST 模块化拆分
+- [x] 表达式优先级链、`call/member`、`string/char/int/float/scientific`
 - [x] 语句解析：`var/if/while/for/block/return/break/continue/expr`
-- [x] `for` 反糖 + `continue` 增量修正
+- [x] `for` 反糖与 `continue` 语义修复
+- [x] `TypeRef` 落地到函数签名
+- [x] `struct` 字段声明解析与 AST 挂载（`struct_fields`）
+- [x] parser declaration 级错误恢复同步点
+- [x] `const` 声明语法接入（lexer/parser/AST）与 for-init 支持
+- [x] `import/extern` 声明语法接入（含 AST/打印与同步点）
+- [x] `enum` 声明语法接入（unit variant 子集 + parser 回归）
+- [x] AST `Stmt` 构造器工厂化（`make_stmt_base`），降低节点扩展时的全局修改面
+- [x] Parser 声明参数解析公共化（`parse_signature_param_list`）
+- [x] 过渡入口打通：`parse_program()` + `resolve_program()`（保留 `parse()/resolve_statements()` 兼容）
+- [x] Resolver 预加载改为直接消费 `Decl` 视图（去除 `Decl -> Stmt` 预加载中转）
+- [x] 测试入口迁移：`test_entry` 与 `test_steps_*` 统一走 `parse_program()/resolve_program()`
+- [x] 移除 `resolve_statements()` 兼容 API，resolver 统一入口为 `resolve_program()`
+- [x] 拆分声明测试步骤统一使用 `parse_program()`；`parse()` 仅保留在 `test_entry` 词法/恢复类测试
+- [x] `test_entry` resolver smoke 测试改为直接消费 `parse_program()`，移除手工 Program 拼装桥接
+- [x] `test_entry` Step20/21/22（struct/impl 声明骨架）已切换为 `parse_program()` 断言
+- [x] `test_entry` 的 parse-error/function-body helper 统一为 `parse_program()` 输入模型
+- [x] `lencyc/driver` 目录内 `parse()` 调用清零，统一通过 `parse_program()` 获取 Program
+- [x] parser 入口收敛：仅保留 `parse_program()`，移除 `parse()` 兼容方法
+- [x] resolver 删除旧 `Stmt` 预加载死代码（`preload_user_type_declarations/preload_user_function_signatures`）
+- [x] resolver 预加载对 `DECL_UNKNOWN` 改为显式报错，移除静默跳过策略
+- [x] `DECL_UNKNOWN` 预加载防御回归已接入 `test_entry`（防止静默吞错回归）
+- [x] 删除 syntax Decl 过渡层未使用 API：`extract_non_declaration_statements`
+- [x] `test_entry` Step3-10 拆分到 `test_steps_parser_frontend`，继续收敛入口文件体积
+- [x] resolver `resolve_stmt` 拆分到 `sema/resolver/stmt.lcy`，继续收敛单文件复杂度
+- [x] resolver return-flow 分析拆分到 `sema/resolver/return_flow.lcy`
+- [x] resolver 声明语句分支拆分到 `sema/resolver/decl_stmt.lcy`，`resolve_stmt` 收敛为“普通语句 + 声明分派”
+- [x] resolver 声明语义处理切换为 `Stmt -> Decl` 视图驱动（`resolve_decl`），降低声明字段变更的扩散面
+- [x] `resolve_import/extern/enum` 已新增 `Decl` 入口，移除声明语义中的 `Decl -> Stmt` 回转桥接
+- [x] parser `parse_program()` 改为单趟累积 `decls`，移除 `extract_declarations` 的二次扫描路径
+- [x] AST `Stmt` 声明字段完成 payload 化：声明数据下沉到 `stmt.decl`（`Decl`），消除 `Stmt` 结构体的声明字段扩散点
+- [x] 声明构造器统一为 `make_decl_*`，`stmt_to_decl` 改为 payload 直读并增加 kind 一致性防御
+- [x] parser/driver/printer 的声明断言与输出统一走 `Decl` 视图，降低 AST 布局变更影响面
+- [x] 新增 `driver/test_support.lcy`，`test_steps_const` 已切换到共享 resolve 断言 helper
+- [x] 共享 resolve 断言 helper 已扩展到 `test_steps_enum/test_steps_struct/test_steps_import_extern`
+- [x] `test_entry` resolve 正/负例断言已切换到 `test_support` 共享 helper
+- [x] `function-body` resolve 正/负例断言已切换到 `test_support` 共享 helper
+- [x] `parse-error` 断言已切换到 `test_support` 共享 helper（`parser_frontend/import_extern`）
 
----
+未完成：
+- [ ] TODO: `match` 最小可用语法接入
+- [ ] TODO: `enum` payload variant 语法接入
+- [ ] TODO: 声明层与表达式层的泛型语法入口统一
 
-## Sprint 16: 自举 - Lexer [DONE]
+### Sprint 18：自举 Semantic Analysis（进行中）
+目标：从“最小约束”扩展到“可拦截主要错误”的语义层。
 
-### 完成内容
-1. **Token 定义** [DONE] -- `lencyc/syntax/token.lcy`
-2. **Keyword Mapping** [DONE] -- `lencyc/syntax/keywords.lcy`
-3. **Lexer 实现** [DONE] -- `lencyc/syntax/lexer.lcy` (完整支持 String/Number/Symbol)
-4. **Driver 验证** [DONE] -- `lencyc/driver/main.lcy`
+已完成：
+- [x] 最小 name resolution（undefined/duplicate/out-of-scope/shadowing）
+- [x] builtin arity 校验
+- [x] 函数 `return` 最小约束
+- [x] 基础类型一致性（`int/bool/string/float`）
+- [x] 用户函数签名/调用校验（含先调用后声明）
+- [x] `impl` 目标类型存在与方法重名校验
+- [x] `struct` 字段重名与未知类型校验
+- [x] `const` 赋值拦截（assignment to const）与遮蔽场景回归
+- [x] `extern` 签名预加载与调用 arity 校验
+- [x] `import` 最小 alias 绑定骨架
+- [x] `enum` duplicate variant 最小语义校验
 
----
+未完成：
+- [ ] TODO: nullable/result 语义规则落地（不是 `unknown` 兜底）
+- [ ] TODO: `enum + match` 语义一致性与穷尽性检查
+- [ ] TODO: import 模块加载与符号导入规则（当前仅 alias 绑定）
+- [ ] TODO: `enum` payload 类型与构造/匹配语义（当前仅 unit variant）
 
-## Sprint 15: 自举准备深化 [DONE]
+## 3. 与 Rust 使用水平的差距评估（2026-03-07）
+- 前端语法能力：约 35%
+- 语义能力：约 30%
+- 后端能力：约 20%
+- 工具链可用性：约 40%
+- 综合：约 30%（距离“接近 Rust 主链路使用水平”约差 70%）
 
-### 完成内容
-1. **Iterator trait 实现** [DONE] -- `VecIterator<T>`
-2. **`char_to_string` intrinsic** [DONE]
-3. **Struct/Enum 返回类型 codegen** [DONE]
-4. **`to_upper`/`to_lower`/`reverse`** [DONE]
-5. **Result<T,E> 方法** [DONE]
-6. **Option<T> 方法** [DONE]
-7. **panic 机制强化** [DONE]
-8. **String 格式化** [DONE] -- `format(string, Vec<string>)`
-9. **String Pattern Matching** [DONE] -- 支持 `match string`
-10. **Lency CLI Fix** [DONE] -- `build` 命令链接修复
-11. **Standard Library Char** [DONE] -- `lib/std/char.lcy`
+## 4. 分阶段执行计划（完整）
 
----
+### Phase 0：基线冻结（1 天）
+- 产出：
+  - 能力矩阵（语法/语义/后端/stdlib/CLI）落地到 `prompt/artifacts/`
+  - 每项状态统一为 `NotStarted/InProgress/Done`
+- 验收：
+  - [x] 矩阵文件提交
+  - [x] `check-lency` + `check-rust` 通过
 
-## 下一步计划
+### Phase 1：语法补齐第一批（2~3 周）
+- 范围：`const/import/extern/enum/match/null` 与 AST 对齐
+- 验收：
+  - [ ] TODO: 每项均有 parser 正/负例
+  - [ ] TODO: `test_entry` 分步回归持续可维护（单文件不超 500 行）
 
-### 优先级 1: Sprint 17 -- Parser 收尾（声明解析从“最小骨架”推进到可用级）
+### Phase 2：语义补齐第一批（3~4 周）
+- 范围：nullable/result、enum/match、import/extern 绑定
+- 验收：
+  - [ ] TODO: 语义负例新增 >= 40 条
+  - [ ] TODO: 主要错误在 resolver 阶段失败，不落入后端
 
-### 优先级 2: Sprint 18 -- Semantic Analysis（在已完成基础上做类型系统增量）
+### Phase 3：泛型与 trait 最小可用（4~5 周）
+- 范围：泛型参数、泛型实例化、trait/impl 匹配
+- 验收：
+  - [ ] TODO: `Vec<T>/Result<T,E>/trait method` 自举样例可跑通
+  - [ ] TODO: 去除关键路径 `unknown` 逃逸
 
----
+### Phase 4：后端能力提升（3~4 周）
+- 范围：LIR 指令补齐、call/member lowering、runtime builtin 类型对齐
+- 验收：
+  - [ ] TODO: 关键后端 FIXME 收敛或降级为非阻塞项
+  - [ ] TODO: `.lcy -> selfhost -> .lir/.exe` 回归稳定
 
-## 统计
-| 指标 | 值 |
-|------|-----|
-| 测试通过 | 69 (.lcy) + Rust unit tests |
-| 自举组件 | Lexer (Done), Parser (Closeout), Sema (WIP) |
-| 自举准备度 | ~98% |
+### Phase 5：可用性冲刺（2~3 周）
+- 范围：stdlib 常用能力、诊断质量、文档对齐
+- 验收：
+  - [ ] TODO: 15~20 个真实小程序样例通过率 > 90%
+  - [ ] TODO: `docs/` 与实现一致性检查通过
 
-*更新时间: 2026-03-07*
+## 5. 本周执行项（立即）
+1. [x] Phase 0 基线矩阵文件已入库（`prompt/artifacts/capability_matrix.md`）。
+2. [x] Phase 1 子项 1：`const`（语法 + 回归 + sema 最小约束）已完成（Step 26）。
+3. [x] Phase 1 子项 2：`import/extern`（语法 + parser 回归 + resolver 绑定骨架）已完成（Step 27）。
+4. [ ] TODO: 每个子项都配正/负例，并执行双检查。
+5. [x] Phase 1 子项 3（部分）：`enum` 最小可用语法与 AST 接入已完成（Step 28）。
+6. [ ] TODO: 完成 Phase 1 子项 3 剩余：`match` + `enum payload` 语法与回归。
 
-### 今日增量（2026-03-05）
-1. 自举 Lexer 新增字符串字面量扫描：`"` 开始与结束，产出 `T_STRING_LITERAL`。
-2. 自举 Parser `primary` 新增字符串字面量分支，AST 走 `EXPR_LITERAL` 统一路径。
-3. 自举回归新增字符串正例：`var msg = "hello"` 与 `print("done")` 的 AST 断言。
-4. 自举回归新增字符串负例：未闭合字符串字面量应被 parser 拒绝。
-5. 自举 Lexer `number()` 新增浮点扫描：支持 `digits '.' digits`（仍归类 `T_NUMBER`）。
-6. 自举回归新增浮点正例：`3.14`、`0.5`；新增浮点负例：`12.`（缺少小数部分）应被 parser 拒绝。
-7. 自举主入口 `lencyc/driver/main.lcy` 完成最小流水线串联：读取源码、词法、语法、语义、AST 文本产物输出。
-8. 新增 `lencyc/driver/pipeline_sample.lcy` 作为主入口默认样例输入，避免依赖尚未实现的函数声明解析。
-9. `scripts/run_lency_checks.sh` 新增对 `lencyc/driver/main.lcy` 的编译、运行与产物校验步骤。
-10. 自举最小“完整流程”可执行：`lencyc_main` 运行后可生成 `lencyc_selfhost_ast.txt`。
-11. resolver 新增 builtin 参数个数校验：对 `arg_count/arg_at/write_string/...` 固定签名做调用 arity 检查，并补充正/负例回归。
-12. resolver 新增函数体 return 约束：value-return 函数禁止 `return` 空值，且要求函数体可达 value-return；`test_entry` 已补齐正/负例回归。
-13. resolver 新增最小类型一致性检查：字面量与局部变量类型跟踪（`int/bool/string/float`），并在赋值/算术/比较/逻辑/一元运算做一致性约束。
-14. `test_cases` + `test_entry` 新增 Step 16 类型一致性回归（正例 + 赋值/算术/逻辑负例）。
-15. 为兼容现有自举 runtime pointer-as-value 链路，`arg_at/int_to_string/float_to_string/bool_to_string` 在 resolver builtin 返回类型中先按 `unknown` 处理，避免误伤现有运行回归。
-16. parser 新增最小函数声明骨架（`int/string/bool/void/float name(...) { ... }`），参数类型写入 AST（`param_kinds`）。
-17. resolver 新增用户函数 arity 预扫描与调用校验，覆盖“先调用后声明”路径。
-18. `test_cases` + `test_entry` 新增 Step 17 用户函数 arity 正/负例回归，并通过 `run_lency_checks.sh` 全链路验证。
-19. token/lexer 新增 `float` 关键字支持（`T_FLOAT`），函数签名语法补齐 `float`。
-20. AST 函数节点新增 `param_kinds`，parser 函数声明保留参数类型信息。
-21. resolver 新增用户函数类型签名预扫描与调用参数类型校验，并新增 return 返回类型校验。
-22. `test_cases` + `test_entry` 新增 Step 18（用户函数签名正/负例），全链路通过。
-23. resolver 模块拆分为 `resolver.lcy + resolver/core.lcy + resolver/expr.lcy`，满足单文件行数约束。
-24. parser 函数声明签名接入 `T_IDENTIFIER`（自定义类型名），并增加安全判定避免误判普通表达式语句。
-25. AST 函数声明节点新增 `return_type_name/param_type_names`，保留签名中的类型名信息供 resolver 校验。
-26. resolver 新增签名类型校验：`T_IDENTIFIER` 类型名需已声明（未声明报 `unknown type in signature`）。
-27. `test_cases` + `test_entry` 新增 Step 19（自定义类型签名正/负例），`check-lency` 全链路通过。
-28. parser 新增最小错误恢复同步点（declaration 级 recover），不再首错即终止；新增回归用例验证“前一条语句错误后仍可继续解析后续语句”。
+## 6. 已知风险
+- FIXME: 文档与实现存在历史错位，若不强制每次同步会继续漂移。
+- FIXME: 自举 resolver 中仍有 `TYPE_UNKNOWN` 兼容路径，会掩盖真实类型错误。
+- FIXME: Rust `.lir` backend 仍有 call/member lowering 子集限制。
+- FIXME: 顶层声明已完成 payload 化与分层，但块内声明仍通过 `Stmt` 路径执行，后续需要评估“声明语句统一中间表示”以进一步收敛双轨分支。
+- FIXME: `stmt_to_decl` 当前对声明 kind 与 payload kind 不一致仍以 `DECL_UNKNOWN` 兜底，后续需补齐诊断上下文并评估 parser 阶段前置拦截。
 
-### 今日增量（2026-03-06）
-1. AST 新增最小 `TypeRef` 结构表示，为后续类型节点落地预留稳定入口。
-2. parser 声明层新增 `struct` 最小骨架解析：支持 `struct Name { ... }` 入 AST（当前成员体先跳过解析）。
-3. AST 新增 `STMT_STRUCT` 与 `make_stmt_struct`，printer 新增 `(struct Name)` 文本输出。
-4. resolver 新增类型声明预扫描 `preload_user_type_declarations`：在函数签名校验前先注册 `struct` 类型名。
-5. resolver 语句分派新增 `STMT_STRUCT` 分支（声明节点不报 unsupported）。
-6. `test_cases` + `test_entry` 新增 Step 20（type declaration skeleton），覆盖 parse AST 形态与“struct + 自定义类型签名”正例。
-7. `cargo run -p xtask -- check-lency` 全链路通过。
-8. parser 声明层新增 `impl` 最小骨架解析：支持 `impl Type { ... }` 入 AST（当前成员体先跳过解析）。
-9. AST 新增 `STMT_IMPL` 与 `make_stmt_impl`，printer 新增 `(impl Type)` 文本输出。
-10. resolver 语句分派新增 `STMT_IMPL` 分支（声明节点不报 unsupported）。
-11. `test_cases` + `test_entry` 新增 Step 21（impl declaration skeleton），覆盖 parse AST 形态与“struct + impl + 自定义类型签名”正例。
-12. 再次执行 `cargo run -p xtask -- check-lency`，全链路通过。
-13. `impl` 声明解析升级为“成员函数骨架”模式：`impl Type { int f(...) { ... } }` 可解析为 `impl` 节点下的函数声明列表。
-14. `AST printer` 的 `impl` 输出改为包含成员列表：`(impl Type [...])`。
-15. `test_cases` + `test_entry` 新增 Step 22，固定校验 `impl` 成员函数骨架 AST 形态（包含 `(func value/0 ...)`）。
-16. 再次执行 `cargo run -p xtask -- check-lency`，全链路通过。
-
-### 今日增量（2026-03-07）
-1. resolver `STMT_IMPL` 接入最小语义约束：`impl` 目标类型必须可解析，否则报 `unknown type in impl target`。
-2. resolver `STMT_IMPL` 接入同一 `impl` 内方法名去重校验：重复方法报 `duplicate method in impl`。
-3. `impl` 成员函数体复用既有函数语义路径（参数/返回签名与 return 约束）。
-4. `test_cases` + `test_entry` 新增 Step 23（impl 语义正/负例）：目标类型不存在、方法重名负例。
-5. Windows CI 修复：`scripts/win/setup-dev.ps1` 支持 `-SearchRoots` 根目录直接命中 LLVM 前缀，并放宽 LLVM 目录名匹配（兼容 `clang+llvm-*`）。
-6. Windows CI 排障增强：`.github/workflows/tests.yml` 新增 `Debug LLVM archive layout` 步骤，输出解压目录结构与 `llvm-config*.exe` 候选路径。
-7. AST `Stmt` 函数签名字段完成 `TypeRef` 落地：`return_type + param_types` 替代分离的 `return_kind/return_type_name/param_kinds/param_type_names`。
-8. parser 函数声明路径改为直接构建 `TypeRef`（返回类型与参数类型统一表示），`impl` 成员函数声明同步沿用该路径。
-9. resolver 签名解析改为消费 `TypeRef`，用户函数/impl 方法的签名预扫描与语义校验路径保持一致。
-10. `test_cases` + `test_entry` 新增 Step 24（Function signature TypeRef AST tests），固定校验函数签名类型节点结构。
-11. 执行 `cargo run -p xtask -- check-lency` 与 `cargo run -p xtask -- check-rust`，全链路通过。
+## 7. 本次重构收尾结论（2026-03-08）
+- [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。
+- [x] resolver 已完成“普通语句处理 vs 声明语义处理”职责分层，声明路径统一消费 `Decl` 视图。
+- [x] parser 已去除声明二次扫描，`parse_program()` 单趟构建 `Program(decls + statements)`。
+- [ ] TODO: `match`/`enum payload` 语法与语义尚未接入，不属于本次模式重构完成条件，但属于后续主线阻塞项。

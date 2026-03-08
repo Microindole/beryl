@@ -2,83 +2,90 @@
 
 ## 0. 最高准则
 - 语言与设计哲学：`assets/Lency.txt`、`assets/design_spec.md`（冲突时以这两个文件为准）。
-- 本文件只做“地图与职责”，不再记录逐条开发日志。
+- `xtask` 是规范主入口：`cargo run -p xtask -- check-rust`、`cargo run -p xtask -- check-lency`。
+- `prompt/sprint/status.md` 是唯一状态真相来源，本文件只保留长期协作上下文与基线。
+- Phase 0 能力矩阵真表：`prompt/artifacts/capability_matrix.md`。
 
-## 1. 目录地图（先看这里）
-- `crates/`：Rust 编译器主实现（稳定链路、CI 主体）。
-- `lencyc/`：Lency 自举编译器（当前重点：Lexer/Parser/Sema 逐步对齐）。
-- `lib/`：标准库源码（Rust/Lency 两侧都会受影响）。
+## 1. 当前基线（2026-03-08）
+- Rust 主编译器（`crates/`）源码文件数：175。
+- Lency 自举编译器（`lencyc/`）源码文件数：27。
+- Rust 集成测试文件数（`tests/integration/`）：74。
+- Lency 示例测试文件数（`tests/example/`）：10。
+- 当前判断：`lencyc` 已打通最小闭环，但能力远未接近 Rust 主链路；此前“~98% 准备度”判定失真，已废弃。
+
+## 2. 能力对照（Rust vs Lency 自举）
+- 词法/语法：
+  - Rust：已覆盖 `const/import/extern/trait/enum/match/null/?. /??/vec/Ok/Err` 等。
+  - Lency：当前聚焦 `var/if/while/for/struct/impl/return` 与基础字面量/运算。
+  - TODO: 补齐 `match/null` 与相关语法节点（`enum` 当前为 unit variant 子集）。
+- 语义：
+  - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
+  - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
+  - TODO: 扩展 nullable/result/enum+match 语义与更完整控制流返回分析。
+  - TODO: `import` 当前仅做 alias 最小绑定，尚未做模块加载与符号导入规则。
+- 后端：
+  - Rust：AST -> LLVM IR -> 可执行链路成熟。
+  - Lency：`AST/LIR` 最小发射 + Rust `.lir` backend 冒烟，仍有子集约束。
+  - FIXME: `crates/lency_cli/src/lir_backend/compile.rs` 仍存在 builtin 子集、call/member lowering 限制。
+- 工具链：
+  - Rust：`compile/run/check/build/repl` 路径稳定。
+  - Lency：`lencyc` + `xtask check-lency` 闭环可用，但语言特性覆盖不足。
+
+## 3. 已落地的自举关键增量
+- `TypeRef` 已接入函数签名（`return_type + param_types`），替代旧并行字段。
+- `struct` 声明已从空骨架升级为字段解析（`Type field` 列表）。
+- resolver 已接入 `struct` 字段重复与未知类型校验。
+- `const` 声明已接入 lexer/parser/AST/resolver，禁止对 `const` 变量赋值。
+- `import/extern` 声明已接入 lexer/parser/AST/resolver，`extern` 可参与调用 arity 校验。
+- `enum` 声明已接入 lexer/parser/AST/resolver（当前仅 unit variant，payload/match 待后续）。
+- 回归已扩展到 Step 28，并通过 `check-lency` 全链路验证。
+- AST 构造器已切换为 `make_stmt_base + 局部覆写` 工厂模式，新增 `Stmt` 字段时只需集中修改基座，显著降低连锁改动面。
+- parser 声明路径已抽出 `parse_signature_param_list()` 公共 helper，减少 `function/extern` 参数解析重复逻辑。
+- 已引入 `Program(decls + statements)` 过渡模型与 `parse_program()/resolve_program()` 入口，为后续 Decl/Stmt 解耦与 payload 化迁移提供兼容路径。
+- resolver 预加载已从 `Decl` 视图直连（不再依赖 `Decl -> Stmt` 中转），迁移方向保持单向解耦。
+- `test_entry` 与拆分的 `test_steps_*` 已切换到 `parse_program()/resolve_program()`，过渡入口已被回归覆盖。
+- `resolve_statements()` 兼容入口已移除，resolver 统一从 `resolve_program()` 进入。
+- 拆分的声明测试步骤（`const/enum/import-extern/signature/struct`）已统一使用 `parse_program()` 读取 AST，`parse()` 仅保留在 `test_entry` 的词法/语法恢复类场景。
+- `test_entry` 的 resolver smoke 路径已去除手工 `extract_declarations + make_program` 组装，改为直接复用 `parse_program()` 结果。
+- `test_entry` 的声明骨架断言步骤（Step 20/21/22）已切换到 `parse_program()`，减少声明测试路径对旧 `parse()` 的依赖面。
+- `test_entry` 的 `expect_parse_error` 与 function-body resolver helper 已统一走 `parse_program()`，不再依赖旧 `parse()` 入口。
+- `lencyc/driver` 已完成 `parse()` 调用清零，统一通过 `parse_program()` 获取 `Program`（再按需读取 `program.statements`）。
+- parser 入口已收敛为 `parse_program()` 单一接口，旧 `parse()` 兼容方法已移除。
+- resolver 已清理旧 `Stmt` 入口遗留：删除 `preload_user_type_declarations/preload_user_function_signatures` 死代码，仅保留 Decl/Program 预加载路径。
+- resolver 预加载阶段已对 `DECL_UNKNOWN` 给出显式错误，避免静默跳过导致问题被吞掉。
+- `test_entry` 已新增 `DECL_UNKNOWN` 预加载防御回归，确保该错误路径不会被回归吞掉。
+- 自举测试支持层已新增 `driver/test_support.lcy`，并先迁移 `test_steps_const` 的 resolve 断言 helper，开始收敛重复逻辑。
+- 共享测试 helper 已继续迁移到 `test_steps_enum`、`test_steps_struct`、`test_steps_import_extern`，重复 resolve 断言代码进一步减少。
+- `test_entry` 主流程中的 resolve 正/负例断言也已切换到 `test_support` 共享 helper，driver 测试断言逻辑已基本统一。
+- `function-body` resolve 正/负例断言也已迁入 `test_support`，`test_entry` 继续瘦身。
+- `parse-error` 断言已统一迁入 `test_support`（`parser_frontend/import_extern` 本地重复 helper 已移除）。
+- syntax 声明过渡层已删除未使用的 `extract_non_declaration_statements`，减少无效 API 面。
+- `test_entry` 已进一步拆分：Step 3-10（解析前端回归）迁移到 `test_steps_parser_frontend.lcy`，主入口体积继续下降。
+- resolver 结构继续拆分：`resolve_stmt` 已迁移到 `sema/resolver/stmt.lcy`，降低 `core.lcy` 单文件复杂度。
+- resolver return-flow 分析也已拆分到 `sema/resolver/return_flow.lcy`，继续压低 `core.lcy` 体积与职责耦合。
+- resolver 声明语句分支已拆分到 `sema/resolver/decl_stmt.lcy`（`resolve_decl_stmt`），`resolve_stmt` 仅保留分派与普通语句处理。
+- resolver 声明处理内部已切换到 `Stmt -> Decl` 视图再执行（`resolve_decl`），减少对 `Stmt` 声明字段的直接耦合。
+- `resolve_import/extern/enum` 已补齐 `Decl` 入口（`resolve_*_decl`），声明语义路径不再需要 `Decl -> Stmt` 回转桥接。
+- parser `parse_program()` 已改为单趟构建 `statements + decls`，移除声明二次提取流程，继续收敛桥接层复杂度。
+- AST `Stmt` 已完成声明 payload 化：声明细节统一下沉到 `stmt.decl`（`Decl`），移除 `Stmt` 上的 `return_type/params/param_types/struct_fields` 散落字段，新增声明节点不再触发 `Stmt` 结构体字段扩散修改。
+- AST 声明构造链已统一为 `make_decl_*` + `make_stmt_*`，`stmt_to_decl` 改为直接读取 payload（带 kind 一致性防御）。
+- parser/syntax/driver 侧声明断言与打印已统一走 `Decl` 视图（`stmt_to_decl`），减少对 `Stmt` 内部布局的耦合。
+- 收尾说明：`status.md` 已移除两条过时 `FIXME`（“AST 未 payload 化 / resolver 未分层”），并替换为当前真实剩余风险条目。
+
+## 4. 目录与职责
+- `crates/`：Rust 主编译器与主工具链。
+- `lencyc/`：自举编译器实现（当前主战场）。
+- `lib/`：标准库源码（Rust/Lency 双侧受影响）。
 - `tests/integration/`：Rust 侧集成测试。
-- `tests/example/`：Lency 侧示例/实验测试。
-- `scripts/linux/run_checks.sh`：Rust 侧 Linux/macOS 检查入口（不接收参数）。
-- `scripts/linux/run_lency_checks.sh`：Lency 侧 Linux/macOS 检查入口（不接收参数）。
-- `scripts/win/run_checks.ps1`：Rust 侧 Windows 检查入口（不依赖 WSL）。
-- `scripts/win/run_lency_checks.ps1`：Lency 侧 Windows 检查入口（不依赖 WSL）。
-- `scripts/linux/`：Linux/macOS 脚本实现目录。
-- `scripts/win/`：Windows 脚本实现目录。
-- `xtask/`：跨平台检查主入口（`check-rust` / `check-lency`）。
-- `prompt/sprint/status.md`：当前 sprint 状态与里程碑。
-- `prompt/artifacts/`：任务记录（task / plan / walkthrough）。
-- `docs/`：用户文档（语言行为变化时必须同步）。
+- `tests/example/`：Lency 自举侧示例与回归输入。
+- `docs/`：对外文档，语言行为变化必须同步。
+- `prompt/sprint/status.md`：里程碑与阶段状态。
+- `prompt/artifacts/`：任务拆解与实现记录。
 
-## 2. 协作与记录规则
-- 进度状态：只更新 `prompt/sprint/status.md`。
-- 任务过程：写入 `prompt/artifacts/` 对应文件。
-- 架构变化：必要时补充到本文件“长期约定”，不要写流水账。
-- 冲刺治理约束：`prompt/sprint/` 仅保留 `status.md` 作为当前真相来源；历史 `plan_*.md` / `roadmap.md` 不再维护，过期即删除。
-- Lency 语法检查约定：`run_lency_checks.sh` 会优先使用 `lencyc build --check-only` 对 `lencyc/driver/test_entry.lcy` 与 `lencyc/driver/main.lcy` 做入口级语法检查；若未来该参数缺失，脚本才会回退为跳过并由完整 build 覆盖。
-- 按作用域运行检查（不要混跑）：
-  - Rust 侧改动：`cargo run -p xtask -- check-rust`
-  - Lency 自举侧改动：`cargo run -p xtask -- check-lency`
-  - 平台入口：`./scripts/linux/run_checks.sh`、`./scripts/linux/run_lency_checks.sh`、`.\scripts\win\run_checks.ps1`、`.\scripts\win\run_lency_checks.ps1`
-- 本地协作约定（`AGENTS.md`）：`xtask` 是规范主入口（`check-rust` / `check-lency`）；平台脚本仅作为便捷包装。禁止再使用不存在的 `./scripts/run_checks.sh` / `./scripts/run_lency_checks.sh` 路径。
-
-## 3. CI 触发约定（摘要）
-- CI 先按路径判定改动作用域，再触发对应 job。
-- Rust 作用域：`crates/**`、`tests/integration/**`、以及共享项（如 `lib/**`、部分脚本/workflow）。
-- Lency 作用域：`lencyc/**`、`tests/example/**`、以及共享项（如 `lib/**`、部分脚本/workflow）。
-- 提交信息门禁：新增 `.github/workflows/commit-message.yml`，在 `push`/`pull_request` 中按事件 SHA 范围逐条校验提交主题（不是只校验最新一条）。
-- 提交信息门禁细化：Conventional type 白名单包含 `chore`；merge 主题额外允许 `Merge tag '...' of ...`；失败输出为中英文双语并附示例，且按 push/PR 范围给出“第 N 条提交”定位。
-- `macos-check` 当前仅跟随 Rust 作用域触发（main 分支或手动触发）。
-- Release 自动化：新增 `.github/workflows/release.yml`，当 push `v*` tag 时自动构建 Linux 产物并创建 GitHub Release（附 `tar.gz` 与 `sha256`）。
-
-## 4. 当前工作焦点（自举）
-- 已完成：Parser/AST 模块化拆分（`lencyc/syntax/{parser,ast}/...`）。
-- 已支持：`break/continue` 语句及循环外非法位置约束（parser 直接报错）。
-- 已支持：C 风格 `for` 语句基础解析（当前通过 parser 反糖到 `while`）。
-- 语义修正：`for` 反糖路径下，`continue` 已确保先执行 `increment`（且不影响嵌套循环）。
-- 解析边界：`for` 当前支持 `var` 或表达式初始化（如 `for var i = ...;` / `for i = ...;`）。
-- 表达式能力：parser 已支持 `call` 与 `member` 链（`foo(a,b)`、`obj.method()`），并支持字符串字面量（`"text"`）。
-- 数字字面量：lexer 已支持 `int/float/scientific`（如 `1`、`3.14`、`1.23e-4`、`9E+2`）。
-- 字符串/字符字面量：lexer 已支持字符串转义扫描（如 `\"`、`\\n`）与字符字面量（如 `'a'`、`'\\n'`）。
-- Lency 自举 TODO 状态：`lencyc/` 目录内 `TODO` 已清零；当前剩余 TODO 仅在 `lib/std` 与 Rust 编译器路径。
-- 自举语义骨架：已添加最小 `name resolution`（变量定义/引用检查）并接入 `test_entry` 烟雾验证。
-- 语义测试：`test_entry` 已补 resolver 负例（undefined/duplicate），不再只测正例。
-- 回归结构化：测试样例已抽离到 `lencyc/driver/test_cases.lcy`，`test_entry` 改为用例编排执行。
-- 最小完整链路：`lencyc/driver/main.lcy` 已串联 `Read -> Lex -> Parse -> Resolve -> Emit(AST 文本)`，默认输入 `lencyc/driver/pipeline_sample.lcy`。
-- 后端演进：`lencyc` 已增加最小 LIR 文本发射（`--emit-lir`），用于对接后续 Rust LLVM backend；当前默认 emit 仍为 AST 文本以保持自举稳定。
-- 回归约束：`run_lency_checks.sh` 已纳入 `tests/example/lencyc_lir_*.lcy` 用例，固定校验自举 `--emit-lir` 输出结构。
-- Rust 后端进展：`crates/lency_cli` 已支持最小 `.lir -> LLVM IR -> executable` 构建路径（`lencyc build file.lir`），并接入 Lency 侧脚本的端到端冒烟。
-- Rust `.lir` backend 能力增量：已支持最小外部函数调用 lowering（`call %foo(...)` -> LLVM `declare i64 @foo(...)` + `call`）。
-- Rust `.lir` backend 内建符号映射：`arg_count` 已映射 `@lency_arg_count`，`arg_at` 已映射 `@lency_arg_at`（最小 backend 以 pointer-as-value 方式承载）。
-- Rust `.lir` backend builtin 映射已扩展：`int_to_string` -> `@lency_int_to_string`、`file_exists/is_dir` -> `@lency_file_exists/@lency_file_is_dir`。
-- Rust CLI 模块化：`crates/lency_cli/src/main.rs`、`lir_backend` 已拆分为目录模块，入口文件不再承载大段实现逻辑。
-- LIR 回归样例扩展：`tests/example` 新增 `lencyc_lir_unary_logic.lcy` 与 `lencyc_lir_break_continue.lcy`，已纳入 `run_lency_checks.sh`。
-- 可用性打通：已提供 `xtask selfhost-build`（脚本入口为 `scripts/linux/lency_selfhost_build.sh`），用于 `.lcy -> self-host emit-lir -> Rust backend build`，并接入 Lency 检查脚本闭环验证。
-- 运行闭环：已提供 `xtask selfhost-run`（脚本入口为 `scripts/linux/lency_selfhost_run.sh`），用于 `.lcy -> self-host build -> run`（支持参数透传与期望退出码校验），并接入 Lency 检查脚本。
-- 运行闭环回归：`tests/example/lencyc_run_args.lcy` 已覆盖 `arg_count + arg_at`，`run_lency_checks.sh` 第 10 步不再依赖绕过用例。
-- 运行时映射回归：`tests/example/lencyc_run_int_to_string.lcy` 已接入 `run_lency_checks.sh` 第 11 步，固定校验最小 runtime builtin 映射链路。
-- 解析可用性修复：`lencyc` resolver 已预载最小 prelude 符号，目标源码中的 `arg_count()/arg_at()` 等内建符号不再因未声明而解析失败。
-- 语义约束增量：`lencyc` resolver 已加入 builtin 调用参数个数校验（固定 arity），`test_entry` 已覆盖正/负例回归。
-- 语义约束增量：`resolve_function_body` 已加入最小 return 合法性检查（value-return 函数禁止 `return` 空值，且要求可达 value-return），并已接入正/负例回归。
-- 语义约束增量：`lencyc` resolver 已加入最小类型一致性检查（`int/bool/string/float`），覆盖赋值、一元、二元、逻辑表达式路径，并已接入 `test_entry` Step 16 回归。
-- 声明解析增量：parser 已支持最小函数声明骨架（`int/string/bool/void/float name(...) { ... }`），并在 AST 中记录参数类型 token kind。
-- 调用语义增量：resolver 已支持用户函数签名预扫描（返回类型 + 参数类型 + arity），并支持“先调用后声明”场景。
-- 语义约束增量：用户函数调用已接入参数类型校验，函数 `return` 已接入返回类型校验，并已接入 `test_entry` Step 18 回归。
-- AST 类型表示增量：函数签名类型已统一为 `TypeRef`（`return_type` + `param_types`），移除旧的并行 kind/name 字段组合。
-- 回归增量：`test_entry` 已新增 Step 24，固定校验函数签名 `TypeRef` AST 结构。
-- 架构演进：`resolver` 已按 `resolver.lcy + resolver/core.lcy + resolver/expr.lcy` 拆分，规避单文件超 500 行限制。
-- 兼容性约束：当前 self-host runtime builtin 仍有 pointer-as-value 历史语义，`arg_at/int_to_string/float_to_string/bool_to_string` 在 resolver 中暂按 `unknown` 返回类型处理，避免误杀现有运行闭环用例。
-- 文档治理增量：`docs/` 已清理过时实现状态与坏链接（补齐 `types/primitives.md`、`stdlib/hashmap.md`，同步脚本文档到当前检查链路）。
-- 当前策略：按语法特性小步增量推进，每次增量后立刻跑 Lency 检查，避免回归。
-- 下一阶段：在保持可运行的前提下逐步补齐语句与语义能力。
+## 5. 协作与验收规则
+- 进度只在 `prompt/sprint/status.md` 更新，不在多处维护冲突状态。
+- 每次改动后必须执行：
+  - `cargo run -p xtask -- check-lency`
+  - `cargo run -p xtask -- check-rust`
+- TODO: 任何新增未完成设计项必须在对应模块或文档明确 `TODO`，禁止口头挂账。
+- FIXME: 任何已知错误路径必须明确 `FIXME` 与收敛计划，禁止“先过再说”。

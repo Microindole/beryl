@@ -37,16 +37,16 @@ int main() {
 
 ---
 
-## 实现状态（2026-03-05）
+## 实现状态（2026-03-08）
 
 Lency 当前是双链路并行：
 - Rust 主编译器链路：功能更完整，作为稳定构建与验证主体。
 - Lency 自举编译器链路（`lencyc/`）：按最小闭环持续补齐语法与语义能力。
 
-### 自举阶段能力快照（2026-03-05）
+### 自举阶段能力快照（2026-03-08）
 
 - Lexer: 已支持 `int/float/scientific/string/char` 字面量。
-- Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入最小函数声明骨架（`int/string/bool/void/float` 起始）。
+- Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入 `function/struct/impl/import/extern/enum` 声明子集。
 - Sema: 已支持最小 name resolution（undefined/duplicate/out-of-scope/shadowing）。
 - Sema: 已支持 builtin 调用参数个数校验（arity）。
 - Sema: 已支持用户函数最小 arity 校验（含先调用后声明）。
@@ -55,7 +55,12 @@ Lency 当前是双链路并行：
 - Sema: 已支持最小类型一致性检查（`int/bool/string/float`，覆盖赋值/一元/二元/逻辑）。
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
-- Tooling: `run_lency_checks.sh`、`lency_selfhost_build.sh`、`lency_selfhost_run.sh` 已接入回归闭环。
+- Tooling: 规范入口统一为 `cargo run -p xtask -- check-rust` 与 `cargo run -p xtask -- check-lency`（平台脚本仅为包装）。
+
+### 自举编译器内部结构快照（2026-03-08）
+
+- AST: 声明数据已从 `Stmt` 散落字段收敛为 `stmt.decl` payload，新增声明特性不再需要修改 `Stmt` 结构体字段列表。
+- Resolver: 声明语义路径已切到 `Decl` 视图处理，`resolve_stmt` 仅负责语句分派。
 
 ### 当前主线
 
