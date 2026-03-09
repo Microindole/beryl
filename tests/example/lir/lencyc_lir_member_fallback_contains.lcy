@@ -1,0 +1,12 @@
+// tests/example/lir/lencyc_lir_member_fallback_contains.lcy
+// Member-call fallback smoke case: `s.contains(x)` should lower through get+call path.
+
+var s = int_to_string(12345)
+var d = int_to_string(3)
+var ok = s.contains(d)
+
+if ok {
+    return 1
+}
+
+return 0

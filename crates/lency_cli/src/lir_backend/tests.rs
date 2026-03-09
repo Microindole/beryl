@@ -194,6 +194,26 @@ entry:
 }
 
 #[test]
+fn test_compile_lir_call_member_join_lowering() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %arg_at(0)
+  %t1 = call %arg_at(0)
+  %t2 = get %t0.join
+  %t3 = call %t2(%t1)
+  ret %t3
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare ptr @lency_string_join(ptr, ptr)"));
+    assert!(ir.contains("call ptr @lency_string_join(ptr"));
+}
+
+#[test]
 fn test_compile_lir_call_member_generic_fallback() {
     let src = r#"
 ; lencyc-lir v0

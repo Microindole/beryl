@@ -53,6 +53,71 @@ fn guess_member_call_return_type(member_name: &str) -> ValueType {
     }
 }
 
+fn resolve_member_intrinsic_call(
+    member_name: &str,
+    call_argc: usize,
+) -> Result<Option<(&'static str, Vec<ValueType>, ValueType)>> {
+    let sig = match member_name {
+        "to_string" => Some((
+            "lency_int_to_string",
+            vec![ValueType::I64],
+            ValueType::Ptr,
+            0usize,
+        )),
+        "len" => Some((
+            "lency_string_len",
+            vec![ValueType::Ptr],
+            ValueType::I64,
+            0usize,
+        )),
+        "trim" => Some((
+            "lency_string_trim",
+            vec![ValueType::Ptr],
+            ValueType::Ptr,
+            0usize,
+        )),
+        "substr" => Some((
+            "lency_string_substr",
+            vec![ValueType::Ptr, ValueType::I64, ValueType::I64],
+            ValueType::Ptr,
+            2usize,
+        )),
+        "split" => Some((
+            "lency_string_split",
+            vec![ValueType::Ptr, ValueType::Ptr],
+            ValueType::Ptr,
+            1usize,
+        )),
+        "format" => Some((
+            "lency_string_format",
+            vec![ValueType::Ptr, ValueType::Ptr],
+            ValueType::Ptr,
+            1usize,
+        )),
+        "join" => Some((
+            "lency_string_join",
+            vec![ValueType::Ptr, ValueType::Ptr],
+            ValueType::Ptr,
+            1usize,
+        )),
+        _ => None,
+    };
+
+    if let Some((runtime_name, arg_tys, ret_ty, expected_call_argc)) = sig {
+        if call_argc != expected_call_argc {
+            bail!(
+                "invalid call arity for member '{}': expected {}, got {}",
+                member_name,
+                expected_call_argc,
+                call_argc
+            );
+        }
+        return Ok(Some((runtime_name, arg_tys, ret_ty)));
+    }
+
+    Ok(None)
+}
+
 /// Compile LIR text emitted by lencyc `--emit-lir` into LLVM IR.
 pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
     let vars = collect_vars(source)?;
@@ -204,138 +269,53 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                 if let Some((obj_repr, obj_ty, member_name)) =
                     member_call_targets.get(callee).cloned()
                 {
-                    if member_name == "to_string" {
-                        if !parsed_args.is_empty() {
+                    if let Some((runtime_name, intrinsic_arg_tys, intrinsic_ret_ty)) =
+                        resolve_member_intrinsic_call(&member_name, parsed_args.len())?
+                    {
+                        let mut intrinsic_arg_values: Vec<(String, ValueType)> = Vec::new();
+                        intrinsic_arg_values.push((obj_repr, obj_ty));
+                        for arg in &parsed_args {
+                            let (arg_repr, arg_ty) = emitter.emit_operand(arg.trim())?;
+                            intrinsic_arg_values.push((arg_repr, arg_ty));
+                        }
+
+                        if intrinsic_arg_values.len() != intrinsic_arg_tys.len() {
                             bail!(
-                                "invalid call arity for member '{}': expected 0, got {}",
+                                "invalid intrinsic member lowering for '{}': expected {} args, got {}",
                                 member_name,
-                                parsed_args.len()
+                                intrinsic_arg_tys.len(),
+                                intrinsic_arg_values.len()
                             );
                         }
-                        let (arg_repr, _) = emitter.ensure_i64(obj_repr, obj_ty);
-                        emitter.note_extern_func(
-                            "lency_int_to_string",
-                            vec![ValueType::I64],
-                            ValueType::Ptr,
-                        )?;
-                        emitter.push(format!(
-                            "  {} = call ptr @lency_int_to_string(i64 {})",
-                            dst, arg_repr
-                        ));
-                        emitter.mark_temp(dst, ValueType::Ptr);
-                        continue;
-                    }
-                    if member_name == "len" {
-                        if !parsed_args.is_empty() {
-                            bail!(
-                                "invalid call arity for member '{}': expected 0, got {}",
-                                member_name,
-                                parsed_args.len()
+
+                        let mut casted_values: Vec<(String, ValueType)> = Vec::new();
+                        for (idx, (arg_repr, arg_ty)) in intrinsic_arg_values.iter().enumerate() {
+                            let (casted, casted_ty) = emitter.cast_to_type(
+                                arg_repr.clone(),
+                                *arg_ty,
+                                intrinsic_arg_tys[idx],
                             );
+                            casted_values.push((casted, casted_ty));
                         }
-                        let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+
                         emitter.note_extern_func(
-                            "lency_string_len",
-                            vec![ValueType::Ptr],
-                            ValueType::I64,
+                            runtime_name,
+                            intrinsic_arg_tys.clone(),
+                            intrinsic_ret_ty,
                         )?;
+                        let args_sig = casted_values
+                            .iter()
+                            .map(|(repr, ty)| format!("{} {}", llvm_type_str(*ty), repr))
+                            .collect::<Vec<_>>()
+                            .join(", ");
                         emitter.push(format!(
-                            "  {} = call i64 @lency_string_len(ptr {})",
-                            dst, arg_repr
+                            "  {} = call {} @{}({})",
+                            dst,
+                            llvm_type_str(intrinsic_ret_ty),
+                            runtime_name,
+                            args_sig
                         ));
-                        emitter.mark_temp(dst, ValueType::I64);
-                        continue;
-                    }
-                    if member_name == "trim" {
-                        if !parsed_args.is_empty() {
-                            bail!(
-                                "invalid call arity for member '{}': expected 0, got {}",
-                                member_name,
-                                parsed_args.len()
-                            );
-                        }
-                        let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                        emitter.note_extern_func(
-                            "lency_string_trim",
-                            vec![ValueType::Ptr],
-                            ValueType::Ptr,
-                        )?;
-                        emitter.push(format!(
-                            "  {} = call ptr @lency_string_trim(ptr {})",
-                            dst, arg_repr
-                        ));
-                        emitter.mark_temp(dst, ValueType::Ptr);
-                        continue;
-                    }
-                    if member_name == "substr" {
-                        if parsed_args.len() != 2 {
-                            bail!(
-                                "invalid call arity for member '{}': expected 2, got {}",
-                                member_name,
-                                parsed_args.len()
-                            );
-                        }
-                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                        let (start_repr, start_ty) = emitter.emit_operand(parsed_args[0].trim())?;
-                        let (start_i64, _) = emitter.ensure_i64(start_repr, start_ty);
-                        let (len_repr, len_ty) = emitter.emit_operand(parsed_args[1].trim())?;
-                        let (len_i64, _) = emitter.ensure_i64(len_repr, len_ty);
-                        emitter.note_extern_func(
-                            "lency_string_substr",
-                            vec![ValueType::Ptr, ValueType::I64, ValueType::I64],
-                            ValueType::Ptr,
-                        )?;
-                        emitter.push(format!(
-                            "  {} = call ptr @lency_string_substr(ptr {}, i64 {}, i64 {})",
-                            dst, self_ptr, start_i64, len_i64
-                        ));
-                        emitter.mark_temp(dst, ValueType::Ptr);
-                        continue;
-                    }
-                    if member_name == "split" {
-                        if parsed_args.len() != 1 {
-                            bail!(
-                                "invalid call arity for member '{}': expected 1, got {}",
-                                member_name,
-                                parsed_args.len()
-                            );
-                        }
-                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                        let (delim_repr, delim_ty) = emitter.emit_operand(parsed_args[0].trim())?;
-                        let (delim_ptr, _) = emitter.ensure_ptr(delim_repr, delim_ty);
-                        emitter.note_extern_func(
-                            "lency_string_split",
-                            vec![ValueType::Ptr, ValueType::Ptr],
-                            ValueType::Ptr,
-                        )?;
-                        emitter.push(format!(
-                            "  {} = call ptr @lency_string_split(ptr {}, ptr {})",
-                            dst, self_ptr, delim_ptr
-                        ));
-                        emitter.mark_temp(dst, ValueType::Ptr);
-                        continue;
-                    }
-                    if member_name == "format" {
-                        if parsed_args.len() != 1 {
-                            bail!(
-                                "invalid call arity for member '{}': expected 1, got {}",
-                                member_name,
-                                parsed_args.len()
-                            );
-                        }
-                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                        let (args_repr, args_ty) = emitter.emit_operand(parsed_args[0].trim())?;
-                        let (args_ptr, _) = emitter.ensure_ptr(args_repr, args_ty);
-                        emitter.note_extern_func(
-                            "lency_string_format",
-                            vec![ValueType::Ptr, ValueType::Ptr],
-                            ValueType::Ptr,
-                        )?;
-                        emitter.push(format!(
-                            "  {} = call ptr @lency_string_format(ptr {}, ptr {})",
-                            dst, self_ptr, args_ptr
-                        ));
-                        emitter.mark_temp(dst, ValueType::Ptr);
+                        emitter.mark_temp(dst, intrinsic_ret_ty);
                         continue;
                     }
                     // Generic member-call fallback: `obj.member(a, b)` => `member(obj, a, b)`.
