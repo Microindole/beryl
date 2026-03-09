@@ -36,6 +36,7 @@ impl Resolver {
         var source = this.sanitize_source_for_bootstrap_parser(source_res.unwrap())
         var parser = make_parser(source)
         parser.signature_only = true
+        parser.suppress_error_output = true
         var program = parser.parse_program()
         // parser 允许错误恢复；即使有错误也尽量提取可识别的声明签名。
         this.preload_imported_declarations(program, module_path)

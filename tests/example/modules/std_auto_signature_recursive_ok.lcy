@@ -1,0 +1,13 @@
+// tests/example/modules/std_auto_signature_recursive_ok.lcy
+// Ensure `import std.assert` recursively brings std.str signatures (contains/len).
+
+import std.assert
+
+int main() {
+    var ok = contains("abc", "b")
+    if !ok {
+        return 1
+    }
+    assert_eq(3, len("abc"), "recursive std import should expose len")
+    return 0
+}

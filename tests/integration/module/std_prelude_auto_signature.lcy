@@ -1,0 +1,10 @@
+import std.assert
+
+int main() {
+    var ok = contains("abc", "b")
+    if !ok {
+        return 1
+    }
+    assert_eq(3, len("abc"), "len from recursive std import should be available")
+    return 0
+}

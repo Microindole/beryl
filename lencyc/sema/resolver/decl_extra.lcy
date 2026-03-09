@@ -94,43 +94,6 @@ impl Resolver {
         }
     }
 
-    void preload_std_function(string name, int return_ty, Vec<int> param_tys) {
-        if !this.table.resolve(name) {
-            this.table.define(name)
-        }
-        if this.lookup_builtin_arity(name) < 0 {
-            this.preload_builtin_arity(name, param_tys.len())
-        }
-        if this.lookup_user_function_arity(name) < 0 {
-            var param_ty_names = vec![]
-            var i = 0
-            while i < param_tys.len() {
-                param_ty_names.push(this.type_to_string(param_tys[i]))
-                i = i + 1
-            }
-            this.function_signatures.push(
-                make_function_signature(name, return_ty, param_tys, this.type_to_string(return_ty), param_ty_names, "")
-            )
-        }
-    }
-
-    void preload_std_core_symbols() {
-        if !this.table.resolve("Result") {
-            this.table.define("Result")
-        }
-        this.preload_enum_type_name("Result")
-        if !this.table.resolve("Ok") {
-            this.table.define("Ok")
-        }
-        if !this.table.resolve("Err") {
-            this.table.define("Err")
-        }
-        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()], vec!["unknown"])
-        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()], vec!["unknown"])
-        this.preload_std_function("print", TYPE_VOID(), vec![TYPE_UNKNOWN()])
-        this.preload_std_function("len", TYPE_INT(), vec![TYPE_UNKNOWN()])
-    }
-
     bool try_resolve_std_import_decl(Decl decl) {
         if decl.params.len() < 2 {
             return false
@@ -142,9 +105,6 @@ impl Resolver {
         if module_path == "" {
             this.error("std import module file not found: " + this.import_path_join(decl.params, "."))
             return true
-        }
-        if decl.params[1] == "core" {
-            this.preload_std_core_symbols()
         }
         // std 模块统一通过模块文件自动导入签名（含递归 import std.*）。
         this.preload_std_module_symbols_auto(module_path, vec![])
