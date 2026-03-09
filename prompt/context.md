@@ -21,10 +21,10 @@
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
-  - TODO: 扩展真正可空类型（如 `int?`）语义与更完整控制流返回分析。
+  - TODO: 扩展完整可空类型系统（当前已接入 primitive `int?/string?/bool?/float?` 签名语义，自定义类型可空仍未接入）。
   - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
   - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
-  - TODO: `std.*` 其余模块导入与符号导入仍未接入（当前仅白名单 `core/str/fs`）。
+  - TODO: `std.*` 全量符号导入仍未完成（当前已支持模块文件存在即导入 + `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载）。
 - 后端：
   - Rust：AST -> LLVM IR -> 可执行链路成熟。
   - Lency：`AST/LIR` 最小发射 + Rust `.lir` backend 冒烟，仍有子集约束。
@@ -88,9 +88,10 @@
 - AST printer 的 expr 分派已完成 Visitor 试点，作为“按边界引入模式”的低风险路径；暂不全量迁移 resolver。
 - enum 类型流已扩展到函数返回、`match` 中间表达式与赋值链路，并补充负例回归（跨 enum 赋值拦截）。
 - import 语义第一版已接入：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）。
-- `std.*` 导入白名单第一版已接入：`std.core/std.str/std.fs` 可做符号预加载。
+- `std.*` 导入已从白名单阻塞改为“模块文件存在即可导入”，并已接入 `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载。
 - `null` 最小语义已接入 lexer/parser/resolver，`Result` builtin enum（`Ok/Err`）语义已接入。
-- Rust LIR backend 已支持 `get %x.to_string` 最小 lowering，非 `to_string` 成员仍未覆盖。
+- primitive nullable 签名语义已接入（`int?/string?/bool?/float?`），并补齐自举正负例回归。
+- Rust LIR backend member lowering 已扩展到 `to_string/len/trim`，并打通 `call(get ...)` 无参链路。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

@@ -165,6 +165,49 @@ impl Resolver {
         this.preload_std_function("assert_eq_str", TYPE_VOID(), vec![TYPE_STRING(), TYPE_STRING(), TYPE_STRING()])
     }
 
+    void preload_std_collections_symbols_minimal() {
+        // FIXME: collections 含大量泛型/Vec<T> 语义，当前仅预加载常用函数的最小签名。
+        this.preload_std_function("find_index_int", TYPE_INT(), vec![TYPE_UNKNOWN(), TYPE_INT()])
+        this.preload_std_function("find_index_string", TYPE_INT(), vec![TYPE_UNKNOWN(), TYPE_STRING()])
+        this.preload_std_function("range", TYPE_UNKNOWN(), vec![TYPE_INT(), TYPE_INT()])
+        this.preload_std_function("vec_contains_int", TYPE_BOOL(), vec![TYPE_UNKNOWN(), TYPE_INT()])
+        this.preload_std_function("vec_contains_string", TYPE_BOOL(), vec![TYPE_UNKNOWN(), TYPE_STRING()])
+        this.preload_std_function("vec_sum", TYPE_INT(), vec![TYPE_UNKNOWN()])
+        this.preload_std_function("vec_max", TYPE_INT(), vec![TYPE_UNKNOWN()])
+        this.preload_std_function("vec_min", TYPE_INT(), vec![TYPE_UNKNOWN()])
+        this.preload_std_function("reverse", TYPE_VOID(), vec![TYPE_UNKNOWN()])
+        this.preload_std_function("last", TYPE_UNKNOWN(), vec![TYPE_UNKNOWN()])
+    }
+
+    void preload_std_iterator_symbols_minimal() {
+        // FIXME: iterator 涉及 trait/generic，当前仅保留 vec_iter 最小签名。
+        this.preload_std_function("vec_iter", TYPE_UNKNOWN(), vec![TYPE_UNKNOWN()])
+    }
+
+    void preload_std_option_symbols_minimal() {
+        this.preload_std_function("option_int_to_string", TYPE_STRING(), vec![TYPE_NULLABLE_INT()])
+        this.preload_std_function("option_string_to_string", TYPE_STRING(), vec![TYPE_NULLABLE_STRING()])
+    }
+
+    void preload_std_result_symbols_minimal() {
+        this.preload_std_function("result_to_string", TYPE_STRING(), vec![TYPE_UNKNOWN()])
+    }
+
+    void preload_std_prelude_symbols_minimal() {
+        this.preload_std_core_symbols()
+        this.preload_std_str_symbols()
+        this.preload_std_fs_symbols()
+        this.preload_std_convert_symbols()
+        this.preload_std_math_symbols_minimal()
+        this.preload_std_char_symbols_minimal()
+        this.preload_std_io_symbols_minimal()
+        this.preload_std_assert_symbols_minimal()
+        this.preload_std_collections_symbols_minimal()
+        this.preload_std_iterator_symbols_minimal()
+        this.preload_std_option_symbols_minimal()
+        this.preload_std_result_symbols_minimal()
+    }
+
     bool try_resolve_std_import_decl(Decl decl) {
         if decl.params.len() < 2 {
             return false
@@ -209,8 +252,28 @@ impl Resolver {
             this.preload_std_assert_symbols_minimal()
             return true
         }
+        if decl.params[1] == "collections" {
+            this.preload_std_collections_symbols_minimal()
+            return true
+        }
+        if decl.params[1] == "iterator" {
+            this.preload_std_iterator_symbols_minimal()
+            return true
+        }
+        if decl.params[1] == "option" {
+            this.preload_std_option_symbols_minimal()
+            return true
+        }
+        if decl.params[1] == "result" {
+            this.preload_std_result_symbols_minimal()
+            return true
+        }
+        if decl.params[1] == "prelude" {
+            this.preload_std_prelude_symbols_minimal()
+            return true
+        }
         // std 模块文件存在则允许导入，避免白名单阻塞。
-        // FIXME: collections/iterator/option/result/prelude 等模块仍未完成完整符号导入。
+        // TODO: std 剩余模块的符号签名收敛到“自动提取 + 完整类型映射”，替代人工最小预加载。
         return true
     }
 

@@ -99,6 +99,8 @@ string src_resolver_import_module_missing_bad() { return "import tests.example.m
 string src_resolver_std_core_result_match_ok() { return "import std.core\nResult make_ok() {\n  return Ok(1)\n}\nvar r = make_ok()\nvar code = match (r) {\n  Ok(v) => v,\n  Err(e) => 0\n}\nreturn code"; }
 string src_resolver_std_str_contains_ok() { return "import std.str\nvar ok = contains(\"abc\", \"b\")\nif ok {\n  return 1\n}\nreturn 0"; }
 string src_resolver_std_convert_ok() { return "import std.convert\nvar s = bool_to_string(true)\nif int_to_bool(1) {\n  return 1\n}\nreturn 0"; }
+string src_resolver_std_option_ok() { return "import std.option\nvar s = option_int_to_string(null)\nreturn 0"; }
+string src_resolver_std_prelude_ok() { return "import std.prelude\nvar s = bool_to_string(true)\nif int_to_bool(1) {\n  return 1\n}\nreturn 0"; }
 string src_resolver_std_unknown_module_bad() { return "import std.missing\nvar x = 1\nreturn x"; }
 string src_parser_enum_decl_program() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar x = 1\nreturn x"; }
 string src_resolver_enum_duplicate_variant_bad() { return "enum Status {\n  Idle,\n  Idle\n}\nvar x = 1\nreturn x"; }

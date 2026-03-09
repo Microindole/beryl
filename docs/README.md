@@ -59,9 +59,10 @@ Lency 当前是双链路并行：
 - Sema: 已支持 `null` 最小语义（字面量 + 基础类型约束检查）。
 - Sema: 已支持 enum 类型流扩展到函数返回、`match` 中间表达式与赋值链路。
 - Sema: import 语义第一版已支持非 `std.*` 模块文件加载与声明符号导入。
-- Sema: `std.*` 导入白名单第一版已支持 `std.core/std.str/std.fs` 符号预加载。
+- Sema: `std.*` 已支持“模块文件存在即导入”，并接入 `std.core/std.str/std.fs/std.convert/std.math/std.char/std.io/std.assert/std.collections/std.iterator/std.option/std.result/std.prelude` 最小符号预加载。
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
-- Backend: Rust LIR backend 已支持 `get %x.to_string` 的最小 lowering。
+- Sema: 已支持 primitive nullable 签名语义（`int?/string?/bool?/float?`）及对应回归。
+- Backend: Rust LIR backend member lowering 已支持 `get %x.to_string/.len/.trim`，并打通 `call(get ...)` 无参链路。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
 - Tooling: 规范入口统一为 `cargo run -p xtask -- check-rust` 与 `cargo run -p xtask -- check-lency`（平台脚本仅为包装）。
 
