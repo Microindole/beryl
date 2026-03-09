@@ -144,6 +144,15 @@ int main() {
     if !expect_shared_resolve_error(src_resolver_type_logical_bad(), "logical type mismatch negative") {
         return 1
     }
+    if !expect_shared_resolve_error(src_resolver_null_assignment_bad(), "null assignment mismatch negative") {
+        return 1
+    }
+    if !expect_shared_resolve_error(src_resolver_null_arithmetic_bad(), "null arithmetic mismatch negative") {
+        return 1
+    }
+    if !expect_shared_resolve_success(src_resolver_null_equality_ok(), "null equality positive") {
+        return 1
+    }
 
     print("Step 17: User function call arity resolution tests...\n")
     if !expect_shared_resolve_success(src_resolver_user_function_arity_ok(), "user function arity positive") {

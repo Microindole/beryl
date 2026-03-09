@@ -65,6 +65,20 @@ impl Resolver {
         this.preload_builtin_type("bool_to_string", TYPE_UNKNOWN())
         this.preload_builtin_type("int_to_bool", TYPE_BOOL())
     }
+    void preload_builtin_result_enum() {
+        if !this.table.resolve("Result") {
+            this.table.define("Result")
+        }
+        this.preload_enum_type_name("Result")
+        if !this.table.resolve("Ok") {
+            this.table.define("Ok")
+        }
+        if !this.table.resolve("Err") {
+            this.table.define("Err")
+        }
+        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()])
+        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()])
+    }
     int lookup_builtin_type(string name) {
         var i = 0
         while i < this.builtin_types.len() {
@@ -302,11 +316,17 @@ impl Resolver {
         if ty == TYPE_VOID() {
             return "void"
         }
+        if ty == TYPE_NULL() {
+            return "null"
+        }
         return "unknown"
     }
     bool types_match_or_unknown(int left, int right) {
         if left == TYPE_UNKNOWN() || right == TYPE_UNKNOWN() {
             return true
+        }
+        if left == TYPE_NULL() || right == TYPE_NULL() {
+            return left == right
         }
         return left == right
     }

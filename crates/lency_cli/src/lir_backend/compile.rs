@@ -248,9 +248,28 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
             }
 
             if let Some(rest) = rhs.strip_prefix("get ") {
-                let _ = rest;
-                // FIXME: Member access lowering (`get obj.field`) is not implemented in LLVM backend yet.
-                bail!("unsupported get in minimal LIR backend: {}", line);
+                let (obj_raw, member_name) = rest
+                    .split_once('.')
+                    .ok_or_else(|| anyhow!("invalid get instruction: {}", line))?;
+                let obj_name = obj_raw.trim();
+                let member_name = member_name.trim();
+                let (obj_repr, obj_ty) = emitter.emit_operand(obj_name)?;
+                if member_name == "to_string" {
+                    let (arg_repr, _) = emitter.ensure_i64(obj_repr, obj_ty);
+                    emitter.note_extern_func(
+                        "lency_int_to_string",
+                        vec![ValueType::I64],
+                        ValueType::Ptr,
+                    )?;
+                    emitter.push(format!(
+                        "  {} = call ptr @lency_int_to_string(i64 {})",
+                        dst, arg_repr
+                    ));
+                    emitter.mark_temp(dst, ValueType::Ptr);
+                    continue;
+                }
+                // FIXME: 非 to_string 的成员访问 lowering 仍未实现。
+                bail!("unsupported get member in minimal LIR backend: {}", line);
             }
 
             let parts = rhs.split_whitespace().collect::<Vec<_>>();

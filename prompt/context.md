@@ -10,7 +10,7 @@
 - Rust 主编译器（`crates/`）源码文件数：175。
 - Lency 自举编译器（`lencyc/`）源码文件数：26。
 - Rust 集成测试文件数（`tests/integration/`）：74。
-- Lency 示例测试文件数（`tests/example/`）：24（已按 `lir/runtime/parser/modules/selfhost` 分层）。
+- Lency 示例测试文件数（`tests/example/`）：25（已按 `lir/runtime/parser/modules/selfhost` 分层）。
 - 当前判断：`lencyc` 已打通最小闭环，但能力远未接近 Rust 主链路；此前“~98% 准备度”判定失真，已废弃。
 
 ## 2. 能力对照（Rust vs Lency 自举）
@@ -21,10 +21,10 @@
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
-  - TODO: 扩展 nullable/result 语义与更完整控制流返回分析。
+  - TODO: 扩展真正可空类型（如 `int?`）语义与更完整控制流返回分析。
   - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
   - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
-  - TODO: `std.*` 模块导入仍为 alias-only，待 parser 覆盖标准库语法子集后再放开符号导入。
+  - TODO: `std.*` 其余模块导入与符号导入仍未接入（当前仅白名单 `core/str/fs`）。
 - 后端：
   - Rust：AST -> LLVM IR -> 可执行链路成熟。
   - Lency：`AST/LIR` 最小发射 + Rust `.lir` backend 冒烟，仍有子集约束。
@@ -88,6 +88,9 @@
 - AST printer 的 expr 分派已完成 Visitor 试点，作为“按边界引入模式”的低风险路径；暂不全量迁移 resolver。
 - enum 类型流已扩展到函数返回、`match` 中间表达式与赋值链路，并补充负例回归（跨 enum 赋值拦截）。
 - import 语义第一版已接入：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）。
+- `std.*` 导入白名单第一版已接入：`std.core/std.str/std.fs` 可做符号预加载。
+- `null` 最小语义已接入 lexer/parser/resolver，`Result` builtin enum（`Ok/Err`）语义已接入。
+- Rust LIR backend 已支持 `get %x.to_string` 最小 lowering，非 `to_string` 成员仍未覆盖。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

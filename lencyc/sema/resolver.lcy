@@ -75,6 +75,7 @@ int TYPE_BOOL() { return 2; }
 int TYPE_STRING() { return 3; }
 int TYPE_FLOAT() { return 4; }
 int TYPE_VOID() { return 5; }
+int TYPE_NULL() { return 6; }
 BuiltinType make_builtin_type(string name, int ty) {
     return BuiltinType {
         name: name,
@@ -136,6 +137,7 @@ Resolver make_resolver() {
     resolver.preload_prelude_symbols()
     resolver.preload_builtin_arities()
     resolver.preload_builtin_types()
+    resolver.preload_builtin_result_enum()
     return resolver
 }
 ResolveResult resolve_program(Program program) {

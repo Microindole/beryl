@@ -88,6 +88,72 @@ impl Resolver {
         }
     }
 
+    void preload_std_function(string name, int return_ty, Vec<int> param_tys) {
+        if !this.table.resolve(name) {
+            this.table.define(name)
+        }
+        if this.lookup_builtin_arity(name) < 0 {
+            this.preload_builtin_arity(name, param_tys.len())
+        }
+        if this.lookup_user_function_arity(name) < 0 {
+            this.function_signatures.push(
+                make_function_signature(name, return_ty, param_tys, "")
+            )
+        }
+    }
+
+    void preload_std_core_symbols() {
+        if !this.table.resolve("Result") {
+            this.table.define("Result")
+        }
+        this.preload_enum_type_name("Result")
+        if !this.table.resolve("Ok") {
+            this.table.define("Ok")
+        }
+        if !this.table.resolve("Err") {
+            this.table.define("Err")
+        }
+        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()])
+        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()])
+        this.preload_std_function("print", TYPE_VOID(), vec![TYPE_UNKNOWN()])
+        this.preload_std_function("len", TYPE_INT(), vec![TYPE_UNKNOWN()])
+    }
+
+    void preload_std_str_symbols() {
+        this.preload_std_function("contains", TYPE_BOOL(), vec![TYPE_STRING(), TYPE_STRING()])
+    }
+
+    void preload_std_fs_symbols() {
+        this.preload_std_function("file_exists", TYPE_BOOL(), vec![TYPE_STRING()])
+        this.preload_std_function("is_dir", TYPE_BOOL(), vec![TYPE_STRING()])
+        this.preload_std_function("read_to_string", TYPE_UNKNOWN(), vec![TYPE_STRING()])
+        this.preload_std_function("write_string", TYPE_UNKNOWN(), vec![TYPE_STRING(), TYPE_STRING()])
+    }
+
+    bool try_resolve_std_import_decl(Decl decl) {
+        if decl.params.len() < 2 {
+            return false
+        }
+        if decl.params[0] != "std" {
+            return false
+        }
+        if decl.params[1] == "core" {
+            this.preload_std_core_symbols()
+            return true
+        }
+        if decl.params[1] == "str" {
+            this.preload_std_str_symbols()
+            return true
+        }
+        if decl.params[1] == "fs" {
+            this.preload_std_fs_symbols()
+            return true
+        }
+        // FIXME: std 其它模块仍未接入自举 import 符号导入白名单。
+        this.error("unsupported std import module: " + this.import_path_join(decl.params, "."))
+        return true
+    }
+
     void resolve_import_decl(Decl decl) {
         if decl.params.len() == 0 {
             this.error("empty import path")
@@ -100,8 +166,7 @@ impl Resolver {
         }
         this.table.define(alias)
 
-        // FIXME: std 模块当前包含超出自举 parser 子集的语法，暂维持 alias-only 绑定策略。
-        if decl.params[0] == "std" {
+        if this.try_resolve_std_import_decl(decl) {
             return
         }
 

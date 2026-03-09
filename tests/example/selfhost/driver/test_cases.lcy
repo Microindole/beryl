@@ -60,6 +60,9 @@ string src_resolver_type_consistency_ok() { return "var n = 1\nn = n + 2\nvar fl
 string src_resolver_type_assignment_bad() { return "var n = 1\nn = true"; }
 string src_resolver_type_arithmetic_bad() { return "var n = 1\nvar s = \"x\"\nvar y = n + s"; }
 string src_resolver_type_logical_bad() { return "var n = 1\nvar bad = n && true"; }
+string src_resolver_null_assignment_bad() { return "var n = 1\nn = null"; }
+string src_resolver_null_arithmetic_bad() { return "var x = null\nvar y = x + 1\nreturn 0"; }
+string src_resolver_null_equality_ok() { return "var x = null\nvar y = (x == null)\nreturn 0"; }
 string src_resolver_user_function_arity_ok() { return "var x = add(1, 2)\nint add(int a, int b) {\n  return a + b\n}\nreturn x"; }
 string src_resolver_user_function_arity_bad() { return "int add(int a, int b) {\n  return a + b\n}\nvar x = add(1)\nreturn x"; }
 string src_resolver_user_function_type_ok() { return "var x = add(1, 2)\nint add(int a, int b) {\n  return a + b\n}\nreturn x"; }
@@ -90,6 +93,9 @@ string src_resolver_extern_call_ok() { return "extern int strlen(string s)\nvar 
 string src_resolver_extern_call_arity_bad() { return "extern int strlen(string s)\nvar n = strlen()\nreturn n"; }
 string src_resolver_import_module_symbol_ok() { return "import tests.example.modules.resolver_import_symbols\nvar x = inc(1)\nvar m = make_mode()\nvar code = match (m) {\n  A => 0,\n  B => 1\n}\nreturn x + code"; }
 string src_resolver_import_module_missing_bad() { return "import tests.example.modules.missing_symbols\nvar x = 1\nreturn x"; }
+string src_resolver_std_core_result_match_ok() { return "import std.core\nResult make_ok() {\n  return Ok(1)\n}\nvar r = make_ok()\nvar code = match (r) {\n  Ok(v) => v,\n  Err(e) => 0\n}\nreturn code"; }
+string src_resolver_std_str_contains_ok() { return "import std.str\nvar ok = contains(\"abc\", \"b\")\nif ok {\n  return 1\n}\nreturn 0"; }
+string src_resolver_std_unknown_module_bad() { return "import std.math\nvar x = 1\nreturn x"; }
 string src_parser_enum_decl_program() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar x = 1\nreturn x"; }
 string src_resolver_enum_duplicate_variant_bad() { return "enum Status {\n  Idle,\n  Idle\n}\nvar x = 1\nreturn x"; }
 string src_resolver_enum_match_exhaustive_ok() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar s = Running()\nvar code = match (s) {\n  Idle => 0,\n  Running => 1,\n  Done => 2\n}\nreturn code"; }

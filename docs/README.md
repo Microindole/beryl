@@ -45,8 +45,8 @@ Lency 当前是双链路并行：
 
 ### 自举阶段能力快照（2026-03-09）
 
-- Lexer: 已支持 `int/float/scientific/string/char` 字面量。
-- Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入 `function/struct/impl/import/extern/enum` 声明子集。
+- Lexer: 已支持 `int/float/scientific/string/char/null` 字面量。
+- Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入 `function/struct/impl/import/extern/enum/match` 声明与表达式子集。
 - Sema: 已支持最小 name resolution（undefined/duplicate/out-of-scope/shadowing）。
 - Sema: 已支持 builtin 调用参数个数校验（arity）。
 - Sema: 已支持用户函数最小 arity 校验（含先调用后声明）。
@@ -55,9 +55,13 @@ Lency 当前是双链路并行：
 - Sema: 已支持最小类型一致性检查（`int/bool/string/float`，覆盖赋值/一元/二元/逻辑）。
 - Sema: 已支持 `enum + match` 语义第一版（重复 pattern、未知 variant、穷尽性检查）。
 - Sema: 已支持 `match` payload 绑定第一版（`Text(v)` / `Pair(a,b)`），绑定变量参与 arm 内类型检查。
+- Sema: 已支持 `Result` builtin enum（`Ok/Err`）的构造与 `match` 校验。
+- Sema: 已支持 `null` 最小语义（字面量 + 基础类型约束检查）。
 - Sema: 已支持 enum 类型流扩展到函数返回、`match` 中间表达式与赋值链路。
 - Sema: import 语义第一版已支持非 `std.*` 模块文件加载与声明符号导入。
+- Sema: `std.*` 导入白名单第一版已支持 `std.core/std.str/std.fs` 符号预加载。
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
+- Backend: Rust LIR backend 已支持 `get %x.to_string` 的最小 lowering。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
 - Tooling: 规范入口统一为 `cargo run -p xtask -- check-rust` 与 `cargo run -p xtask -- check-lency`（平台脚本仅为包装）。
 

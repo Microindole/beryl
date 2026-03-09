@@ -95,3 +95,21 @@ entry:
     assert!(ir.contains("declare ptr @lency_int_to_string(i64)"));
     assert!(ir.contains("call ptr @lency_int_to_string(i64 7)"));
 }
+
+#[test]
+fn test_compile_lir_get_to_string_lowering() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  var %x = 7
+  %t0 = get %x.to_string
+  ret %t0
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare ptr @lency_int_to_string(i64)"));
+    assert!(ir.contains("call ptr @lency_int_to_string(i64"));
+}
