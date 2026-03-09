@@ -112,13 +112,16 @@ bool decl_kind_matches_stmt_kind(int decl_kind, int stmt_kind) {
         (decl_kind == DECL_ENUM() && stmt_kind == STMT_ENUM())
 }
 
+bool has_decl_payload_mismatch(Stmt stmt) {
+    return is_declaration_stmt(stmt) && !decl_kind_matches_stmt_kind(stmt.decl.kind, stmt.kind)
+}
+
 Decl stmt_to_decl(Stmt stmt) {
     if !is_declaration_stmt(stmt) {
         return make_decl_base(DECL_UNKNOWN())
     }
-    if decl_kind_matches_stmt_kind(stmt.decl.kind, stmt.kind) {
+    if !has_decl_payload_mismatch(stmt) {
         return stmt.decl
     }
-    // TODO: 迁移过渡期若遇到声明 kind 与 payload kind 不一致，保留 Unknown 并给调用侧兜底诊断。
     return make_decl_base(DECL_UNKNOWN())
 }

@@ -90,7 +90,16 @@ impl Parser {
             var stmt = this.declaration()
             statements.push(stmt)
             if is_declaration_stmt(stmt) {
-                decls.push(stmt_to_decl(stmt))
+                if has_decl_payload_mismatch(stmt) {
+                    this.error(
+                        "internal declaration payload mismatch: stmt kind " +
+                        int_to_string(stmt.kind) +
+                        ", decl kind " +
+                        int_to_string(stmt.decl.kind)
+                    )
+                } else {
+                    decls.push(stmt_to_decl(stmt))
+                }
             }
             if this.error_count > before_error_count {
                 this.synchronize()

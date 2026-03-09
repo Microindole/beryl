@@ -88,6 +88,24 @@ int main() {
         return 1
     }
     print("Resolver defensive test passed: DECL_UNKNOWN preload reports error.\n")
+    var mismatch_stmt = make_stmt_function(
+        make_token(T_IDENTIFIER(), "foo", 1, 1),
+        make_type_ref(TYPE_UNKNOWN(), "int"),
+        vec![],
+        vec![],
+        vec![]
+    )
+    mismatch_stmt.decl.kind = DECL_STRUCT()
+    if !has_decl_payload_mismatch(mismatch_stmt) {
+        print("Decl payload mismatch defensive test failed: mismatch should be detected.\n")
+        return 1
+    }
+    var mismatch_decl = stmt_to_decl(mismatch_stmt)
+    if mismatch_decl.kind != DECL_UNKNOWN() {
+        print("Decl payload mismatch defensive test failed: stmt_to_decl should return DECL_UNKNOWN.\n")
+        return 1
+    }
+    print("Decl payload mismatch defensive test passed.\n")
 
     print("Step 12: Name resolution negative tests...\n")
     if !expect_shared_resolve_error(src_resolver_undefined_in_initializer(), "undefined variable in initializer") {

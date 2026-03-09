@@ -44,19 +44,7 @@ fn is_docs_change(path: &str) -> bool {
         || path.ends_with(".txt")
 }
 
-fn detect_check_scope_from_git_status() -> Result<CheckScope> {
-    let output = Command::new("git")
-        .args(["status", "--porcelain"])
-        .output()
-        .context("failed to run: git status --porcelain")?;
-    if !output.status.success() {
-        bail!(
-            "git status --porcelain failed with exit code {:?}",
-            output.status.code()
-        );
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
+fn detect_check_scope_from_status(stdout: &str) -> CheckScope {
     let mut has_rust = false;
     let mut has_lency = false;
     let mut has_docs = false;
@@ -84,7 +72,7 @@ fn detect_check_scope_from_git_status() -> Result<CheckScope> {
         }
     }
 
-    Ok(match (has_rust, has_lency) {
+    match (has_rust, has_lency) {
         (true, true) => CheckScope::Both,
         (true, false) => CheckScope::RustOnly,
         (false, true) => CheckScope::LencyOnly,
@@ -95,7 +83,23 @@ fn detect_check_scope_from_git_status() -> Result<CheckScope> {
                 CheckScope::None
             }
         }
-    })
+    }
+}
+
+fn detect_check_scope_from_git_status() -> Result<CheckScope> {
+    let output = Command::new("git")
+        .args(["status", "--porcelain"])
+        .output()
+        .context("failed to run: git status --porcelain")?;
+    if !output.status.success() {
+        bail!(
+            "git status --porcelain failed with exit code {:?}",
+            output.status.code()
+        );
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(detect_check_scope_from_status(&stdout))
 }
 
 pub(crate) fn auto_check() -> Result<()> {
@@ -121,5 +125,28 @@ pub(crate) fn auto_check() -> Result<()> {
             println!("No Rust/Lency scoped changes detected, fallback to check-lency.");
             check_lency()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{detect_check_scope_from_status, CheckScope};
+
+    #[test]
+    fn scope_docs_only() {
+        let status = " M prompt/context.md\n?? docs/notes.md\n";
+        assert_eq!(detect_check_scope_from_status(status), CheckScope::DocsOnly);
+    }
+
+    #[test]
+    fn scope_none_for_non_docs_misc_file() {
+        let status = " M README\n";
+        assert_eq!(detect_check_scope_from_status(status), CheckScope::None);
+    }
+
+    #[test]
+    fn scope_both_when_rust_and_lency() {
+        let status = " M crates/lency_cli/src/main.rs\n M lencyc/sema/resolver.lcy\n";
+        assert_eq!(detect_check_scope_from_status(status), CheckScope::Both);
     }
 }
