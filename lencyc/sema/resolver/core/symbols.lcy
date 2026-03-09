@@ -150,37 +150,37 @@ impl Resolver {
     }
 
     int lookup_user_function_arity(string name) {
-        var i = 0
-        while i < this.function_signatures.len() {
+        var i = this.function_signatures.len() - 1
+        while i >= 0 {
             if this.function_signatures[i].name == name {
                 return this.function_signatures[i].param_tys.len()
             }
-            i = i + 1
+            i = i - 1
         }
         return -1
     }
 
     int lookup_user_function_return_type(string name) {
-        var i = 0
-        while i < this.function_signatures.len() {
+        var i = this.function_signatures.len() - 1
+        while i >= 0 {
             if this.function_signatures[i].name == name {
                 return this.function_signatures[i].return_ty
             }
-            i = i + 1
+            i = i - 1
         }
         return TYPE_UNKNOWN()
     }
 
     int lookup_user_function_param_type(string name, int arg_index) {
-        var i = 0
-        while i < this.function_signatures.len() {
+        var i = this.function_signatures.len() - 1
+        while i >= 0 {
             if this.function_signatures[i].name == name {
                 if arg_index < this.function_signatures[i].param_tys.len() {
                     return this.function_signatures[i].param_tys[arg_index]
                 }
                 return TYPE_UNKNOWN()
             }
-            i = i + 1
+            i = i - 1
         }
         return TYPE_UNKNOWN()
     }

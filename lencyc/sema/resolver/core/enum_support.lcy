@@ -22,51 +22,51 @@ impl Resolver {
     }
 
     int lookup_enum_constructor_arity(string variant_name) {
-        var i = 0
-        while i < this.enum_variant_signatures.len() {
+        var i = this.enum_variant_signatures.len() - 1
+        while i >= 0 {
             if this.enum_variant_signatures[i].variant_name == variant_name {
                 return this.enum_variant_signatures[i].payload_tys.len()
             }
-            i = i + 1
+            i = i - 1
         }
         return -1
     }
 
     int lookup_enum_constructor_param_type(string variant_name, int arg_index) {
-        var i = 0
-        while i < this.enum_variant_signatures.len() {
+        var i = this.enum_variant_signatures.len() - 1
+        while i >= 0 {
             if this.enum_variant_signatures[i].variant_name == variant_name {
                 if arg_index < this.enum_variant_signatures[i].payload_tys.len() {
                     return this.enum_variant_signatures[i].payload_tys[arg_index]
                 }
                 return TYPE_UNKNOWN()
             }
-            i = i + 1
+            i = i - 1
         }
         return TYPE_UNKNOWN()
     }
 
     string lookup_enum_constructor_param_type_name(string variant_name, int arg_index) {
-        var i = 0
-        while i < this.enum_variant_signatures.len() {
+        var i = this.enum_variant_signatures.len() - 1
+        while i >= 0 {
             if this.enum_variant_signatures[i].variant_name == variant_name {
                 if arg_index < this.enum_variant_signatures[i].payload_ty_names.len() {
                     return this.enum_variant_signatures[i].payload_ty_names[arg_index]
                 }
                 return ""
             }
-            i = i + 1
+            i = i - 1
         }
         return ""
     }
 
     string lookup_enum_constructor_name(string variant_name) {
-        var i = 0
-        while i < this.enum_variant_signatures.len() {
+        var i = this.enum_variant_signatures.len() - 1
+        while i >= 0 {
             if this.enum_variant_signatures[i].variant_name == variant_name {
                 return this.enum_variant_signatures[i].enum_name
             }
-            i = i + 1
+            i = i - 1
         }
         return ""
     }
@@ -83,12 +83,12 @@ impl Resolver {
     }
 
     bool is_enum_variant(string enum_name, string variant_name) {
-        var i = 0
-        while i < this.enum_variant_signatures.len() {
+        var i = this.enum_variant_signatures.len() - 1
+        while i >= 0 {
             if this.enum_variant_signatures[i].enum_name == enum_name && this.enum_variant_signatures[i].variant_name == variant_name {
                 return true
             }
-            i = i + 1
+            i = i - 1
         }
         return false
     }
@@ -120,7 +120,9 @@ impl Resolver {
         var i = 0
         while i < this.enum_variant_signatures.len() {
             var sig = this.enum_variant_signatures[i]
-            if sig.enum_name == enum_name && !this.contains_name(seen_variants, sig.variant_name) {
+            if sig.enum_name == enum_name &&
+                !this.contains_name(seen_variants, sig.variant_name) &&
+                !this.contains_name(missing, sig.variant_name) {
                 missing.push(sig.variant_name)
             }
             i = i + 1

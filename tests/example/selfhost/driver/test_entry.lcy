@@ -106,6 +106,32 @@ int main() {
         return 1
     }
     print("Decl payload mismatch defensive test passed.\n")
+    var sig_resolver = make_resolver()
+    sig_resolver.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()], vec!["unknown"])
+    sig_resolver.preload_enum_variant_signature("Result", "Ok", vec![TYPE_INT()], vec!["int"])
+    if sig_resolver.lookup_enum_constructor_param_type("Ok", 0) != TYPE_INT() {
+        print("Signature precedence test failed: latest enum payload type should win.\n")
+        return 1
+    }
+    if sig_resolver.lookup_enum_constructor_param_type_name("Ok", 0) != "int" {
+        print("Signature precedence test failed: latest enum payload type-name should win.\n")
+        return 1
+    }
+    sig_resolver.function_signatures.push(
+        make_function_signature("demo", TYPE_UNKNOWN(), vec![TYPE_UNKNOWN()], "unknown", vec!["unknown"], "")
+    )
+    sig_resolver.function_signatures.push(
+        make_function_signature("demo", TYPE_INT(), vec![TYPE_INT()], "int", vec!["int"], "")
+    )
+    if sig_resolver.lookup_user_function_return_type("demo") != TYPE_INT() {
+        print("Signature precedence test failed: latest function return type should win.\n")
+        return 1
+    }
+    if sig_resolver.lookup_user_function_param_type("demo", 0) != TYPE_INT() {
+        print("Signature precedence test failed: latest function param type should win.\n")
+        return 1
+    }
+    print("Signature precedence test passed.\n")
 
     print("Step 12: Name resolution negative tests...\n")
     if !expect_shared_resolve_error(src_resolver_undefined_in_initializer(), "undefined variable in initializer") {
