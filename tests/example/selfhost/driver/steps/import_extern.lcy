@@ -41,6 +41,21 @@ bool run_import_extern_declaration_tests() {
         print("Import wildcard AST shape mismatch.\n")
         return false
     }
+    var group_source = src_parser_import_group_program()
+    var group_parser = make_parser(group_source)
+    var group_program = group_parser.parse_program()
+    if group_parser.has_error {
+        print("Import group parse failed unexpectedly.\n")
+        return false
+    }
+    if group_program.statements.len() < 2 {
+        print("Import group AST size mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(group_program.statements[0]), "(import std.str)") || !contains(stmt_to_string(group_program.statements[1]), "(import std.convert)") {
+        print("Import group AST shape mismatch.\n")
+        return false
+    }
 
     var extern_source = src_parser_extern_decl_program()
     var extern_parser = make_parser(extern_source)
@@ -83,6 +98,9 @@ bool run_import_extern_declaration_tests() {
         return false
     }
     if !expect_shared_resolve_success(src_resolver_std_wildcard_ok(), "std.* wildcard import positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_std_group_import_ok(), "std.{...} grouped import positive") {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_non_std_wildcard_bad(), "non-std wildcard import negative") {

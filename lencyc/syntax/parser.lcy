@@ -19,6 +19,7 @@ struct Parser {
     int loop_depth
     bool signature_only
     bool suppress_error_output
+    Vec<Vec<string>> queued_import_paths
 }
 
 Parser make_parser(string source) {
@@ -31,7 +32,8 @@ Parser make_parser(string source) {
         error_count: 0,
         loop_depth: 0,
         signature_only: false,
-        suppress_error_output: false
+        suppress_error_output: false,
+        queued_import_paths: vec![]
     }
 }
 
@@ -87,7 +89,12 @@ impl Parser {
         
         while !this.is_at_end() {
             var before_error_count = this.error_count
-            var stmt = this.declaration()
+            var stmt = make_stmt_block(vec![])
+            if this.queued_import_paths.len() > 0 {
+                stmt = make_stmt_import(this.queued_import_paths.pop())
+            } else {
+                stmt = this.declaration()
+            }
             statements.push(stmt)
             if is_declaration_stmt(stmt) {
                 if has_decl_payload_mismatch(stmt) {

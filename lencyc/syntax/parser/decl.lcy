@@ -16,6 +16,16 @@ Vec<Stmt> empty_stmt_list() {
 }
 
 impl Parser {
+    Vec<string> clone_segments(Vec<string> source) {
+        var copied = vec![]
+        var i = 0
+        while i < source.len() {
+            copied.push(source[i])
+            i = i + 1
+        }
+        return copied
+    }
+
     void skip_block_body_tokens() {
         var depth = 1
         while depth > 0 && !this.is_at_end() {
@@ -179,6 +189,28 @@ impl Parser {
         this.consume(T_IDENTIFIER(), "Expect module path after 'import'.")
         path_segments.push(this.previous.lexeme)
         while this.match_token(T_DOT()) {
+            if this.match_token(T_LEFT_BRACE()) {
+                this.consume(T_IDENTIFIER(), "Expect identifier in grouped import.")
+                var first_segments = this.clone_segments(path_segments)
+                first_segments.push(this.previous.lexeme)
+                var tail_names = vec![]
+                while this.match_token(T_COMMA()) {
+                    this.consume(T_IDENTIFIER(), "Expect identifier in grouped import.")
+                    tail_names.push(this.previous.lexeme)
+                }
+                var t = tail_names.len() - 1
+                while t >= 0 {
+                    var queued_segments = this.clone_segments(path_segments)
+                    queued_segments.push(tail_names[t])
+                    this.queued_import_paths.push(queued_segments)
+                    t = t - 1
+                }
+                this.consume(T_RIGHT_BRACE(), "Expect '}' after grouped import list.")
+                if this.match_token(T_SEMICOLON()) {
+                    // no-op
+                }
+                return make_stmt_import(first_segments)
+            }
             if this.match_token(T_STAR()) {
                 path_segments.push("*")
                 break
