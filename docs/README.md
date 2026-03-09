@@ -37,13 +37,13 @@ int main() {
 
 ---
 
-## 实现状态（2026-03-08）
+## 实现状态（2026-03-09）
 
 Lency 当前是双链路并行：
 - Rust 主编译器链路：功能更完整，作为稳定构建与验证主体。
 - Lency 自举编译器链路（`lencyc/`）：按最小闭环持续补齐语法与语义能力。
 
-### 自举阶段能力快照（2026-03-08）
+### 自举阶段能力快照（2026-03-09）
 
 - Lexer: 已支持 `int/float/scientific/string/char` 字面量。
 - Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入 `function/struct/impl/import/extern/enum` 声明子集。
@@ -53,6 +53,10 @@ Lency 当前是双链路并行：
 - Sema: 已支持用户函数签名类型校验（参数类型 + 返回类型，基础内建类型 token）。
 - Sema: 已支持函数体最小 return 约束（禁止 `return` 空值，要求可达 value-return）。
 - Sema: 已支持最小类型一致性检查（`int/bool/string/float`，覆盖赋值/一元/二元/逻辑）。
+- Sema: 已支持 `enum + match` 语义第一版（重复 pattern、未知 variant、穷尽性检查）。
+- Sema: 已支持 `match` payload 绑定第一版（`Text(v)` / `Pair(a,b)`），绑定变量参与 arm 内类型检查。
+- Sema: 已支持 enum 类型流扩展到函数返回、`match` 中间表达式与赋值链路。
+- Sema: import 语义第一版已支持非 `std.*` 模块文件加载与声明符号导入。
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
 - Tooling: 规范入口统一为 `cargo run -p xtask -- check-rust` 与 `cargo run -p xtask -- check-lency`（平台脚本仅为包装）。
@@ -61,6 +65,7 @@ Lency 当前是双链路并行：
 
 - AST: 声明数据已从 `Stmt` 散落字段收敛为 `stmt.decl` payload，新增声明特性不再需要修改 `Stmt` 结构体字段列表。
 - Resolver: 声明语义路径已切到 `Decl` 视图处理，`resolve_stmt` 仅负责语句分派。
+- AST Printer: expr 打印分派已引入 Visitor 试点（低风险路径验证）。
 
 ### 当前主线
 

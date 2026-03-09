@@ -23,8 +23,8 @@
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
   - TODO: 扩展 nullable/result 语义与更完整控制流返回分析。
   - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
-  - TODO: enum 类型在复杂表达式/函数返回场景的类型流追踪仍不完整。
-  - TODO: `import` 当前仅做 alias 最小绑定，尚未做模块加载与符号导入规则。
+  - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
+  - TODO: `std.*` 模块导入仍为 alias-only，待 parser 覆盖标准库语法子集后再放开符号导入。
 - 后端：
   - Rust：AST -> LLVM IR -> 可执行链路成熟。
   - Lency：`AST/LIR` 最小发射 + Rust `.lir` backend 冒烟，仍有子集约束。
@@ -86,6 +86,8 @@
 - Step 29 已补齐 enum/match 语义正负例回归：穷尽性、重复 pattern、未知 variant、payload 构造器 arity/type。
 - `match` payload 绑定语义第一版已接入：支持 `Text(v)`/`Pair(a,b)`，绑定变量在 arm 内按 payload 类型参与类型检查。
 - AST printer 的 expr 分派已完成 Visitor 试点，作为“按边界引入模式”的低风险路径；暂不全量迁移 resolver。
+- enum 类型流已扩展到函数返回、`match` 中间表达式与赋值链路，并补充负例回归（跨 enum 赋值拦截）。
+- import 语义第一版已接入：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

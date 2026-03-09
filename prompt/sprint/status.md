@@ -93,13 +93,15 @@
 - [x] `match` payload 绑定语义第一版：支持 `Text(v)` / `Pair(a, b)` 形态，绑定变量在 arm 内参与类型检查
 - [x] Step 29 已补 payload 绑定回归：绑定正例、binder arity/type/duplicate 负例
 - [x] Visitor 试点：`AST printer(expr)` 已切换到 visitor 分派（低风险路径）
+- [x] enum 类型流追踪已扩展到函数返回、`match` 中间表达式与赋值链路（含负例拦截）
+- [x] import 语义第一版：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）
 
 未完成：
 - [ ] TODO: nullable/result 语义规则落地（不是 `unknown` 兜底）
-- [ ] TODO: import 模块加载与符号导入规则（当前仅 alias 绑定）
-- [ ] TODO: enum 变量跨复杂表达式/函数返回的类型流追踪（当前仅覆盖直接构造与变量引用链路）
+- [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）
 - [ ] TODO: `match` 嵌套/复杂模式解构（当前仅支持 variant + 一层 binder）
 - [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
+- [ ] TODO: `std.*` 模块导入仍为 alias-only（标准库语法超出当前自举 parser 子集）
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）
 - 前端语法能力：约 35%
@@ -162,6 +164,7 @@
 - FIXME: Rust `.lir` backend 仍有 call/member lowering 子集限制。
 - FIXME: 顶层声明已完成 payload 化与分层，但块内声明仍通过 `Stmt` 路径执行，后续需要评估“声明语句统一中间表示”以进一步收敛双轨分支。
 - FIXME: `stmt_to_decl` 当前对声明 kind 与 payload kind 不一致仍以 `DECL_UNKNOWN` 兜底，后续需补齐诊断上下文并评估 parser 阶段前置拦截。
+- FIXME: `std.*` 模块导入当前未启用符号导入，仅保留 alias 绑定；待 parser 覆盖标准库语法后放开。
 
 ## 7. 本次重构收尾结论（2026-03-09）
 - [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。

@@ -2,12 +2,93 @@
 // Extra declaration handlers split from resolver core to keep file size under meta limits.
 
 import std.core
+import std.fs
 import lencyc.syntax.ast
+import lencyc.syntax.parser
 import lencyc.sema.resolver
 
 impl Resolver {
+    string import_path_join(Vec<string> segments, string sep) {
+        var out = ""
+        var i = 0
+        while i < segments.len() {
+            out = out + segments[i]
+            if i + 1 < segments.len() {
+                out = out + sep
+            }
+            i = i + 1
+        }
+        return out
+    }
+
+    string resolve_import_module_file_path(Vec<string> path_segments) {
+        var rel = this.import_path_join(path_segments, "/")
+        var direct = rel + ".lcy"
+        if file_exists(direct) {
+            return direct
+        }
+        var lib_path = "lib/" + rel + ".lcy"
+        if file_exists(lib_path) {
+            return lib_path
+        }
+        return ""
+    }
+
+    void preload_imported_declarations(Program program, string module_path) {
+        var i = 0
+        while i < program.decls.len() {
+            var decl = program.decls[i]
+            if decl.kind == DECL_STRUCT() {
+                if !this.table.resolve(decl.name.lexeme) {
+                    this.table.define(decl.name.lexeme)
+                }
+            }
+            if decl.kind == DECL_ENUM() {
+                if !this.table.resolve(decl.name.lexeme) {
+                    this.table.define(decl.name.lexeme)
+                }
+                this.preload_enum_type_name(decl.name.lexeme)
+                var v = 0
+                while v < decl.enum_variants.len() {
+                    var variant = decl.enum_variants[v]
+                    if !this.table.resolve(variant.name) {
+                        this.table.define(variant.name)
+                    }
+                    var payload_tys = vec![]
+                    var p = 0
+                    while p < variant.payload_types.len() {
+                        payload_tys.push(this.resolve_signature_type_or_error(variant.payload_types[p]))
+                        p = p + 1
+                    }
+                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys)
+                    v = v + 1
+                }
+            }
+            if decl.kind == DECL_FUNCTION() || decl.kind == DECL_EXTERN() {
+                if !this.table.resolve(decl.name.lexeme) {
+                    this.table.define(decl.name.lexeme)
+                    this.preload_builtin_arity(decl.name.lexeme, decl.params.len())
+                    var param_tys = vec![]
+                    var k = 0
+                    while k < decl.param_types.len() {
+                        param_tys.push(this.resolve_signature_type_or_error(decl.param_types[k]))
+                        k = k + 1
+                    }
+                    this.function_signatures.push(
+                        make_function_signature(
+                            decl.name.lexeme,
+                            this.resolve_signature_type_or_error(decl.return_type),
+                            param_tys,
+                            this.resolve_signature_enum_name_or_empty(decl.return_type)
+                        )
+                    )
+                }
+            }
+            i = i + 1
+        }
+    }
+
     void resolve_import_decl(Decl decl) {
-        // TODO: import 语义当前只做最小绑定，不做模块加载/符号导入规则。
         if decl.params.len() == 0 {
             this.error("empty import path")
             return
@@ -18,6 +99,29 @@ impl Resolver {
             return
         }
         this.table.define(alias)
+
+        // FIXME: std 模块当前包含超出自举 parser 子集的语法，暂维持 alias-only 绑定策略。
+        if decl.params[0] == "std" {
+            return
+        }
+
+        var module_path = this.resolve_import_module_file_path(decl.params)
+        if module_path == "" {
+            this.error("import module file not found: " + this.import_path_join(decl.params, "."))
+            return
+        }
+        var source_res = read_to_string(module_path)
+        if source_res.is_err() {
+            this.error("import module read failed: " + module_path)
+            return
+        }
+        var parser = make_parser(source_res.unwrap())
+        var program = parser.parse_program()
+        if parser.has_error {
+            this.error("import module parse failed: " + module_path)
+            return
+        }
+        this.preload_imported_declarations(program, module_path)
     }
 
     void resolve_extern_decl(Decl decl) {
