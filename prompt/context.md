@@ -21,7 +21,7 @@
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
-  - TODO: 扩展完整可空类型系统（当前已接入 primitive `int?/string?/bool?/float?` 签名语义，自定义类型可空仍未接入）。
+  - TODO: 扩展完整可空类型系统（当前已接入 primitive `int?/string?/bool?/float?`，且自定义 `Type?` 已允许语法但仍是 `unknown` 兼容路径）。
   - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
   - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
   - TODO: `std.*` 全量符号导入仍未完成（当前已支持模块文件存在即导入 + `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载）。
@@ -91,7 +91,7 @@
 - `std.*` 导入已从白名单阻塞改为“模块文件存在即可导入”，并已接入 `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载。
 - `null` 最小语义已接入 lexer/parser/resolver，`Result` builtin enum（`Ok/Err`）语义已接入。
 - primitive nullable 签名语义已接入（`int?/string?/bool?/float?`），并补齐自举正负例回归。
-- Rust LIR backend member lowering 已扩展到 `to_string/len/trim`，并打通 `call(get ...)` 无参链路。
+- Rust LIR backend member lowering 已扩展到 `to_string/len/trim/substr/split/format`，并打通 `call(get ...)` 链路（仍是子集）。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

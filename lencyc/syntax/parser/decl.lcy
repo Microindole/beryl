@@ -11,14 +11,55 @@ struct ParsedParamList {
     Vec<TypeRef> types
 }
 
+Vec<Stmt> empty_stmt_list() {
+    return vec![]
+}
+
 impl Parser {
+    void skip_block_body_tokens() {
+        var depth = 1
+        while depth > 0 && !this.is_at_end() {
+            if this.match_token(T_LEFT_BRACE()) {
+                depth = depth + 1
+                continue
+            }
+            if this.match_token(T_RIGHT_BRACE()) {
+                depth = depth - 1
+                continue
+            }
+            this.advance()
+        }
+    }
+
+    void skip_generic_type_arguments_if_any() {
+        if !this.match_token(T_LESS()) {
+            return
+        }
+        var depth = 1
+        while depth > 0 && !this.is_at_end() {
+            if this.match_token(T_LESS()) {
+                depth = depth + 1
+                continue
+            }
+            if this.match_token(T_GREATER()) {
+                depth = depth - 1
+                continue
+            }
+            this.advance()
+        }
+    }
+
     TypeRef parse_signature_type_ref() {
         if this.is_signature_type_token(this.current.kind) {
             var kind = this.current.kind
             var name = this.current.lexeme
             this.advance()
+            this.skip_generic_type_arguments_if_any()
             if this.match_token(T_QUESTION()) {
                 name = name + "?"
+            }
+            if this.match_token(T_BANG()) {
+                name = name + "!"
             }
             return make_type_ref(kind, name)
         }
@@ -66,11 +107,17 @@ impl Parser {
     Stmt function_declaration(TypeRef return_type) {
         this.consume(T_IDENTIFIER(), "Expect function name.")
         var name = this.previous
+        this.skip_generic_type_arguments_if_any()
         this.consume(T_LEFT_PAREN(), "Expect '(' after function name.")
         var parsed_params = this.parse_signature_param_list()
         this.consume(T_RIGHT_PAREN(), "Expect ')' after parameters.")
         this.consume(T_LEFT_BRACE(), "Expect '{' before function body.")
-        var body = this.block()
+        var body = empty_stmt_list()
+        if this.signature_only {
+            this.skip_block_body_tokens()
+        } else {
+            body = this.block()
+        }
         return make_stmt_function(
             name,
             return_type,
@@ -83,6 +130,7 @@ impl Parser {
     Stmt struct_declaration() {
         this.consume(T_IDENTIFIER(), "Expect type name after 'struct'.")
         var name = this.previous
+        this.skip_generic_type_arguments_if_any()
         this.consume(T_LEFT_BRACE(), "Expect '{' after type name.")
         var fields = vec![]
         while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
@@ -105,6 +153,11 @@ impl Parser {
     Stmt impl_declaration() {
         this.consume(T_IDENTIFIER(), "Expect type name after 'impl'.")
         var name = this.previous
+        this.skip_generic_type_arguments_if_any()
+        if this.match_token(T_FOR()) {
+            var target_type = this.parse_signature_type_ref()
+            name = make_token(target_type.kind, target_type.name, this.previous.line, this.previous.column)
+        }
         this.consume(T_LEFT_BRACE(), "Expect '{' after impl target.")
         var members = vec![]
         while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
@@ -139,6 +192,7 @@ impl Parser {
         var return_type = this.parse_signature_type_ref()
         this.consume(T_IDENTIFIER(), "Expect function name after extern return type.")
         var name = this.previous
+        this.skip_generic_type_arguments_if_any()
         this.consume(T_LEFT_PAREN(), "Expect '(' after extern function name.")
         var parsed_params = this.parse_signature_param_list()
         this.consume(T_RIGHT_PAREN(), "Expect ')' after extern parameters.")
@@ -152,6 +206,7 @@ impl Parser {
     Stmt enum_declaration() {
         this.consume(T_IDENTIFIER(), "Expect EnumName after 'enum'.")
         var name = this.previous
+        this.skip_generic_type_arguments_if_any()
         this.consume(T_LEFT_BRACE(), "Expect '{' after EnumName.")
         var variants = vec![]
         var enum_variants = vec![]
@@ -180,6 +235,18 @@ impl Parser {
         return make_stmt_enum_with_variants(name, variants, enum_variants)
     }
 
+    Stmt trait_declaration() {
+        this.consume(T_IDENTIFIER(), "Expect trait name after 'trait'.")
+        this.skip_generic_type_arguments_if_any()
+        this.consume(T_LEFT_BRACE(), "Expect '{' after trait name.")
+        while !this.check(T_RIGHT_BRACE()) && !this.is_at_end() {
+            this.advance()
+        }
+        this.consume(T_RIGHT_BRACE(), "Expect '}' after trait body.")
+        // TODO: trait 暂未进入 AST 声明节点；当前仅在 std 导入路径做语法跳过。
+        return make_stmt_block(vec![])
+    }
+
     Stmt var_declaration(bool is_const) {
         this.consume(T_IDENTIFIER(), "Expect variable name.")
         var name = this.previous
@@ -200,6 +267,9 @@ impl Parser {
         }
         if this.match_token(T_ENUM()) {
             return this.enum_declaration()
+        }
+        if this.match_token(T_TRAIT()) {
+            return this.trait_declaration()
         }
         if this.match_token(T_STRUCT()) {
             return this.struct_declaration()

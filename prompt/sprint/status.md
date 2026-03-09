@@ -98,11 +98,11 @@
 - [x] `std.*` 导入阻塞已解除：模块文件存在即可导入，且 `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 已接入最小符号预加载
 - [x] `null` 最小语义已接入：lexer/parser/resolver 支持 `null` 字面量与基础约束检查
 - [x] `Result` builtin enum 语义已接入：`Ok/Err` 构造与 match 分支校验可用
-- [x] Rust LIR backend member lowering 已扩展到 `get %x.to_string/.len/.trim`，并支持 `call(get ...)` 无参链路
-- [x] primitive nullable 签名语义已接入（`int?/string?/bool?/float?`），并补齐自举正负例
+- [x] Rust LIR backend member lowering 已扩展到 `get %x.to_string/.len/.trim/.substr/.split/.format`，并支持 `call(get ...)` 链路
+- [x] nullable 签名语义已接入（`int?/string?/bool?/float?` + 自定义 `Type?` 语法兼容），并补齐自举正负例
 
 未完成：
-- [ ] TODO: 完整可空类型系统尚未接入（当前仅 primitive `T?` 签名语义与 `null` 基础匹配）
+- [ ] TODO: 完整可空类型系统尚未接入（当前自定义 `Type?` 仍走 `unknown` 兼容路径，缺少精确类型跟踪）
 - [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）
 - [ ] TODO: `match` 嵌套/复杂模式解构（当前仅支持 variant + 一层 binder）
 - [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
@@ -170,7 +170,7 @@
 - FIXME: 顶层声明已完成 payload 化与分层，但块内声明仍通过 `Stmt` 路径执行，后续需要评估“声明语句统一中间表示”以进一步收敛双轨分支。
 - FIXME: `stmt_to_decl` 当前对声明 kind 与 payload kind 不一致仍以 `DECL_UNKNOWN` 兜底，后续需补齐诊断上下文并评估 parser 阶段前置拦截。
 - FIXME: `std.*` 虽已解除白名单阻塞，但多模块仍仅有“最小符号预加载”，尚非完整签名导入。
-- FIXME: Rust LIR backend 成员访问 lowering 仍是子集（当前仅 `to_string/len/trim`）。
+- FIXME: Rust LIR backend 成员访问 lowering 仍是子集（当前到 `to_string/len/trim/substr/split/format`）。
 
 ## 7. 本次重构收尾结论（2026-03-09）
 - [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。

@@ -1,0 +1,58 @@
+// lencyc/sema/resolver/decl_std_auto.lcy
+// Auto preload std module declarations via parser recursion.
+
+import std.core
+import std.fs
+import lencyc.syntax.ast
+import lencyc.syntax.parser
+import lencyc.sema.resolver
+
+impl Resolver {
+    string sanitize_source_for_bootstrap_parser(string source) {
+        var sanitized = ""
+        var i = 0
+        while i < len(source) {
+            var b = source[i]
+            if b >= 0 && b <= 127 {
+                sanitized = sanitized + char_to_string(b)
+            } else {
+                sanitized = sanitized + " "
+            }
+            i = i + 1
+        }
+        return sanitized
+    }
+
+    void preload_std_module_symbols_auto(string module_path, Vec<string> visited) {
+        if this.contains_name(visited, module_path) {
+            return
+        }
+        visited.push(module_path)
+        var source_res = read_to_string(module_path)
+        if source_res.is_err() {
+            this.error("std module read failed: " + module_path)
+            return
+        }
+        var source = this.sanitize_source_for_bootstrap_parser(source_res.unwrap())
+        var parser = make_parser(source)
+        parser.signature_only = true
+        var program = parser.parse_program()
+        // parser 允许错误恢复；即使有错误也尽量提取可识别的声明签名。
+        this.preload_imported_declarations(program, module_path)
+        var d = 0
+        while d < program.decls.len() {
+            var decl = program.decls[d]
+            if decl.kind == DECL_IMPORT() {
+                if decl.params.len() >= 2 {
+                    if decl.params[0] == "std" {
+                        var sub_path = this.resolve_import_module_file_path(decl.params)
+                        if sub_path != "" {
+                            this.preload_std_module_symbols_auto(sub_path, visited)
+                        }
+                    }
+                }
+            }
+            d = d + 1
+        }
+    }
+}

@@ -30,6 +30,9 @@ int T_GREATER_EQUAL() { return 28; } // '>='
 int T_AND_AND()     { return 29; } // '&&'
 int T_OR_OR()       { return 30; } // '||'
 int T_QUESTION()    { return 51; } // '?'
+int T_TRAIT()       { return 52; }
+int T_LEFT_BRACKET()  { return 53; } // '['
+int T_RIGHT_BRACKET() { return 54; } // ']'
 
 // Literals
 int T_NUMBER() { return 7; }

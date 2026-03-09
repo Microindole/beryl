@@ -130,6 +130,7 @@ impl Lexer {
         if text == "import" { kind = T_IMPORT(); }
         if text == "extern" { kind = T_EXTERN(); }
         if text == "enum" { kind = T_ENUM(); }
+        if text == "trait" { kind = T_TRAIT(); }
         if text == "match" { kind = T_MATCH(); }
         if text == "null" { kind = T_NULL(); }
         if text == "true" { kind = T_TRUE(); }
@@ -277,6 +278,8 @@ impl Lexer {
         if c == "." { return this.make_token_from(T_DOT()); }
         if c == "," { return this.make_token_from(T_COMMA()); }
         if c == "?" { return this.make_token_from(T_QUESTION()); }
+        if c == "[" { return this.make_token_from(T_LEFT_BRACKET()); }
+        if c == "]" { return this.make_token_from(T_RIGHT_BRACKET()); }
         if c == "\"" { return this.string_literal(); }
         if c == "'" { return this.char_literal(); }
 

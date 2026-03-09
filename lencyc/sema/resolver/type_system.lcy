@@ -124,10 +124,7 @@ impl Resolver {
             if !this.table.resolve(type_name) {
                 this.error("unknown type in signature: " + type_name)
             }
-            if nullable_suffix {
-                // FIXME: 目前仅支持原生 primitive 的 `T?`，自定义类型可空待后续完整接入。
-                this.error("nullable custom type is not supported yet: " + type_name + "?")
-            }
+            // TODO: 自定义类型可空的完整类型跟踪仍未接入（当前先允许语法并保持 unknown 兼容）。
             return TYPE_UNKNOWN()
         }
         var base_ty = this.token_kind_to_type(base_kind)

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::emitter::{llvm_type_str, Emitter, ExternSig, ValueType};
 
@@ -46,6 +46,7 @@ fn resolve_builtin_call(callee_name: &str) -> Option<(&'static str, Vec<ValueTyp
 pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
     let vars = collect_vars(source)?;
     let mut emitter = Emitter::new(vars.clone());
+    let mut member_call_targets: HashMap<String, (String, ValueType, String)> = HashMap::new();
 
     emitter.push("define i32 @main() {");
     emitter.push("entry:");
@@ -190,6 +191,87 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                     bail!("unsupported call callee: {}", callee);
                 }
 
+                if let Some((obj_repr, obj_ty, member_name)) =
+                    member_call_targets.get(callee).cloned()
+                {
+                    if member_name == "substr" {
+                        if parsed_args.len() != 2 {
+                            bail!(
+                                "invalid call arity for member '{}': expected 2, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+                        let (start_repr, start_ty) = emitter.emit_operand(parsed_args[0].trim())?;
+                        let (start_i64, _) = emitter.ensure_i64(start_repr, start_ty);
+                        let (len_repr, len_ty) = emitter.emit_operand(parsed_args[1].trim())?;
+                        let (len_i64, _) = emitter.ensure_i64(len_repr, len_ty);
+                        emitter.note_extern_func(
+                            "lency_string_substr",
+                            vec![ValueType::Ptr, ValueType::I64, ValueType::I64],
+                            ValueType::Ptr,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call ptr @lency_string_substr(ptr {}, i64 {}, i64 {})",
+                            dst, self_ptr, start_i64, len_i64
+                        ));
+                        emitter.mark_temp(dst, ValueType::Ptr);
+                        continue;
+                    }
+                    if member_name == "split" {
+                        if parsed_args.len() != 1 {
+                            bail!(
+                                "invalid call arity for member '{}': expected 1, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+                        let (delim_repr, delim_ty) = emitter.emit_operand(parsed_args[0].trim())?;
+                        let (delim_ptr, _) = emitter.ensure_ptr(delim_repr, delim_ty);
+                        emitter.note_extern_func(
+                            "lency_string_split",
+                            vec![ValueType::Ptr, ValueType::Ptr],
+                            ValueType::Ptr,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call ptr @lency_string_split(ptr {}, ptr {})",
+                            dst, self_ptr, delim_ptr
+                        ));
+                        emitter.mark_temp(dst, ValueType::Ptr);
+                        continue;
+                    }
+                    if member_name == "format" {
+                        if parsed_args.len() != 1 {
+                            bail!(
+                                "invalid call arity for member '{}': expected 1, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (self_ptr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+                        let (args_repr, args_ty) = emitter.emit_operand(parsed_args[0].trim())?;
+                        let (args_ptr, _) = emitter.ensure_ptr(args_repr, args_ty);
+                        emitter.note_extern_func(
+                            "lency_string_format",
+                            vec![ValueType::Ptr, ValueType::Ptr],
+                            ValueType::Ptr,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call ptr @lency_string_format(ptr {}, ptr {})",
+                            dst, self_ptr, args_ptr
+                        ));
+                        emitter.mark_temp(dst, ValueType::Ptr);
+                        continue;
+                    }
+                    // FIXME: callable member lowering 尚未覆盖更多成员方法。
+                    bail!(
+                        "unsupported callable member in minimal LIR backend: {}",
+                        member_name
+                    );
+                }
+
                 if parsed_args.is_empty() {
                     if let Ok((callee_value, callee_ty)) = emitter.emit_operand(callee) {
                         match callee_ty {
@@ -320,7 +402,16 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                     emitter.mark_temp(dst, ValueType::Ptr);
                     continue;
                 }
-                // FIXME: 非 to_string/len/trim 的成员访问 lowering 仍未实现。
+                if member_name == "substr" || member_name == "split" || member_name == "format" {
+                    // 先记录成员方法目标，等到 `call %tX(...)` 时再补 receiver + 参数 lowering。
+                    // FIXME: 后续应把这类“占位 SSA”统一替换成显式 method ref 表达。
+                    emitter.push(format!("  {} = inttoptr i64 0 to ptr", dst));
+                    emitter.mark_temp(dst, ValueType::Ptr);
+                    member_call_targets
+                        .insert(dst.to_string(), (obj_repr, obj_ty, member_name.to_string()));
+                    continue;
+                }
+                // FIXME: 非 to_string/len/trim/substr/split/format 的成员访问 lowering 仍未实现。
                 bail!("unsupported get member in minimal LIR backend: {}", line);
             }
 

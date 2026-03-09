@@ -165,14 +165,21 @@ impl Parser {
         while true {
             if this.match_token(T_LEFT_PAREN()) {
                 expr = this.finish_call(expr)
-            } else {
-                if this.match_token(T_DOT()) {
-                    this.consume(T_IDENTIFIER(), "Expect property name after '.'.")
-                    expr = make_expr_get(expr, this.previous)
-                } else {
-                    break
-                }
+                continue
             }
+            if this.match_token(T_DOT()) {
+                this.consume(T_IDENTIFIER(), "Expect property name after '.'.")
+                expr = make_expr_get(expr, this.previous)
+                continue
+            }
+            if this.match_token(T_LEFT_BRACKET()) {
+                var index_expr = this.expression()
+                this.consume(T_RIGHT_BRACKET(), "Expect ']' after index expression.")
+                var index_member = make_token(T_IDENTIFIER(), "index", this.previous.line, this.previous.column)
+                expr = make_expr_call(make_expr_get(expr, index_member), vec![index_expr])
+                continue
+            }
+            break
         }
         return expr
     }

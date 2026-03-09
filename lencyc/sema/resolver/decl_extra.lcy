@@ -55,12 +55,14 @@ impl Resolver {
                         this.table.define(variant.name)
                     }
                     var payload_tys = vec![]
+                    var payload_ty_names = vec![]
                     var p = 0
                     while p < variant.payload_types.len() {
-                        payload_tys.push(this.resolve_signature_type_or_error(variant.payload_types[p]))
+                        payload_tys.push(this.resolve_signature_type_or_unknown(variant.payload_types[p]))
+                        payload_ty_names.push(this.resolve_signature_type_name(variant.payload_types[p]))
                         p = p + 1
                     }
-                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys)
+                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys, payload_ty_names)
                     v = v + 1
                 }
             }
@@ -69,16 +71,20 @@ impl Resolver {
                     this.table.define(decl.name.lexeme)
                     this.preload_builtin_arity(decl.name.lexeme, decl.params.len())
                     var param_tys = vec![]
+                    var param_ty_names = vec![]
                     var k = 0
                     while k < decl.param_types.len() {
-                        param_tys.push(this.resolve_signature_type_or_error(decl.param_types[k]))
+                        param_tys.push(this.resolve_signature_type_or_unknown(decl.param_types[k]))
+                        param_ty_names.push(this.resolve_signature_type_name(decl.param_types[k]))
                         k = k + 1
                     }
                     this.function_signatures.push(
                         make_function_signature(
                             decl.name.lexeme,
-                            this.resolve_signature_type_or_error(decl.return_type),
+                            this.resolve_signature_type_or_unknown(decl.return_type),
                             param_tys,
+                            this.resolve_signature_type_name(decl.return_type),
+                            param_ty_names,
                             this.resolve_signature_enum_name_or_empty(decl.return_type)
                         )
                     )
@@ -96,8 +102,14 @@ impl Resolver {
             this.preload_builtin_arity(name, param_tys.len())
         }
         if this.lookup_user_function_arity(name) < 0 {
+            var param_ty_names = vec![]
+            var i = 0
+            while i < param_tys.len() {
+                param_ty_names.push(this.type_to_string(param_tys[i]))
+                i = i + 1
+            }
             this.function_signatures.push(
-                make_function_signature(name, return_ty, param_tys, "")
+                make_function_signature(name, return_ty, param_tys, this.type_to_string(return_ty), param_ty_names, "")
             )
         }
     }
@@ -113,8 +125,8 @@ impl Resolver {
         if !this.table.resolve("Err") {
             this.table.define("Err")
         }
-        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()])
-        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()])
+        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()], vec!["unknown"])
+        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()], vec!["unknown"])
         this.preload_std_function("print", TYPE_VOID(), vec![TYPE_UNKNOWN()])
         this.preload_std_function("len", TYPE_INT(), vec![TYPE_UNKNOWN()])
     }
@@ -136,7 +148,6 @@ impl Resolver {
     }
 
     void preload_std_math_symbols_minimal() {
-        // TODO: 后续接入完整 std.math 符号签名；当前先覆盖主链路常用函数。
         this.preload_std_function("abs", TYPE_INT(), vec![TYPE_INT()])
         this.preload_std_function("max_int", TYPE_INT(), vec![TYPE_INT(), TYPE_INT()])
         this.preload_std_function("min_int", TYPE_INT(), vec![TYPE_INT(), TYPE_INT()])
@@ -144,14 +155,12 @@ impl Resolver {
     }
 
     void preload_std_char_symbols_minimal() {
-        // TODO: 后续补齐 char 模块全部 API 签名。
         this.preload_std_function("is_digit", TYPE_BOOL(), vec![TYPE_INT()])
         this.preload_std_function("is_alpha", TYPE_BOOL(), vec![TYPE_INT()])
         this.preload_std_function("is_alphanumeric", TYPE_BOOL(), vec![TYPE_INT()])
     }
 
     void preload_std_io_symbols_minimal() {
-        // FIXME: io 模块涉及 Vec/string! 等 richer 类型，当前先提供最小自举符号。
         this.preload_std_function("println", TYPE_VOID(), vec![TYPE_STRING()])
         this.preload_std_function("print_int", TYPE_VOID(), vec![TYPE_INT()])
         this.preload_std_function("print_float", TYPE_VOID(), vec![TYPE_FLOAT()])
@@ -166,7 +175,6 @@ impl Resolver {
     }
 
     void preload_std_collections_symbols_minimal() {
-        // FIXME: collections 含大量泛型/Vec<T> 语义，当前仅预加载常用函数的最小签名。
         this.preload_std_function("find_index_int", TYPE_INT(), vec![TYPE_UNKNOWN(), TYPE_INT()])
         this.preload_std_function("find_index_string", TYPE_INT(), vec![TYPE_UNKNOWN(), TYPE_STRING()])
         this.preload_std_function("range", TYPE_UNKNOWN(), vec![TYPE_INT(), TYPE_INT()])
@@ -180,7 +188,6 @@ impl Resolver {
     }
 
     void preload_std_iterator_symbols_minimal() {
-        // FIXME: iterator 涉及 trait/generic，当前仅保留 vec_iter 最小签名。
         this.preload_std_function("vec_iter", TYPE_UNKNOWN(), vec![TYPE_UNKNOWN()])
     }
 
@@ -222,58 +229,9 @@ impl Resolver {
         }
         if decl.params[1] == "core" {
             this.preload_std_core_symbols()
-            return true
         }
-        if decl.params[1] == "str" {
-            this.preload_std_str_symbols()
-            return true
-        }
-        if decl.params[1] == "fs" {
-            this.preload_std_fs_symbols()
-            return true
-        }
-        if decl.params[1] == "convert" {
-            this.preload_std_convert_symbols()
-            return true
-        }
-        if decl.params[1] == "math" {
-            this.preload_std_math_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "char" {
-            this.preload_std_char_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "io" {
-            this.preload_std_io_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "assert" {
-            this.preload_std_assert_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "collections" {
-            this.preload_std_collections_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "iterator" {
-            this.preload_std_iterator_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "option" {
-            this.preload_std_option_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "result" {
-            this.preload_std_result_symbols_minimal()
-            return true
-        }
-        if decl.params[1] == "prelude" {
-            this.preload_std_prelude_symbols_minimal()
-            return true
-        }
-        // std 模块文件存在则允许导入，避免白名单阻塞。
-        // TODO: std 剩余模块的符号签名收敛到“自动提取 + 完整类型映射”，替代人工最小预加载。
+        // std 模块统一通过模块文件自动导入签名（含递归 import std.*）。
+        this.preload_std_module_symbols_auto(module_path, vec![])
         return true
     }
 

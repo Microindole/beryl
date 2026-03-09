@@ -151,3 +151,42 @@ entry:
     assert!(ir.contains("declare i64 @lency_string_len(ptr)"));
     assert!(ir.contains("call i64 @lency_string_len(ptr"));
 }
+
+#[test]
+fn test_compile_lir_call_member_substr_lowering() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %int_to_string(12345)
+  %t1 = get %t0.substr
+  %t2 = call %t1(1, 2)
+  ret %t2
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare ptr @lency_string_substr(ptr, i64, i64)"));
+    assert!(ir.contains("call ptr @lency_string_substr(ptr"));
+}
+
+#[test]
+fn test_compile_lir_call_member_split_lowering() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %int_to_string(12345)
+  %t1 = call %int_to_string(3)
+  %t2 = get %t0.split
+  %t3 = call %t2(%t1)
+  ret %t3
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare ptr @lency_string_split(ptr, ptr)"));
+    assert!(ir.contains("call ptr @lency_string_split(ptr"));
+}
