@@ -42,6 +42,14 @@ impl Resolver {
             if expr.children.len() > 0 {
                 var rhs_ty = this.resolve_expr(expr.children[0])
                 var lhs_ty = this.lookup_typed_symbol(expr.literal_value.lexeme)
+                var rhs_ty_name = this.infer_expr_type_name(expr.children[0], rhs_ty)
+                var lhs_ty_name = this.lookup_typed_symbol_name(expr.literal_value.lexeme)
+                if lhs_ty_name == "" {
+                    lhs_ty_name = this.type_to_string(lhs_ty)
+                }
+                if rhs_ty_name == "" {
+                    rhs_ty_name = this.type_to_string(rhs_ty)
+                }
                 var lhs_enum_name = this.lookup_enum_value_symbol(expr.literal_value.lexeme)
                 var rhs_enum_name = this.infer_expr_enum_name(expr.children[0])
                 if lhs_enum_name != "" && rhs_enum_name != "" && lhs_enum_name != rhs_enum_name {
@@ -50,10 +58,10 @@ impl Resolver {
                         ": expected " + lhs_enum_name + ", got " + rhs_enum_name
                     )
                 }
-                if !this.types_match_or_unknown(lhs_ty, rhs_ty) {
+                if !this.types_match_or_unknown_by_name(lhs_ty, lhs_ty_name, rhs_ty, rhs_ty_name) {
                     this.error(
                         "type mismatch in assignment to " + expr.literal_value.lexeme +
-                        ": expected " + this.type_to_string(lhs_ty) + ", got " + this.type_to_string(rhs_ty)
+                        ": expected " + lhs_ty_name + ", got " + rhs_ty_name
                     )
                 }
                 return rhs_ty
@@ -120,8 +128,16 @@ impl Resolver {
                 return TYPE_BOOL()
             }
             if op == T_EQUAL_EQUAL() || op == T_BANG_EQUAL() {
-                if !this.types_match_or_unknown(left_ty, right_ty) {
-                    this.error("equality operands type mismatch: left " + this.type_to_string(left_ty) + ", right " + this.type_to_string(right_ty))
+                var left_name = this.infer_expr_type_name(expr.children[0], left_ty)
+                var right_name = this.infer_expr_type_name(expr.children[1], right_ty)
+                if left_name == "" {
+                    left_name = this.type_to_string(left_ty)
+                }
+                if right_name == "" {
+                    right_name = this.type_to_string(right_ty)
+                }
+                if !this.types_match_or_unknown_by_name(left_ty, left_name, right_ty, right_name) {
+                    this.error("equality operands type mismatch: left " + left_name + ", right " + right_name)
                 }
                 return TYPE_BOOL()
             }
@@ -183,25 +199,40 @@ impl Resolver {
             var j = 1
             while j < expr.children.len() {
                 var arg_ty = this.resolve_expr(expr.children[j])
+                var arg_ty_name = this.infer_expr_type_name(expr.children[j], arg_ty)
                 if has_user_signature {
                     var expected_arg_ty = this.lookup_user_function_param_type(callee_name, j - 1)
-                    if !this.types_match_or_unknown(expected_arg_ty, arg_ty) {
+                    var expected_arg_ty_name = this.lookup_user_function_param_type_name(callee_name, j - 1)
+                    if expected_arg_ty_name == "" {
+                        expected_arg_ty_name = this.type_to_string(expected_arg_ty)
+                    }
+                    if arg_ty_name == "" {
+                        arg_ty_name = this.type_to_string(arg_ty)
+                    }
+                    if !this.types_match_or_unknown_by_name(expected_arg_ty, expected_arg_ty_name, arg_ty, arg_ty_name) {
                         this.error(
                             "call argument type mismatch for " + callee_name +
                             " arg #" + int_to_string(j) +
-                            ": expected " + this.type_to_string(expected_arg_ty) +
-                            ", got " + this.type_to_string(arg_ty)
+                            ": expected " + expected_arg_ty_name +
+                            ", got " + arg_ty_name
                         )
                     }
                 }
                 if has_enum_constructor_signature {
                     var expected_payload_ty = this.lookup_enum_constructor_param_type(callee_name, j - 1)
-                    if !this.types_match_or_unknown(expected_payload_ty, arg_ty) {
+                    var expected_payload_ty_name = this.lookup_enum_constructor_param_type_name(callee_name, j - 1)
+                    if expected_payload_ty_name == "" {
+                        expected_payload_ty_name = this.type_to_string(expected_payload_ty)
+                    }
+                    if arg_ty_name == "" {
+                        arg_ty_name = this.type_to_string(arg_ty)
+                    }
+                    if !this.types_match_or_unknown_by_name(expected_payload_ty, expected_payload_ty_name, arg_ty, arg_ty_name) {
                         this.error(
                             "EnumConstructor argument type mismatch for " + callee_name +
                             " arg #" + int_to_string(j) +
-                            ": expected " + this.type_to_string(expected_payload_ty) +
-                            ", got " + this.type_to_string(arg_ty)
+                            ": expected " + expected_payload_ty_name +
+                            ", got " + arg_ty_name
                         )
                     }
                 }
@@ -217,6 +248,7 @@ impl Resolver {
             this.resolve_expr(expr.children[0])
             var target_enum_name = this.infer_expr_enum_name(expr.children[0])
             var result_ty = TYPE_UNKNOWN()
+            var result_ty_name = ""
             var seen_variants = vec![]
             var has_wildcard = false
             var i = 0
@@ -284,7 +316,11 @@ impl Resolver {
                         }
                         this.table.define(binder_name)
                         var binder_ty = this.lookup_enum_constructor_param_type(pattern.tag.lexeme, b)
-                        this.define_typed_symbol(binder_name, binder_ty)
+                        var binder_ty_name = this.lookup_enum_constructor_param_type_name(pattern.tag.lexeme, b)
+                        if binder_ty_name == "" {
+                            binder_ty_name = this.type_to_string(binder_ty)
+                        }
+                        this.define_typed_symbol(binder_name, binder_ty, binder_ty_name)
                         b = b + 1
                     }
                     arm_ty = this.resolve_expr(expr.children[i + 1])
@@ -294,12 +330,20 @@ impl Resolver {
                 }
                 if result_ty == TYPE_UNKNOWN() {
                     result_ty = arm_ty
+                    result_ty_name = this.infer_expr_type_name(expr.children[i + 1], arm_ty)
                 } else {
-                    if !this.types_match_or_unknown(result_ty, arm_ty) {
+                    var actual_arm_name = this.infer_expr_type_name(expr.children[i + 1], arm_ty)
+                    if result_ty_name == "" {
+                        result_ty_name = this.type_to_string(result_ty)
+                    }
+                    if actual_arm_name == "" {
+                        actual_arm_name = this.type_to_string(arm_ty)
+                    }
+                    if !this.types_match_or_unknown_by_name(result_ty, result_ty_name, arm_ty, actual_arm_name) {
                         this.error(
                             "match arm type mismatch for pattern " + this.match_pattern_to_string(pattern) +
-                            ": expected " + this.type_to_string(result_ty) +
-                            ", got " + this.type_to_string(arm_ty)
+                            ": expected " + result_ty_name +
+                            ", got " + actual_arm_name
                         )
                     }
                 }

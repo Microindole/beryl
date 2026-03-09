@@ -29,9 +29,7 @@ fn collect_vars(source: &str) -> Result<HashSet<String>> {
 }
 
 fn resolve_builtin_call(callee_name: &str) -> Option<(&'static str, Vec<ValueType>, ValueType)> {
-    // FIXME: 这里仅覆盖“早期 Lency 自举最小可用”的 builtin 子集。
-    // `read_to_string` / `write_string` / `parse_float` 等需要 richer ABI
-    // （Result/float/多返回值）后，才能在 LIR 最小后端完整支持。
+    // 当前仅映射 runtime ABI 已稳定的 builtin 子集。
     match callee_name {
         "arg_count" => Some(("lency_arg_count", vec![], ValueType::I64)),
         "arg_at" => Some(("lency_arg_at", vec![ValueType::I64], ValueType::Ptr)),
@@ -39,6 +37,19 @@ fn resolve_builtin_call(callee_name: &str) -> Option<(&'static str, Vec<ValueTyp
         "file_exists" => Some(("lency_file_exists", vec![ValueType::Ptr], ValueType::I64)),
         "is_dir" => Some(("lency_file_is_dir", vec![ValueType::Ptr], ValueType::I64)),
         _ => None,
+    }
+}
+
+fn guess_member_call_return_type(member_name: &str) -> ValueType {
+    match member_name {
+        "to_string" | "trim" | "substr" | "replace_first" | "replace_all" | "repeat"
+        | "pad_right" | "pad_left" | "to_upper" | "to_lower" | "reverse" | "trim_left"
+        | "trim_right" | "join" | "format" | "get_extension" | "get_filename" | "get_directory"
+        | "join_path" => ValueType::Ptr,
+        "contains" | "starts_with" | "ends_with" | "is_empty" | "is_alpha" | "is_digit"
+        | "is_alphanumeric" | "is_whitespace" | "is_hex_digit" | "is_printable"
+        | "is_punctuation" | "is_lower" | "is_upper" | "is_close" => ValueType::I1,
+        _ => ValueType::I64,
     }
 }
 
@@ -187,13 +198,75 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
 
                 let callee = callee.trim();
                 if !callee.starts_with('%') {
-                    // FIXME: LIR call lowering currently only supports `%symbol(...)`.
                     bail!("unsupported call callee: {}", callee);
                 }
 
                 if let Some((obj_repr, obj_ty, member_name)) =
                     member_call_targets.get(callee).cloned()
                 {
+                    if member_name == "to_string" {
+                        if !parsed_args.is_empty() {
+                            bail!(
+                                "invalid call arity for member '{}': expected 0, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (arg_repr, _) = emitter.ensure_i64(obj_repr, obj_ty);
+                        emitter.note_extern_func(
+                            "lency_int_to_string",
+                            vec![ValueType::I64],
+                            ValueType::Ptr,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call ptr @lency_int_to_string(i64 {})",
+                            dst, arg_repr
+                        ));
+                        emitter.mark_temp(dst, ValueType::Ptr);
+                        continue;
+                    }
+                    if member_name == "len" {
+                        if !parsed_args.is_empty() {
+                            bail!(
+                                "invalid call arity for member '{}': expected 0, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+                        emitter.note_extern_func(
+                            "lency_string_len",
+                            vec![ValueType::Ptr],
+                            ValueType::I64,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call i64 @lency_string_len(ptr {})",
+                            dst, arg_repr
+                        ));
+                        emitter.mark_temp(dst, ValueType::I64);
+                        continue;
+                    }
+                    if member_name == "trim" {
+                        if !parsed_args.is_empty() {
+                            bail!(
+                                "invalid call arity for member '{}': expected 0, got {}",
+                                member_name,
+                                parsed_args.len()
+                            );
+                        }
+                        let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
+                        emitter.note_extern_func(
+                            "lency_string_trim",
+                            vec![ValueType::Ptr],
+                            ValueType::Ptr,
+                        )?;
+                        emitter.push(format!(
+                            "  {} = call ptr @lency_string_trim(ptr {})",
+                            dst, arg_repr
+                        ));
+                        emitter.mark_temp(dst, ValueType::Ptr);
+                        continue;
+                    }
                     if member_name == "substr" {
                         if parsed_args.len() != 2 {
                             bail!(
@@ -265,11 +338,30 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                         emitter.mark_temp(dst, ValueType::Ptr);
                         continue;
                     }
-                    // FIXME: callable member lowering 尚未覆盖更多成员方法。
-                    bail!(
-                        "unsupported callable member in minimal LIR backend: {}",
-                        member_name
-                    );
+                    // Generic member-call fallback: `obj.member(a, b)` => `member(obj, a, b)`.
+                    let mut arg_values: Vec<(String, ValueType)> = Vec::new();
+                    arg_values.push((obj_repr, obj_ty));
+                    for arg in &parsed_args {
+                        let (arg_repr, arg_ty) = emitter.emit_operand(arg.trim())?;
+                        arg_values.push((arg_repr, arg_ty));
+                    }
+                    let arg_tys = arg_values.iter().map(|(_, ty)| *ty).collect::<Vec<_>>();
+                    let ret_ty = guess_member_call_return_type(&member_name);
+                    emitter.note_extern_func(&member_name, arg_tys, ret_ty)?;
+                    let args_sig = arg_values
+                        .iter()
+                        .map(|(repr, ty)| format!("{} {}", llvm_type_str(*ty), repr))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    emitter.push(format!(
+                        "  {} = call {} @{}({})",
+                        dst,
+                        llvm_type_str(ret_ty),
+                        member_name,
+                        args_sig
+                    ));
+                    emitter.mark_temp(dst, ret_ty);
+                    continue;
                 }
 
                 if parsed_args.is_empty() {
@@ -360,59 +452,12 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                 let obj_name = obj_raw.trim();
                 let member_name = member_name.trim();
                 let (obj_repr, obj_ty) = emitter.emit_operand(obj_name)?;
-                if member_name == "to_string" {
-                    let (arg_repr, _) = emitter.ensure_i64(obj_repr, obj_ty);
-                    emitter.note_extern_func(
-                        "lency_int_to_string",
-                        vec![ValueType::I64],
-                        ValueType::Ptr,
-                    )?;
-                    emitter.push(format!(
-                        "  {} = call ptr @lency_int_to_string(i64 {})",
-                        dst, arg_repr
-                    ));
-                    emitter.mark_temp(dst, ValueType::Ptr);
-                    continue;
-                }
-                if member_name == "len" {
-                    let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                    emitter.note_extern_func(
-                        "lency_string_len",
-                        vec![ValueType::Ptr],
-                        ValueType::I64,
-                    )?;
-                    emitter.push(format!(
-                        "  {} = call i64 @lency_string_len(ptr {})",
-                        dst, arg_repr
-                    ));
-                    emitter.mark_temp(dst, ValueType::I64);
-                    continue;
-                }
-                if member_name == "trim" {
-                    let (arg_repr, _) = emitter.ensure_ptr(obj_repr, obj_ty);
-                    emitter.note_extern_func(
-                        "lency_string_trim",
-                        vec![ValueType::Ptr],
-                        ValueType::Ptr,
-                    )?;
-                    emitter.push(format!(
-                        "  {} = call ptr @lency_string_trim(ptr {})",
-                        dst, arg_repr
-                    ));
-                    emitter.mark_temp(dst, ValueType::Ptr);
-                    continue;
-                }
-                if member_name == "substr" || member_name == "split" || member_name == "format" {
-                    // 先记录成员方法目标，等到 `call %tX(...)` 时再补 receiver + 参数 lowering。
-                    // FIXME: 后续应把这类“占位 SSA”统一替换成显式 method ref 表达。
-                    emitter.push(format!("  {} = inttoptr i64 0 to ptr", dst));
-                    emitter.mark_temp(dst, ValueType::Ptr);
-                    member_call_targets
-                        .insert(dst.to_string(), (obj_repr, obj_ty, member_name.to_string()));
-                    continue;
-                }
-                // FIXME: 非 to_string/len/trim/substr/split/format 的成员访问 lowering 仍未实现。
-                bail!("unsupported get member in minimal LIR backend: {}", line);
+                // Generic member reference placeholder for subsequent `call %tX(...)`.
+                emitter.push(format!("  {} = inttoptr i64 0 to ptr", dst));
+                emitter.mark_temp(dst, ValueType::Ptr);
+                member_call_targets
+                    .insert(dst.to_string(), (obj_repr, obj_ty, member_name.to_string()));
+                continue;
             }
 
             let parts = rhs.split_whitespace().collect::<Vec<_>>();

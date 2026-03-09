@@ -37,12 +37,14 @@ impl Resolver {
                     }
                     this.table.define(variant.name)
                     var payload_tys = vec![]
+                    var payload_ty_names = vec![]
                     var p = 0
                     while p < variant.payload_types.len() {
                         payload_tys.push(this.resolve_signature_type_or_error(variant.payload_types[p]))
+                        payload_ty_names.push(this.resolve_signature_type_name(variant.payload_types[p]))
                         p = p + 1
                     }
-                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys)
+                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys, payload_ty_names)
                     v = v + 1
                 }
             }
@@ -59,9 +61,11 @@ impl Resolver {
                     this.table.define(decl.name.lexeme)
                     this.preload_builtin_arity(decl.name.lexeme, decl.params.len())
                     var param_tys = vec![]
+                    var param_ty_names = vec![]
                     var k = 0
                     while k < decl.param_types.len() {
                         param_tys.push(this.resolve_signature_type_or_error(decl.param_types[k]))
+                        param_ty_names.push(this.resolve_signature_type_name(decl.param_types[k]))
                         k = k + 1
                     }
                     this.function_signatures.push(
@@ -69,6 +73,8 @@ impl Resolver {
                             decl.name.lexeme,
                             this.resolve_signature_type_or_error(decl.return_type),
                             param_tys,
+                            this.resolve_signature_type_name(decl.return_type),
+                            param_ty_names,
                             this.resolve_signature_enum_name_or_empty(decl.return_type)
                         )
                     )

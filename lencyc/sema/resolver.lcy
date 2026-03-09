@@ -5,7 +5,9 @@ import lencyc.syntax.ast
 import lencyc.sema.scope
 import lencyc.sema.resolver.core
 import lencyc.sema.resolver.type_system
+import lencyc.sema.resolver.type_names
 import lencyc.sema.resolver.decl_extra
+import lencyc.sema.resolver.decl_std_auto
 import lencyc.sema.resolver.decl_stmt
 import lencyc.sema.resolver.program
 import lencyc.sema.resolver.expr
@@ -26,6 +28,7 @@ struct BuiltinType {
 struct TypedSymbol {
     string name
     int ty
+    string ty_name
     int depth
 }
 struct ConstSymbol {
@@ -36,12 +39,15 @@ struct FunctionSignature {
     string name
     int return_ty
     Vec<int> param_tys
+    string return_ty_name
+    Vec<string> param_ty_names
     string return_enum_name
 }
 struct EnumVariantSignature {
     string enum_name
     string variant_name
     Vec<int> payload_tys
+    Vec<string> payload_ty_names
 }
 struct EnumValueSymbol {
     string name
@@ -61,6 +67,7 @@ struct Resolver {
     bool in_function
     bool require_value_return
     int current_function_return_type
+    string current_function_return_type_name
     bool has_error
     int error_count
 }
@@ -87,10 +94,11 @@ BuiltinType make_builtin_type(string name, int ty) {
         ty: ty
     }
 }
-TypedSymbol make_typed_symbol(string name, int ty, int depth) {
+TypedSymbol make_typed_symbol(string name, int ty, string ty_name, int depth) {
     return TypedSymbol {
         name: name,
         ty: ty,
+        ty_name: ty_name,
         depth: depth
     }
 }
@@ -100,19 +108,29 @@ ConstSymbol make_const_symbol(string name, int depth) {
         depth: depth
     }
 }
-FunctionSignature make_function_signature(string name, int return_ty, Vec<int> param_tys, string return_enum_name) {
+FunctionSignature make_function_signature(
+    string name,
+    int return_ty,
+    Vec<int> param_tys,
+    string return_ty_name,
+    Vec<string> param_ty_names,
+    string return_enum_name
+) {
     return FunctionSignature {
         name: name,
         return_ty: return_ty,
         param_tys: param_tys,
+        return_ty_name: return_ty_name,
+        param_ty_names: param_ty_names,
         return_enum_name: return_enum_name
     }
 }
-EnumVariantSignature make_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys) {
+EnumVariantSignature make_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys, Vec<string> payload_ty_names) {
     return EnumVariantSignature {
         enum_name: enum_name,
         variant_name: variant_name,
-        payload_tys: payload_tys
+        payload_tys: payload_tys,
+        payload_ty_names: payload_ty_names
     }
 }
 EnumValueSymbol make_enum_value_symbol(string name, string enum_name, int depth) {
@@ -136,6 +154,7 @@ Resolver make_resolver() {
         in_function: false,
         require_value_return: false,
         current_function_return_type: TYPE_UNKNOWN(),
+        current_function_return_type_name: "",
         has_error: false,
         error_count: 0
     }
@@ -161,7 +180,7 @@ ResolveResult resolve_program(Program program) {
 
 ResolveResult resolve_function_body(Vec<string> params, Vec<Stmt> body) {
     var resolver = make_resolver()
-    resolver.resolve_function(params, vec![], body, true, TYPE_UNKNOWN())
+    resolver.resolve_function(params, vec![], vec![], body, true, TYPE_UNKNOWN(), "")
     return ResolveResult {
         has_error: resolver.has_error,
         error_count: resolver.error_count

@@ -21,14 +21,14 @@
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
-  - TODO: 扩展完整可空类型系统（当前已接入 primitive `int?/string?/bool?/float?`，且自定义 `Type?` 已允许语法但仍是 `unknown` 兼容路径）。
+  - 已完成：nullable 类型匹配已接入 `type_name` 约束，自定义类型与 `Type?` 不再走 `unknown` 兼容放行。
   - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
   - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
-  - TODO: `std.*` 全量符号导入仍未完成（当前已支持模块文件存在即导入 + `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载）。
+  - 已完成：`std.*` 采用模块文件自动签名导入（递归 `import std.*`），并在导入路径启用 `signature_only` 解析模式提取声明签名。
 - 后端：
   - Rust：AST -> LLVM IR -> 可执行链路成熟。
   - Lency：`AST/LIR` 最小发射 + Rust `.lir` backend 冒烟，仍有子集约束。
-  - FIXME: `crates/lency_cli/src/lir_backend/compile.rs` 仍存在 builtin 子集、call/member lowering 限制。
+  - 现状：`member lowering` 已收敛为统一 `get -> call` 路径（含 intrinsic 特判 + 通用 fallback），不再限于固定少量成员。
 - 工具链：
   - Rust：`compile/run/check/build/repl` 路径稳定。
   - Lency：`lencyc` + `xtask check-lency` 闭环可用，但语言特性覆盖不足。
@@ -88,10 +88,10 @@
 - AST printer 的 expr 分派已完成 Visitor 试点，作为“按边界引入模式”的低风险路径；暂不全量迁移 resolver。
 - enum 类型流已扩展到函数返回、`match` 中间表达式与赋值链路，并补充负例回归（跨 enum 赋值拦截）。
 - import 语义第一版已接入：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）。
-- `std.*` 导入已从白名单阻塞改为“模块文件存在即可导入”，并已接入 `core/str/fs/convert/math/char/io/assert/collections/iterator/option/result/prelude` 最小符号预加载。
+- `std.*` 导入已升级为“递归模块签名自动导入”：对 std 模块源码做 ASCII sanitize + `signature_only` 解析，仅提取声明签名并递归处理 `import std.*`，并已移除旧的 minimal 预加载分支。
 - `null` 最小语义已接入 lexer/parser/resolver，`Result` builtin enum（`Ok/Err`）语义已接入。
-- primitive nullable 签名语义已接入（`int?/string?/bool?/float?`），并补齐自举正负例回归。
-- Rust LIR backend member lowering 已扩展到 `to_string/len/trim/substr/split/format`，并打通 `call(get ...)` 链路（仍是子集）。
+- nullable 语义已从 primitive 扩展到自定义类型名约束：`Type?/Type`、enum payload binder、函数参数/返回/赋值统一走 `type + type_name` 双通道匹配。
+- Rust LIR backend member lowering 已统一到 member-ref 调用路径：`to_string/len/trim/substr/split/format` 与通用成员调用共用 `get + call` 降低分派。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

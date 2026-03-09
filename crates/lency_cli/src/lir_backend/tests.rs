@@ -104,7 +104,8 @@ func main {
 entry:
   var %x = 7
   %t0 = get %x.to_string
-  ret %t0
+  %t1 = call %t0()
+  ret %t1
 }
 "#;
     let result = compile_lir_to_llvm_ir(src);
@@ -142,7 +143,8 @@ func main {
 entry:
   %t0 = call %int_to_string(7)
   %t1 = get %t0.len
-  ret %t1
+  %t2 = call %t1()
+  ret %t2
 }
 "#;
     let result = compile_lir_to_llvm_ir(src);
@@ -189,4 +191,24 @@ entry:
     let ir = result.unwrap_or_default();
     assert!(ir.contains("declare ptr @lency_string_split(ptr, ptr)"));
     assert!(ir.contains("call ptr @lency_string_split(ptr"));
+}
+
+#[test]
+fn test_compile_lir_call_member_generic_fallback() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %int_to_string(12345)
+  %t1 = call %int_to_string(5)
+  %t2 = get %t0.contains
+  %t3 = call %t2(%t1)
+  ret %t3
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare i1 @contains(ptr, ptr)"));
+    assert!(ir.contains("call i1 @contains(ptr"));
 }

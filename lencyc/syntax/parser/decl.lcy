@@ -151,6 +151,7 @@ impl Parser {
     }
 
     Stmt impl_declaration() {
+        this.skip_generic_type_arguments_if_any()
         this.consume(T_IDENTIFIER(), "Expect type name after 'impl'.")
         var name = this.previous
         this.skip_generic_type_arguments_if_any()

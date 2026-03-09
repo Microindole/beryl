@@ -14,7 +14,8 @@ impl Resolver {
                 this.error("duplicate variable in same scope: " + stmt.name.lexeme)
             } else {
                 this.table.define(stmt.name.lexeme)
-                this.define_typed_symbol(stmt.name.lexeme, value_ty)
+                var value_ty_name = this.infer_expr_type_name(stmt.expr, value_ty)
+                this.define_typed_symbol(stmt.name.lexeme, value_ty, value_ty_name)
                 var enum_name = this.infer_expr_enum_name(stmt.expr)
                 if enum_name != "" {
                     this.define_enum_value_symbol(stmt.name.lexeme, enum_name)
@@ -31,11 +32,20 @@ impl Resolver {
         }
         if stmt.kind == STMT_RETURN() {
             var ret_ty = this.resolve_expr(stmt.expr)
-            if this.in_function && this.require_value_return && !this.types_match_or_unknown(this.current_function_return_type, ret_ty) {
+            var ret_ty_name = this.infer_expr_type_name(stmt.expr, ret_ty)
+            var expected_ret_name = this.current_function_return_type_name
+            if expected_ret_name == "" {
+                expected_ret_name = this.type_to_string(this.current_function_return_type)
+            }
+            var actual_ret_name = ret_ty_name
+            if actual_ret_name == "" {
+                actual_ret_name = this.type_to_string(ret_ty)
+            }
+            if this.in_function && this.require_value_return && !this.types_match_or_unknown_by_name(this.current_function_return_type, this.current_function_return_type_name, ret_ty, ret_ty_name) {
                 this.error(
                     "return type mismatch: expected " +
-                    this.type_to_string(this.current_function_return_type) +
-                    ", got " + this.type_to_string(ret_ty)
+                    expected_ret_name +
+                    ", got " + actual_ret_name
                 )
             }
             return

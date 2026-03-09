@@ -10,17 +10,21 @@ impl Resolver {
     void resolve_decl(Decl decl) {
         if decl.kind == DECL_FUNCTION() {
             var fn_param_tys = vec![]
+            var fn_param_ty_names = vec![]
             var i = 0
             while i < decl.param_types.len() {
                 fn_param_tys.push(this.resolve_signature_type_or_error(decl.param_types[i]))
+                fn_param_ty_names.push(this.resolve_signature_type_name(decl.param_types[i]))
                 i = i + 1
             }
             this.resolve_function(
                 decl.params,
                 fn_param_tys,
+                fn_param_ty_names,
                 decl.body,
                 decl.return_type.kind != T_VOID(),
-                this.resolve_signature_type_or_error(decl.return_type)
+                this.resolve_signature_type_or_error(decl.return_type),
+                this.resolve_signature_type_name(decl.return_type)
             )
             return
         }
@@ -61,17 +65,21 @@ impl Resolver {
                 }
                 method_names.push(member.name.lexeme)
                 var fn_param_tys = vec![]
+                var fn_param_ty_names = vec![]
                 var j = 0
                 while j < member.param_types.len() {
                     fn_param_tys.push(this.resolve_signature_type_or_error(member.param_types[j]))
+                    fn_param_ty_names.push(this.resolve_signature_type_name(member.param_types[j]))
                     j = j + 1
                 }
                 this.resolve_function(
                     member.params,
                     fn_param_tys,
+                    fn_param_ty_names,
                     member.body,
                     member.return_type.kind != T_VOID(),
-                    this.resolve_signature_type_or_error(member.return_type)
+                    this.resolve_signature_type_or_error(member.return_type),
+                    this.resolve_signature_type_name(member.return_type)
                 )
                 i = i + 1
             }

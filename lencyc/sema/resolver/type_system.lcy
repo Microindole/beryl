@@ -7,6 +7,67 @@ import lencyc.syntax.token
 import lencyc.sema.resolver
 
 impl Resolver {
+    string strip_signature_result_marker(string ty_name) {
+        if len(ty_name) > 0 && ty_name[len(ty_name) - 1] == 33 {
+            // `T!` 当前按 value-or-error 简化为“值类型兼容检查”，类型名侧折叠为 `T?`。
+            return substr(ty_name, 0, len(ty_name) - 1) + "?"
+        }
+        return ty_name
+    }
+    string resolve_signature_type_name(TypeRef type_ref) {
+        return this.strip_signature_result_marker(type_ref.name)
+    }
+    bool is_nullable_type_name(string type_name) {
+        return len(type_name) > 0 && type_name[len(type_name) - 1] == 63
+    }
+    string nullable_base_type_name(string type_name) {
+        if this.is_nullable_type_name(type_name) {
+            return substr(type_name, 0, len(type_name) - 1)
+        }
+        return type_name
+    }
+    bool type_names_match_or_unknown(string left_name, string right_name) {
+        if left_name == "" || right_name == "" {
+            return true
+        }
+        if left_name == "unknown" && right_name == "unknown" {
+            return true
+        }
+        if left_name == right_name {
+            return true
+        }
+        if left_name == "null" {
+            return this.is_nullable_type_name(right_name)
+        }
+        if right_name == "null" {
+            return this.is_nullable_type_name(left_name)
+        }
+        if this.is_nullable_type_name(left_name) && this.nullable_base_type_name(left_name) == right_name {
+            return true
+        }
+        if this.is_nullable_type_name(right_name) && this.nullable_base_type_name(right_name) == left_name {
+            return true
+        }
+        return false
+    }
+    bool has_concrete_type_name(string name) {
+        return name != "" && name != "unknown"
+    }
+    bool types_match_or_unknown_by_name(int left, string left_name, int right, string right_name) {
+        if left_name == "unknown" && left == TYPE_UNKNOWN() {
+            return this.types_match_or_unknown(left, right)
+        }
+        if right_name == "unknown" && right == TYPE_UNKNOWN() {
+            return this.types_match_or_unknown(left, right)
+        }
+        if this.has_concrete_type_name(left_name) || this.has_concrete_type_name(right_name) {
+            return this.type_names_match_or_unknown(left_name, right_name)
+        }
+        if this.types_match_or_unknown(left, right) {
+            return true
+        }
+        return this.type_names_match_or_unknown(left_name, right_name)
+    }
     bool is_nullable_type(int ty) {
         return ty == TYPE_NULLABLE_INT() || ty == TYPE_NULLABLE_BOOL() || ty == TYPE_NULLABLE_STRING() || ty == TYPE_NULLABLE_FLOAT()
     }
@@ -124,7 +185,6 @@ impl Resolver {
             if !this.table.resolve(type_name) {
                 this.error("unknown type in signature: " + type_name)
             }
-            // TODO: 自定义类型可空的完整类型跟踪仍未接入（当前先允许语法并保持 unknown 兼容）。
             return TYPE_UNKNOWN()
         }
         var base_ty = this.token_kind_to_type(base_kind)
@@ -134,6 +194,27 @@ impl Resolver {
         var nullable_ty = this.make_nullable_primitive_type(base_ty)
         if nullable_ty == TYPE_UNKNOWN() {
             this.error("nullable signature is only supported for int/string/bool/float")
+            return TYPE_UNKNOWN()
+        }
+        return nullable_ty
+    }
+    int resolve_signature_type_or_unknown(TypeRef type_ref) {
+        var type_name = type_ref.name
+        var nullable_suffix = false
+        if len(type_name) > 0 && type_name[len(type_name) - 1] == 63 {
+            nullable_suffix = true
+            type_name = substr(type_name, 0, len(type_name) - 1)
+        }
+        var base_kind = type_ref.kind
+        if type_ref.kind == T_IDENTIFIER() {
+            return TYPE_UNKNOWN()
+        }
+        var base_ty = this.token_kind_to_type(base_kind)
+        if !nullable_suffix {
+            return base_ty
+        }
+        var nullable_ty = this.make_nullable_primitive_type(base_ty)
+        if nullable_ty == TYPE_UNKNOWN() {
             return TYPE_UNKNOWN()
         }
         return nullable_ty

@@ -1,0 +1,87 @@
+// lencyc/sema/resolver/type_names.lcy
+// Resolver type-name helpers split from core to keep file size under meta limits.
+
+import std.core
+import lencyc.syntax.ast
+import lencyc.syntax.token
+import lencyc.sema.resolver
+
+impl Resolver {
+    string lookup_typed_symbol_name(string name) {
+        var i = this.typed_symbols.len() - 1
+        while i >= 0 {
+            if this.typed_symbols[i].name == name {
+                return this.typed_symbols[i].ty_name
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    string lookup_user_function_return_type_name(string name) {
+        var i = 0
+        while i < this.function_signatures.len() {
+            if this.function_signatures[i].name == name {
+                return this.function_signatures[i].return_ty_name
+            }
+            i = i + 1
+        }
+        return ""
+    }
+
+    string lookup_user_function_param_type_name(string name, int arg_index) {
+        var i = 0
+        while i < this.function_signatures.len() {
+            if this.function_signatures[i].name == name {
+                if arg_index < this.function_signatures[i].param_ty_names.len() {
+                    return this.function_signatures[i].param_ty_names[arg_index]
+                }
+                return ""
+            }
+            i = i + 1
+        }
+        return ""
+    }
+
+    string infer_expr_type_name(Expr expr, int resolved_ty) {
+        if expr.kind == EXPR_LITERAL() {
+            if expr.literal_value.kind == T_NUMBER() {
+                if contains(expr.literal_value.lexeme, ".") || contains(expr.literal_value.lexeme, "e") || contains(expr.literal_value.lexeme, "E") {
+                    return "float"
+                }
+                return "int"
+            }
+            if expr.literal_value.kind == T_TRUE() || expr.literal_value.kind == T_FALSE() {
+                return "bool"
+            }
+            if expr.literal_value.kind == T_STRING_LITERAL() {
+                return "string"
+            }
+            if expr.literal_value.kind == T_NULL() {
+                return "null"
+            }
+        }
+        if expr.kind == EXPR_VARIABLE() {
+            return this.lookup_typed_symbol_name(expr.literal_value.lexeme)
+        }
+        if expr.kind == EXPR_CALL() {
+            if expr.children.len() > 0 {
+                if expr.children[0].kind == EXPR_VARIABLE() {
+                    var callee_name = expr.children[0].literal_value.lexeme
+                    var ctor_enum_name = this.lookup_enum_constructor_name(callee_name)
+                    if ctor_enum_name != "" {
+                        return ctor_enum_name
+                    }
+                    var fn_ret_name = this.lookup_user_function_return_type_name(callee_name)
+                    if fn_ret_name != "" {
+                        return fn_ret_name
+                    }
+                }
+            }
+        }
+        if resolved_ty != TYPE_UNKNOWN() {
+            return this.type_to_string(resolved_ty)
+        }
+        return ""
+    }
+}

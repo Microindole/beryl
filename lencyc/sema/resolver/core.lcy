@@ -43,6 +43,7 @@ impl Resolver {
         this.preload_builtin_arity("float_to_string", 1)
         this.preload_builtin_arity("parse_int", 1)
         this.preload_builtin_arity("parse_float", 1)
+        this.preload_builtin_arity("char_to_string", 1)
         this.preload_builtin_arity("file_exists", 1)
         this.preload_builtin_arity("is_dir", 1)
         this.preload_builtin_arity("read_to_string", 1)
@@ -58,6 +59,7 @@ impl Resolver {
         this.preload_builtin_type("arg_at", TYPE_UNKNOWN())
         this.preload_builtin_type("int_to_string", TYPE_UNKNOWN())
         this.preload_builtin_type("float_to_string", TYPE_UNKNOWN())
+        this.preload_builtin_type("char_to_string", TYPE_UNKNOWN())
         this.preload_builtin_type("parse_int", TYPE_INT())
         this.preload_builtin_type("parse_float", TYPE_FLOAT())
         this.preload_builtin_type("file_exists", TYPE_BOOL())
@@ -76,8 +78,8 @@ impl Resolver {
         if !this.table.resolve("Err") {
             this.table.define("Err")
         }
-        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()])
-        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()])
+        this.preload_enum_variant_signature("Result", "Ok", vec![TYPE_UNKNOWN()], vec!["unknown"])
+        this.preload_enum_variant_signature("Result", "Err", vec![TYPE_UNKNOWN()], vec!["unknown"])
     }
     int lookup_builtin_type(string name) {
         var i = 0
@@ -89,8 +91,8 @@ impl Resolver {
         }
         return TYPE_UNKNOWN()
     }
-    void define_typed_symbol(string name, int ty) {
-        this.typed_symbols.push(make_typed_symbol(name, ty, this.table.current_depth))
+    void define_typed_symbol(string name, int ty, string ty_name) {
+        this.typed_symbols.push(make_typed_symbol(name, ty, ty_name, this.table.current_depth))
     }
     void define_const_symbol(string name) {
         this.const_symbols.push(make_const_symbol(name, this.table.current_depth))
@@ -108,8 +110,8 @@ impl Resolver {
         }
         return ""
     }
-    void preload_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys) {
-        this.enum_variant_signatures.push(make_enum_variant_signature(enum_name, variant_name, payload_tys))
+    void preload_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys, Vec<string> payload_ty_names) {
+        this.enum_variant_signatures.push(make_enum_variant_signature(enum_name, variant_name, payload_tys, payload_ty_names))
     }
     void preload_enum_type_name(string enum_name) {
         if !this.contains_name(this.enum_type_names, enum_name) {
@@ -141,6 +143,19 @@ impl Resolver {
             i = i + 1
         }
         return TYPE_UNKNOWN()
+    }
+    string lookup_enum_constructor_param_type_name(string variant_name, int arg_index) {
+        var i = 0
+        while i < this.enum_variant_signatures.len() {
+            if this.enum_variant_signatures[i].variant_name == variant_name {
+                if arg_index < this.enum_variant_signatures[i].payload_ty_names.len() {
+                    return this.enum_variant_signatures[i].payload_ty_names[arg_index]
+                }
+                return ""
+            }
+            i = i + 1
+        }
+        return ""
     }
     string lookup_enum_constructor_name(string variant_name) {
         var i = 0
@@ -364,11 +379,13 @@ impl Resolver {
         this.preload_prelude_symbol("bool")
         this.preload_prelude_symbol("string")
         this.preload_prelude_symbol("float")
+        this.preload_prelude_symbol("Vec")
         this.preload_prelude_symbol("Result")
         this.preload_prelude_symbol("int_to_string")
         this.preload_prelude_symbol("float_to_string")
         this.preload_prelude_symbol("parse_int")
         this.preload_prelude_symbol("parse_float")
+        this.preload_prelude_symbol("char_to_string")
         this.preload_prelude_symbol("file_exists")
         this.preload_prelude_symbol("is_dir")
         this.preload_prelude_symbol("arg_count")
@@ -395,14 +412,24 @@ impl Resolver {
         this.resolve_stmt_list(statements)
         this.end_scope()
     }
-    void resolve_function(Vec<string> params, Vec<int> param_tys, Vec<Stmt> body, bool require_value_return, int function_return_ty) {
+    void resolve_function(
+        Vec<string> params,
+        Vec<int> param_tys,
+        Vec<string> param_ty_names,
+        Vec<Stmt> body,
+        bool require_value_return,
+        int function_return_ty,
+        string function_return_ty_name
+    ) {
         this.begin_scope()
         var prev_in_function = this.in_function
         var prev_require_value_return = this.require_value_return
         var prev_function_return_ty = this.current_function_return_type
+        var prev_function_return_ty_name = this.current_function_return_type_name
         this.in_function = true
         this.require_value_return = require_value_return
         this.current_function_return_type = function_return_ty
+        this.current_function_return_type_name = function_return_ty_name
         var i = 0
         while i < params.len() {
             if this.table.is_defined_in_current_scope(params[i]) {
@@ -413,7 +440,11 @@ impl Resolver {
                 if i < param_tys.len() {
                     param_ty = param_tys[i]
                 }
-                this.define_typed_symbol(params[i], param_ty)
+                var param_ty_name = this.type_to_string(param_ty)
+                if i < param_ty_names.len() {
+                    param_ty_name = param_ty_names[i]
+                }
+                this.define_typed_symbol(params[i], param_ty, param_ty_name)
             }
             i = i + 1
         }
@@ -424,6 +455,7 @@ impl Resolver {
         this.in_function = prev_in_function
         this.require_value_return = prev_require_value_return
         this.current_function_return_type = prev_function_return_ty
+        this.current_function_return_type_name = prev_function_return_ty_name
         this.end_scope()
     }
 }
