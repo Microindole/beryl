@@ -90,12 +90,16 @@
 - [x] enum payload 构造调用语义第一版：构造器 arity 与参数类型校验
 - [x] enum variant 构造器预加载：声明后可直接调用（如 `Running()` / `Text("x")`）
 - [x] Step 29 已补 resolver 正负例：穷尽性、重复 pattern、未知 variant、payload arity/type
+- [x] `match` payload 绑定语义第一版：支持 `Text(v)` / `Pair(a, b)` 形态，绑定变量在 arm 内参与类型检查
+- [x] Step 29 已补 payload 绑定回归：绑定正例、binder arity/type/duplicate 负例
+- [x] Visitor 试点：`AST printer(expr)` 已切换到 visitor 分派（低风险路径）
 
 未完成：
 - [ ] TODO: nullable/result 语义规则落地（不是 `unknown` 兜底）
 - [ ] TODO: import 模块加载与符号导入规则（当前仅 alias 绑定）
-- [ ] TODO: `match` payload 解构绑定语义（当前 pattern 仅单 token，尚无 `Text(v)` 形态）
 - [ ] TODO: enum 变量跨复杂表达式/函数返回的类型流追踪（当前仅覆盖直接构造与变量引用链路）
+- [ ] TODO: `match` 嵌套/复杂模式解构（当前仅支持 variant + 一层 binder）
+- [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）
 - 前端语法能力：约 35%
@@ -159,8 +163,9 @@
 - FIXME: 顶层声明已完成 payload 化与分层，但块内声明仍通过 `Stmt` 路径执行，后续需要评估“声明语句统一中间表示”以进一步收敛双轨分支。
 - FIXME: `stmt_to_decl` 当前对声明 kind 与 payload kind 不一致仍以 `DECL_UNKNOWN` 兜底，后续需补齐诊断上下文并评估 parser 阶段前置拦截。
 
-## 7. 本次重构收尾结论（2026-03-08）
+## 7. 本次重构收尾结论（2026-03-09）
 - [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。
 - [x] resolver 已完成“普通语句处理 vs 声明语义处理”职责分层，声明路径统一消费 `Decl` 视图。
 - [x] parser 已去除声明二次扫描，`parse_program()` 单趟构建 `Program(decls + statements)`。
-- [ ] TODO: `match` payload 解构绑定与绑定变量类型一致性尚未接入，仍是后续主线项。
+- [x] `match` payload 绑定与绑定变量类型一致性第一版已接入（一层 binder）。
+- [x] Visitor 已完成低风险试点（AST printer expr），当前结论是“按边界推进，不做全量迁移”。

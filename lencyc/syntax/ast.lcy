@@ -7,6 +7,7 @@ import lencyc.syntax.token
 import lencyc.syntax.ast.expr
 import lencyc.syntax.ast.stmt
 import lencyc.syntax.ast.decl
+import lencyc.syntax.ast.visitor
 import lencyc.syntax.ast.printer
 
 struct Expr {

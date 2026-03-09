@@ -35,6 +35,7 @@ struct FunctionSignature {
     string name
     int return_ty
     Vec<int> param_tys
+    string return_enum_name
 }
 struct EnumVariantSignature {
     string enum_name
@@ -53,6 +54,7 @@ struct Resolver {
     Vec<TypedSymbol> typed_symbols
     Vec<ConstSymbol> const_symbols
     Vec<FunctionSignature> function_signatures
+    Vec<string> enum_type_names
     Vec<EnumVariantSignature> enum_variant_signatures
     Vec<EnumValueSymbol> enum_value_symbols
     bool in_function
@@ -92,11 +94,12 @@ ConstSymbol make_const_symbol(string name, int depth) {
         depth: depth
     }
 }
-FunctionSignature make_function_signature(string name, int return_ty, Vec<int> param_tys) {
+FunctionSignature make_function_signature(string name, int return_ty, Vec<int> param_tys, string return_enum_name) {
     return FunctionSignature {
         name: name,
         return_ty: return_ty,
-        param_tys: param_tys
+        param_tys: param_tys,
+        return_enum_name: return_enum_name
     }
 }
 EnumVariantSignature make_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys) {
@@ -121,6 +124,7 @@ Resolver make_resolver() {
         typed_symbols: vec![],
         const_symbols: vec![],
         function_signatures: vec![],
+        enum_type_names: vec![],
         enum_variant_signatures: vec![],
         enum_value_symbols: vec![],
         in_function: false,

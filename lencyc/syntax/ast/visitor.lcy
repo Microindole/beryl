@@ -1,0 +1,110 @@
+// lencyc/syntax/ast/visitor.lcy
+// Visitor pilot for expression string rendering.
+
+import std.core
+import lencyc.syntax.ast
+
+struct ExprStringVisitor {
+}
+
+ExprStringVisitor make_expr_string_visitor() {
+    return ExprStringVisitor {}
+}
+
+impl ExprStringVisitor {
+    string pattern_to_string(MatchPattern pattern) {
+        var out = pattern.tag.lexeme
+        if pattern.binders.len() == 0 {
+            return out
+        }
+        out = out + "("
+        var i = 0
+        while i < pattern.binders.len() {
+            out = out + pattern.binders[i].lexeme
+            if i + 1 < pattern.binders.len() {
+                out = out + ", "
+            }
+            i = i + 1
+        }
+        out = out + ")"
+        return out
+    }
+
+    string visit_expr(Expr expr) {
+        if expr.kind == EXPR_LITERAL() {
+            return expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_VARIABLE() {
+            return expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_GROUPING() {
+            if expr.children.len() > 0 {
+                return "(group " + this.visit_expr(expr.children[0]) + ")"
+            }
+            return "(group)"
+        }
+        if expr.kind == EXPR_UNARY() {
+            if expr.children.len() > 0 {
+                return "(" + expr.operator.lexeme + " " + this.visit_expr(expr.children[0]) + ")"
+            }
+            return "(" + expr.operator.lexeme + " ?)"
+        }
+        if expr.kind == EXPR_ASSIGN() {
+            if expr.children.len() > 0 {
+                return "(assign " + expr.literal_value.lexeme + " " + this.visit_expr(expr.children[0]) + ")"
+            }
+            return "(assign " + expr.literal_value.lexeme + " ?)"
+        }
+        if expr.kind == EXPR_GET() {
+            if expr.children.len() > 0 {
+                return "(get " + this.visit_expr(expr.children[0]) + "." + expr.literal_value.lexeme + ")"
+            }
+            return "(get ?." + expr.literal_value.lexeme + ")"
+        }
+        if expr.kind == EXPR_CALL() {
+            if expr.children.len() == 0 {
+                return "(call ?)"
+            }
+            var out = "(call " + this.visit_expr(expr.children[0])
+            var i = 1
+            while i < expr.children.len() {
+                out = out + " " + this.visit_expr(expr.children[i])
+                i = i + 1
+            }
+            out = out + ")"
+            return out
+        }
+        if expr.kind == EXPR_BINARY() || expr.kind == EXPR_LOGICAL() {
+            if expr.children.len() >= 2 {
+                return "(" + expr.operator.lexeme + " " + this.visit_expr(expr.children[0]) + " " + this.visit_expr(expr.children[1]) + ")"
+            }
+            return "(" + expr.operator.lexeme + " ? ?)"
+        }
+        if expr.kind == EXPR_MATCH() {
+            if expr.children.len() == 0 {
+                return "(match ? {})"
+            }
+            var out = "(match " + this.visit_expr(expr.children[0]) + " {"
+            var i = 0
+            while i < expr.arm_patterns.len() {
+                var arm_expr = "?"
+                if i + 1 < expr.children.len() {
+                    arm_expr = this.visit_expr(expr.children[i + 1])
+                }
+                out = out + this.pattern_to_string(expr.arm_patterns[i]) + " => " + arm_expr
+                if i + 1 < expr.arm_patterns.len() {
+                    out = out + ", "
+                }
+                i = i + 1
+            }
+            out = out + "})"
+            return out
+        }
+        return "(expr_unknown)"
+    }
+}
+
+string expr_to_string_by_visitor(Expr expr) {
+    var visitor = make_expr_string_visitor()
+    return visitor.visit_expr(expr)
+}

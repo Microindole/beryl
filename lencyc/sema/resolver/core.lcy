@@ -97,6 +97,14 @@ impl Resolver {
     void preload_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys) {
         this.enum_variant_signatures.push(make_enum_variant_signature(enum_name, variant_name, payload_tys))
     }
+    void preload_enum_type_name(string enum_name) {
+        if !this.contains_name(this.enum_type_names, enum_name) {
+            this.enum_type_names.push(enum_name)
+        }
+    }
+    bool is_enum_type_name(string type_name) {
+        return this.contains_name(this.enum_type_names, type_name)
+    }
     int lookup_enum_constructor_arity(string variant_name) {
         var i = 0
         while i < this.enum_variant_signatures.len() {
@@ -125,6 +133,16 @@ impl Resolver {
         while i < this.enum_variant_signatures.len() {
             if this.enum_variant_signatures[i].variant_name == variant_name {
                 return this.enum_variant_signatures[i].enum_name
+            }
+            i = i + 1
+        }
+        return ""
+    }
+    string lookup_user_function_return_enum_name(string name) {
+        var i = 0
+        while i < this.function_signatures.len() {
+            if this.function_signatures[i].name == name {
+                return this.function_signatures[i].return_enum_name
             }
             i = i + 1
         }
@@ -188,12 +206,39 @@ impl Resolver {
         if expr.kind == EXPR_CALL() {
             if expr.children.len() > 0 {
                 if expr.children[0].kind == EXPR_VARIABLE() {
-                    return this.lookup_enum_constructor_name(expr.children[0].literal_value.lexeme)
+                    var callee_name = expr.children[0].literal_value.lexeme
+                    var ctor_enum_name = this.lookup_enum_constructor_name(callee_name)
+                    if ctor_enum_name != "" {
+                        return ctor_enum_name
+                    }
+                    return this.lookup_user_function_return_enum_name(callee_name)
                 }
             }
         }
         if expr.kind == EXPR_VARIABLE() {
             return this.lookup_enum_value_symbol(expr.literal_value.lexeme)
+        }
+        if expr.kind == EXPR_MATCH() {
+            if expr.children.len() <= 1 {
+                return ""
+            }
+            var result_enum_name = ""
+            var i = 1
+            while i < expr.children.len() {
+                var arm_enum_name = this.infer_expr_enum_name(expr.children[i])
+                if arm_enum_name == "" {
+                    return ""
+                }
+                if result_enum_name == "" {
+                    result_enum_name = arm_enum_name
+                } else {
+                    if result_enum_name != arm_enum_name {
+                        return ""
+                    }
+                }
+                i = i + 1
+            }
+            return result_enum_name
         }
         if expr.kind == EXPR_GROUPING() && expr.children.len() > 0 {
             return this.infer_expr_enum_name(expr.children[0])
@@ -286,6 +331,15 @@ impl Resolver {
             return TYPE_UNKNOWN()
         }
         return this.token_kind_to_type(type_ref.kind)
+    }
+    string resolve_signature_enum_name_or_empty(TypeRef type_ref) {
+        if type_ref.kind != T_IDENTIFIER() {
+            return ""
+        }
+        if this.is_enum_type_name(type_ref.name) {
+            return type_ref.name
+        }
+        return ""
     }
     int lookup_user_function_arity(string name) {
         var i = 0

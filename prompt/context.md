@@ -8,9 +8,9 @@
 
 ## 1. 当前基线（2026-03-09）
 - Rust 主编译器（`crates/`）源码文件数：175。
-- Lency 自举编译器（`lencyc/`）源码文件数：25。
+- Lency 自举编译器（`lencyc/`）源码文件数：26。
 - Rust 集成测试文件数（`tests/integration/`）：74。
-- Lency 示例测试文件数（`tests/example/`）：23（已按 `lir/runtime/parser/modules/selfhost` 分层）。
+- Lency 示例测试文件数（`tests/example/`）：24（已按 `lir/runtime/parser/modules/selfhost` 分层）。
 - 当前判断：`lencyc` 已打通最小闭环，但能力远未接近 Rust 主链路；此前“~98% 准备度”判定失真，已废弃。
 
 ## 2. 能力对照（Rust vs Lency 自举）
@@ -22,7 +22,7 @@
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
   - TODO: 扩展 nullable/result 语义与更完整控制流返回分析。
-  - TODO: `match` payload 解构绑定语义（当前 pattern 仅单 token）。
+  - TODO: `match` 嵌套/复杂模式解构语义（当前仅支持 variant + 一层 binder）。
   - TODO: enum 类型在复杂表达式/函数返回场景的类型流追踪仍不完整。
   - TODO: `import` 当前仅做 alias 最小绑定，尚未做模块加载与符号导入规则。
 - 后端：
@@ -84,6 +84,8 @@
 - enum variant 构造器已在 preload 阶段入表并携带 payload 签名，`Running()/Text("x")` 可在 resolver 做 arity/type 校验。
 - `match` 在目标可推断为 enum 时已接入语义校验：重复 pattern、未知 variant、穷尽性检查。
 - Step 29 已补齐 enum/match 语义正负例回归：穷尽性、重复 pattern、未知 variant、payload 构造器 arity/type。
+- `match` payload 绑定语义第一版已接入：支持 `Text(v)`/`Pair(a,b)`，绑定变量在 arm 内按 payload 类型参与类型检查。
+- AST printer 的 expr 分派已完成 Visitor 试点，作为“按边界引入模式”的低风险路径；暂不全量迁移 resolver。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

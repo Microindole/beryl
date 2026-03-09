@@ -95,6 +95,24 @@ bool run_match_and_enum_payload_tests() {
     if !expect_shared_resolve_success(match_source, "match resolver smoke positive") {
         return false
     }
+    var payload_pattern_source = read_match_case_or_empty("tests/example/parser/match_payload_pattern.lcy")
+    if payload_pattern_source == "" {
+        return false
+    }
+    var payload_pattern_parser = make_parser(payload_pattern_source)
+    var payload_pattern_program = payload_pattern_parser.parse_program()
+    if payload_pattern_parser.has_error {
+        print("Match payload pattern parse failed unexpectedly.\n")
+        return false
+    }
+    if payload_pattern_program.statements.len() < 3 || payload_pattern_program.statements[2].kind != STMT_VAR_DECL() {
+        print("Match payload pattern AST kind mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(payload_pattern_program.statements[2]), "(var y = (match m {Quit => 0, Text(msg) => 1, Pair(a, b) => a}))") {
+        print("Match payload pattern AST shape mismatch.\n")
+        return false
+    }
     if !expect_shared_resolve_success(src_resolver_enum_match_exhaustive_ok(), "enum match exhaustive positive") {
         return false
     }
@@ -114,6 +132,18 @@ bool run_match_and_enum_payload_tests() {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_enum_payload_ctor_arity_bad(), "enum payload constructor arity mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_match_bind_ok(), "enum payload match binder positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_arity_bad(), "enum payload match binder arity mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_type_bad(), "enum payload match binder type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_duplicate_bad(), "enum payload match binder duplicate negative") {
         return false
     }
     return true
