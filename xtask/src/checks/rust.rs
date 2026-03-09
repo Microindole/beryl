@@ -78,6 +78,14 @@ pub(crate) fn check_rust() -> Result<()> {
         )
     })?;
 
+    step("Checking directory density (rust scope)", || {
+        run_python(
+            &python,
+            &["scripts/check_dir_density.py", "--scope", "rust"],
+            false,
+        )
+    })?;
+
     step("Scanning TODO/FIXME (rust scope)", || {
         run_python(
             &python,

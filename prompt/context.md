@@ -55,6 +55,8 @@
 - 测试目录重构：`tests/example/selfhost/driver/test_steps_*` 已下沉到 `tests/example/selfhost/driver/steps/*`。
 - 规则治理：`prompt/rules.md` 中“同层文件数接近或超过 9”已明确为可调启发式预警线（非工业硬标准）。
 - 文档治理：`assets/Lency.txt` 已完成语气规范化改写，规则与约束语义保持不变（无放宽、无删减）。
+- 工具链增量：`xtask auto-check` 已支持 docs-only 快速模式（仅文档变更时不再回退全量 `check-lency`）。
+- 工具链增量：新增 `scripts/check_dir_density.py`，并接入 `check-rust/check-lency`（warning 级预警，超大目录 error 失败）。
 - 已引入 `Program(decls + statements)` 过渡模型与 `parse_program()/resolve_program()` 入口，为后续 Decl/Stmt 解耦与 payload 化迁移提供兼容路径。
 - resolver 预加载已从 `Decl` 视图直连（不再依赖 `Decl -> Stmt` 中转），迁移方向保持单向解耦。
 - `test_entry` 与拆分的 `test_steps_*` 已切换到 `parse_program()/resolve_program()`，过渡入口已被回归覆盖。

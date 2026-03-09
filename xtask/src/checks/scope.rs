@@ -1,4 +1,4 @@
-use super::{check_lency, check_rust};
+use super::{check_docs_quick, check_lency, check_rust};
 use crate::helpers::step;
 use anyhow::{bail, Context, Result};
 use std::process::Command;
@@ -8,6 +8,7 @@ enum CheckScope {
     RustOnly,
     LencyOnly,
     Both,
+    DocsOnly,
     None,
 }
 
@@ -35,6 +36,14 @@ fn is_lency_change(path: &str) -> bool {
         || path == "scripts/win/lency_selfhost_run.ps1"
 }
 
+fn is_docs_change(path: &str) -> bool {
+    path.starts_with("docs/")
+        || path.starts_with("prompt/")
+        || path.starts_with("assets/")
+        || path.ends_with(".md")
+        || path.ends_with(".txt")
+}
+
 fn detect_check_scope_from_git_status() -> Result<CheckScope> {
     let output = Command::new("git")
         .args(["status", "--porcelain"])
@@ -50,6 +59,7 @@ fn detect_check_scope_from_git_status() -> Result<CheckScope> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let mut has_rust = false;
     let mut has_lency = false;
+    let mut has_docs = false;
 
     for line in stdout.lines() {
         if line.len() < 4 {
@@ -69,13 +79,22 @@ fn detect_check_scope_from_git_status() -> Result<CheckScope> {
         if is_lency_change(&normalized) {
             has_lency = true;
         }
+        if is_docs_change(&normalized) {
+            has_docs = true;
+        }
     }
 
     Ok(match (has_rust, has_lency) {
         (true, true) => CheckScope::Both,
         (true, false) => CheckScope::RustOnly,
         (false, true) => CheckScope::LencyOnly,
-        (false, false) => CheckScope::None,
+        (false, false) => {
+            if has_docs {
+                CheckScope::DocsOnly
+            } else {
+                CheckScope::None
+            }
+        }
     })
 }
 
@@ -93,6 +112,10 @@ pub(crate) fn auto_check() -> Result<()> {
         CheckScope::Both => {
             check_rust()?;
             check_lency()
+        }
+        CheckScope::DocsOnly => {
+            println!("Docs-only changes detected, running quick check mode.");
+            check_docs_quick()
         }
         CheckScope::None => {
             println!("No Rust/Lency scoped changes detected, fallback to check-lency.");

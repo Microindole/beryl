@@ -60,6 +60,11 @@ pub(crate) fn check_lency() -> Result<()> {
                 &["scripts/check_file_size.py", "--scope", "lency"],
                 false,
             )?;
+            run_python(
+                &python,
+                &["scripts/check_dir_density.py", "--scope", "lency"],
+                false,
+            )?;
             run_python(&python, &["scripts/check_lencyc_meta.py"], false)
         },
     )?;
