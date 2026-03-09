@@ -14,7 +14,7 @@ struct Expr {
     Token literal_value
     Token operator
     Vec<Expr> children
-    Vec<Token> arm_patterns // EXPR_MATCH 分支模式（与 children[1..] 一一对应）
+    Vec<MatchPattern> arm_patterns // EXPR_MATCH 分支模式（与 children[1..] 一一对应）
 }
 
 struct TypeRef {
@@ -50,6 +50,18 @@ EnumVariant make_enum_variant(string name, Vec<TypeRef> payload_types) {
     return EnumVariant {
         name: name,
         payload_types: payload_types
+    }
+}
+
+struct MatchPattern {
+    Token tag
+    Vec<Token> binders
+}
+
+MatchPattern make_match_pattern(Token tag, Vec<Token> binders) {
+    return MatchPattern {
+        tag: tag,
+        binders: binders
     }
 }
 

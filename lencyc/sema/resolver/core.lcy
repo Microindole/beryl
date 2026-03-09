@@ -140,8 +140,25 @@ impl Resolver {
         }
         return false
     }
-    bool is_wildcard_pattern(Token pattern) {
-        return pattern.kind == T_IDENTIFIER() && pattern.lexeme == "_"
+    bool is_wildcard_pattern(MatchPattern pattern) {
+        return pattern.tag.kind == T_IDENTIFIER() && pattern.tag.lexeme == "_"
+    }
+    string match_pattern_to_string(MatchPattern pattern) {
+        var out = pattern.tag.lexeme
+        if pattern.binders.len() == 0 {
+            return out
+        }
+        out = out + "("
+        var i = 0
+        while i < pattern.binders.len() {
+            out = out + pattern.binders[i].lexeme
+            if i + 1 < pattern.binders.len() {
+                out = out + ", "
+            }
+            i = i + 1
+        }
+        out = out + ")"
+        return out
     }
     Vec<string> collect_missing_enum_variants(string enum_name, Vec<string> seen_variants) {
         var missing = vec![]

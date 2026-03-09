@@ -4,6 +4,24 @@
 import std.core
 import lencyc.syntax.ast
 
+string match_pattern_to_string(MatchPattern pattern) {
+    var out = pattern.tag.lexeme
+    if pattern.binders.len() == 0 {
+        return out
+    }
+    out = out + "("
+    var i = 0
+    while i < pattern.binders.len() {
+        out = out + pattern.binders[i].lexeme
+        if i + 1 < pattern.binders.len() {
+            out = out + ", "
+        }
+        i = i + 1
+    }
+    out = out + ")"
+    return out
+}
+
 string expr_to_string(Expr expr) {
     if expr.kind == EXPR_LITERAL() {
         return expr.literal_value.lexeme
@@ -65,7 +83,7 @@ string expr_to_string(Expr expr) {
             if i + 1 < expr.children.len() {
                 arm_expr = expr_to_string(expr.children[i + 1])
             }
-            out = out + expr.arm_patterns[i].lexeme + " => " + arm_expr
+            out = out + match_pattern_to_string(expr.arm_patterns[i]) + " => " + arm_expr
             if i + 1 < expr.arm_patterns.len() {
                 out = out + ", "
             }

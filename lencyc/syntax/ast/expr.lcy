@@ -114,7 +114,7 @@ Expr make_expr_get(Expr object, Token name) {
     }
 }
 
-Expr make_expr_match(Expr target, Vec<Token> patterns, Vec<Expr> arm_values) {
+Expr make_expr_match(Expr target, Vec<MatchPattern> patterns, Vec<Expr> arm_values) {
     var children = vec![target]
     var i = 0
     while i < arm_values.len() {
