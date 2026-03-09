@@ -4,6 +4,7 @@
 import std.core
 import std.fs
 import std.str
+import tests.example.selfhost.driver.test_cases
 import tests.example.selfhost.driver.test_support
 import lencyc.syntax.parser
 import lencyc.syntax.ast
@@ -92,6 +93,27 @@ bool run_match_and_enum_payload_tests() {
         return false
     }
     if !expect_shared_resolve_success(match_source, "match resolver smoke positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_match_exhaustive_ok(), "enum match exhaustive positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_non_exhaustive_bad(), "enum match non-exhaustive negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_duplicate_pattern_bad(), "enum match duplicate pattern negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_unknown_variant_bad(), "enum match unknown variant negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_ctor_type_ok(), "enum payload constructor type positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_ctor_type_bad(), "enum payload constructor type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_ctor_arity_bad(), "enum payload constructor arity mismatch negative") {
         return false
     }
     return true

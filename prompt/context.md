@@ -6,7 +6,7 @@
 - `prompt/sprint/status.md` 是唯一状态真相来源，本文件只保留长期协作上下文与基线。
 - Phase 0 能力矩阵真表：`prompt/artifacts/capability_matrix.md`。
 
-## 1. 当前基线（2026-03-08）
+## 1. 当前基线（2026-03-09）
 - Rust 主编译器（`crates/`）源码文件数：175。
 - Lency 自举编译器（`lencyc/`）源码文件数：25。
 - Rust 集成测试文件数（`tests/integration/`）：74。
@@ -21,7 +21,9 @@
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
-  - TODO: 扩展 nullable/result/enum+match 语义与更完整控制流返回分析。
+  - TODO: 扩展 nullable/result 语义与更完整控制流返回分析。
+  - TODO: `match` payload 解构绑定语义（当前 pattern 仅单 token）。
+  - TODO: enum 类型在复杂表达式/函数返回场景的类型流追踪仍不完整。
   - TODO: `import` 当前仅做 alias 最小绑定，尚未做模块加载与符号导入规则。
 - 后端：
   - Rust：AST -> LLVM IR -> 可执行链路成熟。
@@ -79,6 +81,9 @@
 - 收尾说明：`status.md` 已移除两条过时 `FIXME`（“AST 未 payload 化 / resolver 未分层”），并替换为当前真实剩余风险条目。
 - `xtask check-rust` 已纳入 `.lcy` 集成用例（`tests/integration/*.lcy`）执行，不再只依赖 Rust 单元/文档测试覆盖。
 - `run_lcy_tests` 脚本已修正项目根路径解析（`scripts/* -> repo root`），消除此前误报“未找到 tests/integration”导致的假通过。
+- enum variant 构造器已在 preload 阶段入表并携带 payload 签名，`Running()/Text("x")` 可在 resolver 做 arity/type 校验。
+- `match` 在目标可推断为 enum 时已接入语义校验：重复 pattern、未知 variant、穷尽性检查。
+- Step 29 已补齐 enum/match 语义正负例回归：穷尽性、重复 pattern、未知 variant、payload 构造器 arity/type。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

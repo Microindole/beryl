@@ -90,3 +90,10 @@ string src_resolver_extern_call_ok() { return "extern int strlen(string s)\nvar 
 string src_resolver_extern_call_arity_bad() { return "extern int strlen(string s)\nvar n = strlen()\nreturn n"; }
 string src_parser_enum_decl_program() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar x = 1\nreturn x"; }
 string src_resolver_enum_duplicate_variant_bad() { return "enum Status {\n  Idle,\n  Idle\n}\nvar x = 1\nreturn x"; }
+string src_resolver_enum_match_exhaustive_ok() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar s = Running()\nvar code = match (s) {\n  Idle => 0,\n  Running => 1,\n  Done => 2\n}\nreturn code"; }
+string src_resolver_enum_match_non_exhaustive_bad() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar s = Running()\nvar code = match (s) {\n  Idle => 0,\n  Running => 1\n}\nreturn code"; }
+string src_resolver_enum_match_duplicate_pattern_bad() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar s = Running()\nvar code = match (s) {\n  Idle => 0,\n  Idle => 1,\n  Done => 2\n}\nreturn code"; }
+string src_resolver_enum_match_unknown_variant_bad() { return "enum Status {\n  Idle,\n  Running,\n  Done\n}\nvar s = Running()\nvar code = match (s) {\n  Idle => 0,\n  Paused => 1,\n  Done => 2\n}\nreturn code"; }
+string src_resolver_enum_payload_ctor_type_ok() { return "enum Message {\n  Quit,\n  Text(string),\n  Pair(int, string)\n}\nvar m = Text(\"ok\")\nvar p = Pair(1, \"x\")\nvar code = match (m) {\n  Quit => 0,\n  Text => 1,\n  Pair => 2\n}\nreturn code"; }
+string src_resolver_enum_payload_ctor_type_bad() { return "enum Message {\n  Quit,\n  Text(string),\n  Pair(int, string)\n}\nvar m = Text(1)\nreturn 0"; }
+string src_resolver_enum_payload_ctor_arity_bad() { return "enum Message {\n  Quit,\n  Text(string),\n  Pair(int, string)\n}\nvar p = Pair(1)\nreturn 0"; }

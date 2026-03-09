@@ -39,6 +39,14 @@ impl Resolver {
             if expr.children.len() > 0 {
                 var rhs_ty = this.resolve_expr(expr.children[0])
                 var lhs_ty = this.lookup_typed_symbol(expr.literal_value.lexeme)
+                var lhs_enum_name = this.lookup_enum_value_symbol(expr.literal_value.lexeme)
+                var rhs_enum_name = this.infer_expr_enum_name(expr.children[0])
+                if lhs_enum_name != "" && rhs_enum_name != "" && lhs_enum_name != rhs_enum_name {
+                    this.error(
+                        "EnumAssignment mismatch for " + expr.literal_value.lexeme +
+                        ": expected " + lhs_enum_name + ", got " + rhs_enum_name
+                    )
+                }
                 if !this.types_match_or_unknown(lhs_ty, rhs_ty) {
                     this.error(
                         "type mismatch in assignment to " + expr.literal_value.lexeme +
@@ -129,6 +137,7 @@ impl Resolver {
             var call_ty = TYPE_UNKNOWN()
             var callee_name = ""
             var has_user_signature = false
+            var has_enum_constructor_signature = false
             if expr.children.len() > 0 {
                 var callee = expr.children[0]
                 if callee.kind == EXPR_VARIABLE() {
@@ -152,6 +161,17 @@ impl Resolver {
                             )
                         }
                     }
+                    var enum_expected = this.lookup_enum_constructor_arity(callee_name)
+                    if enum_expected >= 0 {
+                        has_enum_constructor_signature = true
+                        var enum_actual = expr.children.len() - 1
+                        if enum_actual != enum_expected {
+                            this.error(
+                                "EnumConstructor arity mismatch for " + callee_name +
+                                ": expected " + int_to_string(enum_expected) + ", got " + int_to_string(enum_actual)
+                            )
+                        }
+                    }
                 }
             }
             if expr.children.len() > 0 {
@@ -171,6 +191,17 @@ impl Resolver {
                         )
                     }
                 }
+                if has_enum_constructor_signature {
+                    var expected_payload_ty = this.lookup_enum_constructor_param_type(callee_name, j - 1)
+                    if !this.types_match_or_unknown(expected_payload_ty, arg_ty) {
+                        this.error(
+                            "EnumConstructor argument type mismatch for " + callee_name +
+                            " arg #" + int_to_string(j) +
+                            ": expected " + this.type_to_string(expected_payload_ty) +
+                            ", got " + this.type_to_string(arg_ty)
+                        )
+                    }
+                }
                 j = j + 1
             }
             return call_ty
@@ -181,9 +212,35 @@ impl Resolver {
                 return TYPE_UNKNOWN()
             }
             this.resolve_expr(expr.children[0])
+            var target_enum_name = this.infer_expr_enum_name(expr.children[0])
             var result_ty = TYPE_UNKNOWN()
+            var seen_variants = vec![]
+            var has_wildcard = false
             var i = 0
             while i < expr.arm_patterns.len() {
+                var pattern = expr.arm_patterns[i]
+                if target_enum_name != "" {
+                    if this.is_wildcard_pattern(pattern) {
+                        has_wildcard = true
+                    } else {
+                        if pattern.kind != T_IDENTIFIER() {
+                            this.error("EnumMatch pattern must be identifier variant or '_'")
+                        } else {
+                            if !this.is_enum_variant(target_enum_name, pattern.lexeme) {
+                                this.error(
+                                    "unknown EnumVariant in match for " + target_enum_name +
+                                    ": " + pattern.lexeme
+                                )
+                            } else {
+                                if this.contains_name(seen_variants, pattern.lexeme) {
+                                    this.error("duplicate match pattern: " + pattern.lexeme)
+                                } else {
+                                    seen_variants.push(pattern.lexeme)
+                                }
+                            }
+                        }
+                    }
+                }
                 if i + 1 >= expr.children.len() {
                     this.error("match arm expression missing for pattern: " + expr.arm_patterns[i].lexeme)
                     i = i + 1
@@ -203,7 +260,16 @@ impl Resolver {
                 }
                 i = i + 1
             }
-            // TODO: match 分支穷尽性与模式重复检查在 enum+match 语义阶段补齐。
+            if target_enum_name != "" && !has_wildcard {
+                var missing_variants = this.collect_missing_enum_variants(target_enum_name, seen_variants)
+                if missing_variants.len() > 0 {
+                    this.error(
+                        "non-exhaustive match for enum " + target_enum_name +
+                        ": missing " + this.join_names(missing_variants, ", ")
+                    )
+                }
+            }
+            // TODO: 当前 parser 的 match pattern 仅支持单 token，payload 解构绑定语义待 pattern AST 扩展后接入。
             return result_ty
         }
         var i = 0

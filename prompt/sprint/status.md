@@ -1,6 +1,6 @@
 # Sprint 状态总结
 
-更新时间：2026-03-08
+更新时间：2026-03-09
 
 ## 0. 当前结论（先看）
 - `lencyc` 已完成最小自举闭环：`Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
@@ -86,12 +86,16 @@
 - [x] `extern` 签名预加载与调用 arity 校验
 - [x] `import` 最小 alias 绑定骨架
 - [x] `enum` duplicate variant 最小语义校验
+- [x] `enum + match` 语义第一版：重复 pattern/未知 variant/穷尽性检查（目标可推断为 enum 时）
+- [x] enum payload 构造调用语义第一版：构造器 arity 与参数类型校验
+- [x] enum variant 构造器预加载：声明后可直接调用（如 `Running()` / `Text("x")`）
+- [x] Step 29 已补 resolver 正负例：穷尽性、重复 pattern、未知 variant、payload arity/type
 
 未完成：
 - [ ] TODO: nullable/result 语义规则落地（不是 `unknown` 兜底）
-- [ ] TODO: `enum + match` 语义一致性与穷尽性检查
 - [ ] TODO: import 模块加载与符号导入规则（当前仅 alias 绑定）
-- [ ] TODO: `enum` payload 类型与构造/匹配语义（语法已接入，语义与穷尽性未完成）
+- [ ] TODO: `match` payload 解构绑定语义（当前 pattern 仅单 token，尚无 `Text(v)` 形态）
+- [ ] TODO: enum 变量跨复杂表达式/函数返回的类型流追踪（当前仅覆盖直接构造与变量引用链路）
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）
 - 前端语法能力：约 35%
@@ -159,4 +163,4 @@
 - [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。
 - [x] resolver 已完成“普通语句处理 vs 声明语义处理”职责分层，声明路径统一消费 `Decl` 视图。
 - [x] parser 已去除声明二次扫描，`parse_program()` 单趟构建 `Program(decls + statements)`。
-- [ ] TODO: `match`/`enum payload` 语义（穷尽性、绑定与类型一致性）尚未接入，属于后续主线阻塞项。
+- [ ] TODO: `match` payload 解构绑定与绑定变量类型一致性尚未接入，仍是后续主线项。

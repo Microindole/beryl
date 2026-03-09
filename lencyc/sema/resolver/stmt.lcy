@@ -15,6 +15,10 @@ impl Resolver {
             } else {
                 this.table.define(stmt.name.lexeme)
                 this.define_typed_symbol(stmt.name.lexeme, value_ty)
+                var enum_name = this.infer_expr_enum_name(stmt.expr)
+                if enum_name != "" {
+                    this.define_enum_value_symbol(stmt.name.lexeme, enum_name)
+                }
                 if stmt.is_const {
                     this.define_const_symbol(stmt.name.lexeme)
                 }

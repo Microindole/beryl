@@ -1,89 +1,51 @@
 # 枚举
 
-## 基本枚举
+## 当前可用语法（自举链路）
 
 ```lency
-enum Color {
-    Red,
-    Green,
-    Blue
+enum Status {
+    Idle,
+    Running,
+    Done
 }
 
-var c = Color.Red
+var s = Running()
 ```
 
-## 带数据的枚举
+## 带 payload 的 variant 构造
 
 ```lency
-enum Shape {
-    Circle(int),      // 半径
-    Rectangle(int, int)  // 宽, 高
+enum Message {
+    Quit,
+    Text(string),
+    Pair(int, string)
 }
 
-var s = Shape.Circle(10)
+var m = Text("hello")
+var p = Pair(1, "ok")
 ```
 
 ## 模式匹配
 
 ```lency
-var color = Color.Red
+var s = Running()
 
-match color {
-    case Red => print("red")
-    case Green => print("green")
-    case Blue => print("blue")
+var code = match (s) {
+    Idle => 0,
+    Running => 1,
+    Done => 2
 }
 ```
 
-### 提取数据
+## 当前语义检查（自举链路）
 
-```lency
-var shape = Shape.Rectangle(10, 20)
+- `match` 在目标可推断为 enum 时，检查：
+  - 重复 pattern（如 `Idle` 写两次）
+  - 未知 variant（如 `Paused` 不在 `Status` 内）
+  - 穷尽性（无 `_` 且漏分支时报错）
+- enum variant 构造调用检查：
+  - 参数个数（arity）一致
+  - 参数类型一致（payload 类型）
 
-match shape {
-    case Circle(r) => print(r)
-    case Rectangle(w, h) => print(w * h)
-}
-```
-
-## 泛型枚举
-
-> **⚠️ 注意:** 当前 Lency 编译器对泛型枚举的全面支持仍有部分限制。
-
-```lency
-enum Option<T> {
-    Some(T),
-    None
-}
-
-var opt = Option::<int>.Some(42)
-
-match opt {
-    case Some(value) => print(value)
-    case None => print("nothing")
-}
-```
-
-## 标准库枚举
-
-### Option<T>
-
-```lency
-import std.core
-
-// 表示可能不存在的值
-Option<int> find(Vec<int> v, int target) {
-    // ... 返回 Some(index) 或 None
-}
-```
-
-### Result<T, E>
-
-```lency
-import std.core
-
-// 表示可能失败的操作
-Result<int, Error> parse(string s) {
-    // ... 返回 Ok(value) 或 Err(error)
-}
-```
+> TODO: `match` 的 payload 解构绑定（如 `Text(v)`）依赖 pattern AST 扩展，当前尚未接入。
+> FIXME: 自举链路仍存在 `TYPE_UNKNOWN` 兼容路径，复杂组合场景可能把类型错误降级为弱诊断。

@@ -36,6 +36,16 @@ struct FunctionSignature {
     int return_ty
     Vec<int> param_tys
 }
+struct EnumVariantSignature {
+    string enum_name
+    string variant_name
+    Vec<int> payload_tys
+}
+struct EnumValueSymbol {
+    string name
+    string enum_name
+    int depth
+}
 struct Resolver {
     SymbolTable table
     Vec<BuiltinArity> builtin_arities
@@ -43,6 +53,8 @@ struct Resolver {
     Vec<TypedSymbol> typed_symbols
     Vec<ConstSymbol> const_symbols
     Vec<FunctionSignature> function_signatures
+    Vec<EnumVariantSignature> enum_variant_signatures
+    Vec<EnumValueSymbol> enum_value_symbols
     bool in_function
     bool require_value_return
     int current_function_return_type
@@ -87,6 +99,20 @@ FunctionSignature make_function_signature(string name, int return_ty, Vec<int> p
         param_tys: param_tys
     }
 }
+EnumVariantSignature make_enum_variant_signature(string enum_name, string variant_name, Vec<int> payload_tys) {
+    return EnumVariantSignature {
+        enum_name: enum_name,
+        variant_name: variant_name,
+        payload_tys: payload_tys
+    }
+}
+EnumValueSymbol make_enum_value_symbol(string name, string enum_name, int depth) {
+    return EnumValueSymbol {
+        name: name,
+        enum_name: enum_name,
+        depth: depth
+    }
+}
 Resolver make_resolver() {
     var resolver = Resolver {
         table: make_symbol_table(),
@@ -95,6 +121,8 @@ Resolver make_resolver() {
         typed_symbols: vec![],
         const_symbols: vec![],
         function_signatures: vec![],
+        enum_variant_signatures: vec![],
+        enum_value_symbols: vec![],
         in_function: false,
         require_value_return: false,
         current_function_return_type: TYPE_UNKNOWN(),

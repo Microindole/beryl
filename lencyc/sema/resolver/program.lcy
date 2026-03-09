@@ -20,6 +20,32 @@ impl Resolver {
             i = i + 1
         }
 
+        var e = 0
+        while e < decls.len() {
+            var decl = decls[e]
+            if decl.kind == DECL_ENUM() {
+                var v = 0
+                while v < decl.enum_variants.len() {
+                    var variant = decl.enum_variants[v]
+                    if this.table.is_defined_in_current_scope(variant.name) {
+                        this.error("duplicate EnumConstructor in same scope: " + variant.name)
+                        v = v + 1
+                        continue
+                    }
+                    this.table.define(variant.name)
+                    var payload_tys = vec![]
+                    var p = 0
+                    while p < variant.payload_types.len() {
+                        payload_tys.push(this.resolve_signature_type_or_error(variant.payload_types[p]))
+                        p = p + 1
+                    }
+                    this.preload_enum_variant_signature(decl.name.lexeme, variant.name, payload_tys)
+                    v = v + 1
+                }
+            }
+            e = e + 1
+        }
+
         var j = 0
         while j < decls.len() {
             var decl = decls[j]
