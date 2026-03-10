@@ -1,6 +1,6 @@
 # Sprint 状态总结
 
-更新时间：2026-03-09
+更新时间：2026-03-10
 
 ## 0. 当前结论（先看）
 - `lencyc` 已完成最小自举闭环：`Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
@@ -19,7 +19,7 @@
 
 ## 2. Sprint 状态
 
-### Sprint 17：自举 Parser（收尾中）
+### Sprint 17：自举 Parser（已完成）
 目标：声明解析从“最小骨架”推进到“可用级”。
 
 已完成：
@@ -67,9 +67,11 @@
 - [x] `test_entry` resolve 正/负例断言已切换到 `test_support` 共享 helper
 - [x] `function-body` resolve 正/负例断言已切换到 `test_support` 共享 helper
 - [x] `parse-error` 断言已切换到 `test_support` 共享 helper（`parser_frontend/import_extern`）
+- [x] 声明层与表达式层的泛型语法入口已统一：抽取 parser 公共 `<...>` 解析 helper，声明签名与调用侧均复用；调用侧新增泛型调用前瞻以避免与普通比较表达式冲突
+- [x] 泛型语法回归已补齐：新增调用侧正/负例（`foo<int, Result<string>>(...)` / 破损泛型调用）与比较表达式防回退用例（`1 < 2`），声明签名新增泛型正/负例
 
 未完成：
-- [ ] TODO: 声明层与表达式层的泛型语法入口统一
+- 无
 
 ### Sprint 18：自举 Semantic Analysis（进行中）
 目标：从“最小约束”扩展到“可拦截主要错误”的语义层。
@@ -126,7 +128,7 @@
 ### Phase 1：语法补齐第一批（2~3 周）
 - 范围：`const/import/extern/enum/match/null` 与 AST 对齐
 - 验收：
-  - [ ] TODO: 每项均有 parser 正/负例
+  - [x] 每项均有 parser 正/负例（并补充了泛型语法入口统一相关正/负例回归）
   - [ ] TODO: `test_entry` 分步回归持续可维护（单文件不超 500 行）
 
 ### Phase 2：语义补齐第一批（3~4 周）
@@ -157,7 +159,7 @@
 1. [x] Phase 0 基线矩阵文件已入库（`prompt/artifacts/capability_matrix.md`）。
 2. [x] Phase 1 子项 1：`const`（语法 + 回归 + sema 最小约束）已完成（Step 26）。
 3. [x] Phase 1 子项 2：`import/extern`（语法 + parser 回归 + resolver 绑定骨架）已完成（Step 27）。
-4. [ ] TODO: 每个子项都配正/负例，并执行双检查。
+4. [x] 每个子项都配正/负例，并执行双检查（2026-03-10：新增泛型入口统一正/负例并通过 `auto-check`）。
 5. [x] Phase 1 子项 3（部分）：`enum` 最小可用语法与 AST 接入已完成（Step 28）。
 6. [x] Phase 1 子项 3：`match` + `enum payload` 语法与回归已落地（Step 29）。
 

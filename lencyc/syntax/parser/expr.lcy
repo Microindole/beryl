@@ -163,6 +163,12 @@ impl Parser {
     Expr call() {
         var expr = this.primary()
         while true {
+            if this.is_generic_call_ahead() {
+                if !this.consume_generic_type_arguments(true) {
+                    break
+                }
+                continue
+            }
             if this.match_token(T_LEFT_PAREN()) {
                 expr = this.finish_call(expr)
                 continue

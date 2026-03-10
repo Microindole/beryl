@@ -41,24 +41,6 @@ impl Parser {
         }
     }
 
-    void skip_generic_type_arguments_if_any() {
-        if !this.match_token(T_LESS()) {
-            return
-        }
-        var depth = 1
-        while depth > 0 && !this.is_at_end() {
-            if this.match_token(T_LESS()) {
-                depth = depth + 1
-                continue
-            }
-            if this.match_token(T_GREATER()) {
-                depth = depth - 1
-                continue
-            }
-            this.advance()
-        }
-    }
-
     TypeRef parse_signature_type_ref() {
         if this.is_signature_type_token(this.current.kind) {
             var kind = this.current.kind
@@ -75,10 +57,6 @@ impl Parser {
         }
         this.error("Expect type in signature.")
         return make_type_ref(0, "")
-    }
-
-    bool is_signature_type_token(int kind) {
-        return kind == T_INT() || kind == T_STRING() || kind == T_BOOL() || kind == T_VOID() || kind == T_FLOAT() || kind == T_IDENTIFIER()
     }
 
     bool is_function_return_type_start() {

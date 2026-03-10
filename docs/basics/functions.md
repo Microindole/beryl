@@ -34,11 +34,15 @@ T identity<T>(T value) {
 }
 
 int main() {
-    var x = identity::<int>(42)
-    var s = identity::<string>("hello")
+    var x = identity<int>(42)
+    var s = identity<string>("hello")
     return 0
 }
 ```
+
+自举链路当前状态：
+- 已支持泛型参数语法在声明与调用侧的统一解析（`<...>`）。
+- TODO: 泛型实例化与约束语义仍在后续 Sprint（当前以语法可解析为主）。
 
 ## 方法（结构体上的函数）
 

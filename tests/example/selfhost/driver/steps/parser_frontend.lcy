@@ -69,6 +69,37 @@ bool run_parser_frontend_steps() {
         print("Member call AST shape mismatch.\n")
         return false
     }
+    var generic_call_source = src_call_with_generic_args_program()
+    var generic_call_parser = make_parser(generic_call_source)
+    var generic_call_program = generic_call_parser.parse_program()
+    var generic_call_stmts = generic_call_program.statements
+    if generic_call_parser.has_error {
+        print("Generic call parse failed unexpectedly.\n")
+        return false
+    }
+    if !contains(stmt_to_string(generic_call_stmts[1]), "(call foo obj 2)") {
+        print("Generic call AST shape mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(generic_call_stmts[2]), "(call (get obj.to_string))") {
+        print("Generic member call AST shape mismatch.\n")
+        return false
+    }
+    if !expect_shared_parse_error(src_invalid_call_with_broken_generic_args(), "broken generic call arguments") {
+        return false
+    }
+    var less_source = src_less_than_comparison_program()
+    var less_parser = make_parser(less_source)
+    var less_program = less_parser.parse_program()
+    var less_stmts = less_program.statements
+    if less_parser.has_error {
+        print("Less-than comparison parse failed unexpectedly after generic call support.\n")
+        return false
+    }
+    if !contains(stmt_to_string(less_stmts[0]), "(var ok = (< 1 2))") {
+        print("Less-than comparison AST shape mismatch.\n")
+        return false
+    }
 
     print("Step 6: String literal parsing tests...\n")
     var string_source = src_string_literal_program()

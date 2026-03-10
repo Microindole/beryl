@@ -37,16 +37,17 @@ int main() {
 
 ---
 
-## 实现状态（2026-03-09）
+## 实现状态（2026-03-10）
 
 Lency 当前是双链路并行：
 - Rust 主编译器链路：功能更完整，作为稳定构建与验证主体。
 - Lency 自举编译器链路（`lencyc/`）：按最小闭环持续补齐语法与语义能力。
 
-### 自举阶段能力快照（2026-03-09）
+### 自举阶段能力快照（2026-03-10）
 
 - Lexer: 已支持 `int/float/scientific/string/char/null` 字面量。
 - Parser: 已支持 `var/if/while/for/block/return/break/continue` 与 `call/member` 链，并已接入 `function/struct/impl/import/extern/enum/match` 声明与表达式子集（含 `import std.*` 通配导入与 `import std.{a,b}` 分组导入语法）。
+- Parser: 声明层与表达式调用层的泛型实参入口已统一为 `<...>` 解析（如 `Result<int, string>`、`foo<int>(x)`）。
 - Sema: 已支持最小 name resolution（undefined/duplicate/out-of-scope/shadowing）。
 - Sema: 已支持 builtin 调用参数个数校验（arity）。
 - Sema: 已支持用户函数最小 arity 校验（含先调用后声明）。

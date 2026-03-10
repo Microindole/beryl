@@ -82,6 +82,112 @@ impl Parser {
         return true
     }
 
+    bool is_signature_type_token(int kind) {
+        return kind == T_INT() || kind == T_STRING() || kind == T_BOOL() || kind == T_VOID() || kind == T_FLOAT() || kind == T_IDENTIFIER()
+    }
+
+    bool parse_generic_type_ref_inner(bool report_error) {
+        if !this.is_signature_type_token(this.current.kind) {
+            if report_error {
+                this.error("Expect type in generic arguments.")
+            }
+            return false
+        }
+        this.advance()
+        if this.check(T_LESS()) {
+            if !this.consume_generic_type_arguments(report_error) {
+                return false
+            }
+        }
+        if this.match_token(T_QUESTION()) {
+            // Optional nullable suffix in generic argument.
+        }
+        if this.match_token(T_BANG()) {
+            // Optional non-null assertion suffix in generic argument.
+        }
+        return true
+    }
+
+    bool consume_generic_type_arguments(bool report_error) {
+        if !this.match_token(T_LESS()) {
+            return false
+        }
+        if !this.parse_generic_type_ref_inner(report_error) {
+            return false
+        }
+        while this.match_token(T_COMMA()) {
+            if !this.parse_generic_type_ref_inner(report_error) {
+                return false
+            }
+        }
+        if !this.match_token(T_GREATER()) {
+            if report_error {
+                this.error("Expect '>' after generic type arguments.")
+            }
+            return false
+        }
+        return true
+    }
+
+    bool is_generic_call_ahead() {
+        // FIXME: This is a conservative text-level lookahead; very complex relational chains
+        // like `a < b > (c)` may still be misclassified before full type-aware parsing exists.
+        if this.current.kind != T_LESS() {
+            return false
+        }
+        var src = this.lexer.source
+        var idx = this.lexer.current
+        var depth = 1
+        var has_type_head = false
+        while idx < len(src) {
+            var b = src[idx]
+            if b == 32 || b == 9 || b == 10 || b == 13 { // whitespace
+                idx = idx + 1
+                continue
+            }
+            if b == 60 { // '<'
+                depth = depth + 1
+                idx = idx + 1
+                continue
+            }
+            if b == 62 { // '>'
+                depth = depth - 1
+                idx = idx + 1
+                if depth == 0 {
+                    break
+                }
+                continue
+            }
+            var is_alpha_num = is_alphanumeric(b)
+            var is_allowed_symbol = b == 95 || b == 44 || b == 63 || b == 33 || b == 46 // _ , ? ! .
+            if !is_alpha_num && !is_allowed_symbol {
+                return false
+            }
+            if !has_type_head {
+                has_type_head = is_alpha(b) || b == 95
+            }
+            idx = idx + 1
+        }
+        if depth != 0 || !has_type_head {
+            return false
+        }
+        while idx < len(src) {
+            var b2 = src[idx]
+            if b2 == 32 || b2 == 9 || b2 == 10 || b2 == 13 {
+                idx = idx + 1
+                continue
+            }
+            return b2 == 40 // '('
+        }
+        return false
+    }
+
+    void skip_generic_type_arguments_if_any() {
+        if this.check(T_LESS()) {
+            this.consume_generic_type_arguments(true)
+        }
+    }
+
     Program parse_program() {
         var statements = vec![]
         var decls = vec![]

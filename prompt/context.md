@@ -7,7 +7,7 @@
 - `prompt/context.md` 是日常实时同步入口（每轮实现后都要更新）；`prompt/sprint/status.md` 仅做阶段里程碑汇总与发布级复盘。
 - Phase 0 能力矩阵真表：`prompt/artifacts/capability_matrix.md`。
 
-## 1. 当前基线（2026-03-09）
+## 1. 当前基线（2026-03-10）
 - Rust 主编译器（`crates/`）源码文件数：175。
 - Lency 自举编译器（`lencyc/`）源码文件数：26。
 - Rust 集成测试文件数（`tests/integration/`）：74。
@@ -17,7 +17,7 @@
 ## 2. 能力对照（Rust vs Lency 自举）
 - 词法/语法：
   - Rust：已覆盖 `const/import/extern/trait/enum/match/null/?. /??/vec/Ok/Err` 等。
-  - Lency：当前聚焦 `var/if/while/for/struct/impl/return/match` 与基础字面量/运算，`enum payload variant` 语法已接入。
+  - Lency：当前聚焦 `var/if/while/for/struct/impl/return/match` 与基础字面量/运算，`enum payload variant` 语法已接入；声明层与表达式调用层的泛型实参入口已统一到 `<...>` 解析。
   - TODO: 继续补齐复杂模式匹配语义（嵌套解构/多层绑定规则）。
 - 语义：
   - Rust：Resolver + TypeInfer + TypeCheck + NullSafety 分层较完整。
@@ -50,6 +50,7 @@
 - `tests/example` 目录已按 `lir/runtime/parser/modules` 分层，消除单层平铺混乱。
 - AST 构造器已切换为 `make_stmt_base + 局部覆写` 工厂模式，新增 `Stmt` 字段时只需集中修改基座，显著降低连锁改动面。
 - parser 声明路径已抽出 `parse_signature_param_list()` 公共 helper，减少 `function/extern` 参数解析重复逻辑。
+- parser 泛型参数解析已上提为公共 helper（`consume_generic_type_arguments`）；声明签名与表达式调用侧统一复用，避免双轨分叉。
 - 目录分层重构：`lencyc/sema/resolver/` 已下沉为 `core/*` 与 `expr/*` 子目录，避免同层文件持续堆积。
 - 目录分层重构：`crates/lency_cli/src/lir_backend/compile.rs` 已下沉为 `compile/{mod,call,member_call,helpers}.rs`。
 - 测试目录重构：`tests/example/selfhost/driver/test_steps_*` 已下沉到 `tests/example/selfhost/driver/steps/*`。
@@ -106,6 +107,7 @@
 - nullable 语义已从 primitive 扩展到自定义类型名约束：`Type?/Type`、enum payload binder、函数参数/返回/赋值统一走 `type + type_name` 双通道匹配。
 - Rust LIR backend member lowering 已统一到 member-ref 调用路径：`to_string/len/trim/substr/split/format/join` 与通用成员调用共用 `get + call` 降低分派。
 - std 签名导入的 parser 噪音已抑制：`Parser.suppress_error_output` 仅静默输出，不影响错误计数与恢复提取。
+- parser_frontend/signature 回归已新增泛型入口统一正负例：`foo<int, Result<string>>(...)` 正例、破损泛型调用负例、`1 < 2` 比较表达式防回退、声明签名泛型负例。
 
 ## 4. 目录与职责
 - `crates/`：Rust 主编译器与主工具链。

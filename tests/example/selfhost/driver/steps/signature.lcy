@@ -46,6 +46,17 @@ bool run_function_signature_typeref_tests() {
         print("Function signature TypeRef param #4 mismatch.\n")
         return false
     }
+    var broken_generic_source = src_parser_function_typeref_broken_generic_program()
+    var broken_generic_parser = make_parser(broken_generic_source)
+    var broken_generic_program = broken_generic_parser.parse_program()
+    if !broken_generic_parser.has_error {
+        print("Function signature generic TypeRef negative parse should fail.\n")
+        return false
+    }
+    if broken_generic_program.statements.len() == 0 {
+        print("Function signature generic TypeRef negative parse lost recovery statement stream.\n")
+        return false
+    }
 
     var nullable_source = src_parser_function_nullable_typeref_program()
     var nullable_parser = make_parser(nullable_source)

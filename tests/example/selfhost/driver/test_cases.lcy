@@ -11,6 +11,18 @@ string src_call_member_program() {
     return "var obj = 1\nfoo(obj, 2)\nobj.to_string()"
 }
 
+string src_call_with_generic_args_program() {
+    return "var obj = 1\nfoo<int, Result<string>>(obj, 2)\nobj.to_string<Result<int>>()"
+}
+
+string src_invalid_call_with_broken_generic_args() {
+    return "foo<int>(1"
+}
+
+string src_less_than_comparison_program() {
+    return "var ok = 1 < 2\nif ok {\n  return 1\n}\nreturn 0"
+}
+
 string src_string_literal_program() {
     return "var msg = \"hello\"\nprint(msg)\nprint(\"done\")"
 }
@@ -82,7 +94,8 @@ string src_parser_impl_method_decl_program() { return "struct Boxed {\n}\nimpl B
 string src_resolver_impl_methods_ok() { return "struct Boxed {\n}\nimpl Boxed {\n  int value() {\n    return 1\n  }\n}\nvar y = 1\nreturn y"; }
 string src_resolver_impl_unknown_type_bad() { return "impl Mystery {\n  int value() {\n    return 1\n  }\n}\nvar y = 1\nreturn y"; }
 string src_resolver_impl_duplicate_method_bad() { return "struct Boxed {\n}\nimpl Boxed {\n  int value() {\n    return 1\n  }\n  int value() {\n    return 2\n  }\n}\nvar y = 1\nreturn y"; }
-string src_parser_function_typeref_program() { return "Result mix(int a, string b, float c, Boxed d) {\n  return d\n}"; }
+string src_parser_function_typeref_program() { return "Result<int, string> mix(int a, string b, float c, Boxed<int> d) {\n  return d\n}"; }
+string src_parser_function_typeref_broken_generic_program() { return "Result<int mix(int a) {\n  return a\n}"; }
 string src_parser_function_nullable_typeref_program() { return "int? maybe_id(int? x) {\n  return x\n}"; }
 string src_parser_struct_fields_program() { return "struct Boxed {\n  int id\n  string name\n  float score\n}"; }
 string src_resolver_struct_duplicate_field_bad() { return "struct Boxed {\n  int id\n  string id\n}\nvar x = 1\nreturn x"; }
