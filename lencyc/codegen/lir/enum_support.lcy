@@ -16,17 +16,22 @@ impl LirBuilder {
                 while tag_id < decl.enum_variants.len() {
                     var payload0 = ""
                     var payload1 = ""
+                    var payload2 = ""
                     if decl.enum_variants[tag_id].payload_types.len() > 0 {
                         payload0 = decl.enum_variants[tag_id].payload_types[0].name
                     }
                     if decl.enum_variants[tag_id].payload_types.len() > 1 {
                         payload1 = decl.enum_variants[tag_id].payload_types[1].name
                     }
+                    if decl.enum_variants[tag_id].payload_types.len() > 2 {
+                        payload2 = decl.enum_variants[tag_id].payload_types[2].name
+                    }
                     this.enum_variant_enum_names.push(decl.name.lexeme)
                     this.enum_variant_names.push(decl.enum_variants[tag_id].name)
                     this.enum_variant_tags.push(tag_id)
                     this.enum_variant_payload0_types.push(payload0)
                     this.enum_variant_payload1_types.push(payload1)
+                    this.enum_variant_payload2_types.push(payload2)
                     tag_id = tag_id + 1
                 }
             }
@@ -99,6 +104,10 @@ impl LirBuilder {
                 if payload_index == 1 {
                     return this.enum_variant_payload1_types[i]
                 }
+                if payload_index == 2 {
+                    return this.enum_variant_payload2_types[i]
+                }
+                // TODO: 后续继续扩展到 3 个以上 payload 槽位的 metadata 查询。
                 return ""
             }
             i = i - 1

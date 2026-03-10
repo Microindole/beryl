@@ -9,7 +9,8 @@ enum Payload {
 enum Message {
   Quit,
   Wrap(Payload),
-  Pair(int, int)
+  Pair(int, int),
+  Triple(int, int, Payload)
 }
 
 var p = Pair(5, 6)
@@ -30,4 +31,19 @@ var code = match (m) {
   _ => 5
 }
 
-return code
+if code != 0 {
+  return code
+}
+
+var t = Triple(1, 2, Num(9))
+var nested = match (t) {
+  Triple(1, _, Num(v)) => v,
+  Triple(a, b, Text(msg)) => a + b,
+  _ => 4
+}
+
+if nested != 9 {
+  return nested
+}
+
+return 0

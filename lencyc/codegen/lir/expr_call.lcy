@@ -30,8 +30,15 @@ impl LirBuilder {
                         var arg1 = this.emit_expr(expr.children[2])
                         this.emit_line("  " + ctor_dst + " = call %lency_enum_new2(" + int_to_string(ctor_tag) + ", " + arg0 + ", " + arg1 + ")")
                     } else {
-                        // TODO: Extend EnumConstructor lowering beyond 2 payload values.
-                        this.emit_line("  " + ctor_dst + " = expr_unknown")
+                        if expr.children.len() == 4 {
+                            var arg0 = this.emit_expr(expr.children[1])
+                            var arg1 = this.emit_expr(expr.children[2])
+                            var arg2 = this.emit_expr(expr.children[3])
+                            this.emit_line("  " + ctor_dst + " = call %lency_enum_new3(" + int_to_string(ctor_tag) + ", " + arg0 + ", " + arg1 + ", " + arg2 + ")")
+                        } else {
+                            // TODO: Extend EnumConstructor lowering beyond 3 payload values.
+                            this.emit_line("  " + ctor_dst + " = expr_unknown")
+                        }
                     }
                 }
             }

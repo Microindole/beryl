@@ -45,7 +45,7 @@
 - 一句话：Lency 已具备最小自举闭环，但与 Rust 主链路仍有代差，当前应优先补语义密度与 lowering 覆盖，而不是继续打磨 parser 外形。
 - 前端：`match/enum payload/import/extern/null/泛型入口` 已接入；parser 侧当前不是主瓶颈。
 - 语义：已覆盖 name resolution、基础 type check、函数签名、enum/match、guard 组合边界、grouped callee/constructor 类型流、binder 改名去重与嵌套 payload 字面量模式；复杂控制流类型流仍需增强。
-- 后端：selfhost LIR 已覆盖 `match(number/string/bool/null/char + _ + guard 组合)`，并已接入 enum payload 基础 pattern lowering；更深层 mixed pattern lowering 仍是待办。
+- 后端：selfhost LIR 已覆盖 `match(number/string/bool/null/char + _ + guard 组合)`，并已接入 enum payload 基础 pattern lowering 与 3 payload constructor/runtime ABI；更深层 mixed pattern lowering 仍是待办。
 - 工具链：`auto-check` 与 `bootstrap-check` 已落地，手动/tag 触发的重型收敛验证已具备。
 
 ## 3. 已落地的自举关键增量
@@ -62,6 +62,7 @@
   - enum 类型流已覆盖函数返回、match 中间表达式、赋值链、分组 callee/constructor 调用链等主路径。
 - 后端与运行时基线（可跑）：
   - selfhost `match lowering` 当前覆盖 `number/string/bool/null/char + _ + guard 组合`，并支持 enum payload 基础 pattern lowering。
+  - enum runtime ABI 已扩到 `lency_enum_new3`，selfhost constructor lowering 与 payload metadata 已支持 3 payload 变体。
   - runtime 回归已覆盖 `match_guard`、`match_guard_combo`、`match_bool_null`、`match_char`、`match_string`、`match_enum_payload`。
   - `xtask` 已在 Windows 运行自举产物时自动注入 `lency_runtime.dll` 所在目录，修复 runtime case DLL 装载失败。
   - `match` 更复杂 mixed pattern lowering 仍是后续增量（见 TODO）。

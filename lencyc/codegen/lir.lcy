@@ -20,6 +20,7 @@ struct LirBuilder {
     Vec<int> enum_variant_tags
     Vec<string> enum_variant_payload0_types
     Vec<string> enum_variant_payload1_types
+    Vec<string> enum_variant_payload2_types
     Vec<string> enum_var_names
     Vec<string> enum_var_types
 }
@@ -37,6 +38,7 @@ LirBuilder make_lir_builder() {
         enum_variant_tags: vec![],
         enum_variant_payload0_types: vec![],
         enum_variant_payload1_types: vec![],
+        enum_variant_payload2_types: vec![],
         enum_var_names: vec![],
         enum_var_types: vec![]
     }

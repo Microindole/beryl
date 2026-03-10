@@ -120,6 +120,7 @@
 - [x] selfhost runtime 已补 `match_guard_combo` 回归，覆盖多 guard arm 顺序与回退路径
 - [x] selfhost `match` lowering 已扩展到 `string literal`，并补 Rust LIR 编译层与 runtime 回归
 - [x] selfhost `match` lowering 已接入 enum payload 基础 pattern lowering，覆盖 constructor lowering、tag/payload runtime ABI 与 `match_enum_payload` runtime 回归
+- [x] selfhost enum runtime ABI 与 constructor lowering 已扩展到 3 payload（`lency_enum_new3`），并补充 nested payload runtime 回归与 Rust LIR 编译层测试
 - [x] `xtask` 已在 Windows 运行自举产物时自动注入 `lency_runtime.dll` 所在目录，修复 selfhost runtime case DLL 装载失败
 - [x] Step 29 已补 non-enum `char literal` pattern 语义正例回归（resolver 路径）
 - [x] 新增 `xtask bootstrap-check`（stage1→stage2→stage3 收敛验证）并接入独立 CI 工作流（仅手动或 `bootstrap-check/**` tag 触发）
@@ -132,7 +133,7 @@
 
 未完成：
 - [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）
-- [ ] TODO: `match` 复杂模式仍未覆盖更深层混合模式与后端 pattern lowering（当前已支持 guard 组合、嵌套 payload guard、enum payload 基础 lowering 与 binder 语义判重）
+- [ ] TODO: `match` 复杂模式仍未覆盖更深层混合模式与后端 pattern lowering（当前已支持 guard 组合、嵌套 payload guard、enum payload 基础 lowering、3 payload constructor/runtime ABI 与 binder 语义判重）
 - [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）

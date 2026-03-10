@@ -71,7 +71,7 @@ Lency 当前是双链路并行：
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
 - Sema: 已支持 nullable 签名语义（`int?/string?/bool?/float?` + 自定义 `Type?`），自定义可空类型不再走 `TYPE_UNKNOWN` 兼容放行。
 - Backend: Rust LIR backend member lowering 已改为“intrinsic 映射 + 通用 fallback”统一路径（含 `to_string/len/trim/substr/split/format/join`）。
-- Backend: selfhost LIR 发射器已接入 `match` lowering（number/string/bool/null/char literal + `_` + guard），并已支持 enum payload 基础 pattern lowering；runtime 回归已覆盖 guard 组合、string literal 与 enum payload。
+- Backend: selfhost LIR 发射器已接入 `match` lowering（number/string/bool/null/char literal + `_` + guard），并已支持 enum payload 基础 pattern lowering；enum runtime ABI 已扩到 `lency_enum_new3`，runtime 回归已覆盖 guard 组合、string literal 与 enum payload。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
 - Tooling: 规范入口统一为 `cargo run -p xtask -- auto-check`（按范围派发 `check-rust/check-lency`）；Windows 下 `xtask` 会自动补齐 `lency_runtime.dll` 搜索路径，避免自举 runtime case 因 DLL 装载失败假红。
 

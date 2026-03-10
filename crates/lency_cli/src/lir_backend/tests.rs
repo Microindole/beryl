@@ -273,3 +273,22 @@ entry:
     assert!(ir.contains("declare i64 @lency_enum_payload(i64, i64)"));
     assert!(ir.contains("call i64 @lency_enum_new1(i64 2, i64 9)"));
 }
+
+#[test]
+fn test_compile_lir_enum_runtime_calls_three_payloads() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %lency_enum_new3(4, 1, 2, 3)
+  %t1 = call %lency_enum_payload(%t0, 2)
+  ret %t1
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare i64 @lency_enum_new3(i64, i64, i64, i64)"));
+    assert!(ir.contains("call i64 @lency_enum_new3(i64 4, i64 1, i64 2, i64 3)"));
+    assert!(ir.contains("call i64 @lency_enum_payload(i64"));
+}

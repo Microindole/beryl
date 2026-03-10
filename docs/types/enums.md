@@ -155,11 +155,12 @@ var code = match (m) {
   - 非 enum literal pattern：`number/string/bool/null/char`
   - wildcard：`_`
   - guard：`pattern if (cond)`
-  - enum payload 基础模式：如 `Text(msg)`、`Pair(a, b)`、`Wrap(Text(msg))`
+  - enum payload 基础模式：如 `Text(msg)`、`Pair(a, b)`、`Triple(a, b, c)`、`Wrap(Text(msg))`
 - runtime 已提供 enum ABI：
   - `lency_enum_new0`
   - `lency_enum_new1`
   - `lency_enum_new2`
+  - `lency_enum_new3`
   - `lency_enum_tag`
   - `lency_enum_payload`
 - 已有 runtime 回归：
@@ -167,4 +168,4 @@ var code = match (m) {
 
 > TODO: `match` 的嵌套/复杂模式（例如更深层结构解构）尚未接入。
 > FIXME: 自举链路仍存在 `TYPE_UNKNOWN` 兼容路径，复杂组合场景可能把类型错误降级为弱诊断。
-> TODO: selfhost LIR 后端虽已支持 enum payload 基础 pattern lowering，但更完整的 mixed pattern lowering 仍待扩展。
+> TODO: selfhost LIR 后端虽已支持 enum payload 基础 pattern lowering 与 3 payload constructor/runtime ABI，但更完整的 mixed pattern lowering 仍待扩展。
