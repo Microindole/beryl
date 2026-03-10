@@ -26,6 +26,10 @@ fn main() -> Result<()> {
             ensure_no_args("check-lency", &rest)?;
             checks::check_lency()
         }
+        "bootstrap-check" => {
+            ensure_no_args("bootstrap-check", &rest)?;
+            checks::bootstrap_check()
+        }
         "selfhost-build" => selfhost::selfhost_build_from_args(&rest),
         "selfhost-run" => selfhost::selfhost_run_from_args(&rest),
         _ => {
@@ -47,6 +51,7 @@ fn print_usage() {
     eprintln!("  cargo run -p xtask -- auto-check");
     eprintln!("  cargo run -p xtask -- check-rust");
     eprintln!("  cargo run -p xtask -- check-lency");
+    eprintln!("  cargo run -p xtask -- bootstrap-check");
     eprintln!(
         "  cargo run -p xtask -- selfhost-build <input.lcy> [-o output] [--out-dir DIR] [--check-only] [--release]"
     );

@@ -1,0 +1,37 @@
+name: Bootstrap Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      strict_binary:
+        description: "Enable strict stage2/stage3 binary equality compare"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  push:
+    tags:
+      - "bootstrap-check/**"
+
+env:
+  CARGO_TERM_COLOR: always
+  LLVM_SYS_150_PREFIX: /usr/lib/llvm-15
+
+jobs:
+  bootstrap-check:
+    name: Stage Bootstrap Convergence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install LLVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15-dev libpolly-15-dev libz-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run bootstrap-check
+        env:
+          LENCY_BOOTSTRAP_STRICT_BINARY: ${{ inputs.strict_binary == 'true' && '1' || '0' }}
+        run: cargo run -p xtask -- bootstrap-check

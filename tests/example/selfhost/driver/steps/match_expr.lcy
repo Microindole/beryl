@@ -84,6 +84,28 @@ bool run_match_and_enum_payload_tests() {
         print("Match expression AST shape mismatch.\n")
         return false
     }
+    var literal_pattern_source = read_match_case_or_empty("tests/example/parser/match_literal_pattern.lcy")
+    if literal_pattern_source == "" {
+        return false
+    }
+    var literal_pattern_parser = make_parser(literal_pattern_source)
+    var literal_pattern_program = literal_pattern_parser.parse_program()
+    if literal_pattern_parser.has_error {
+        print("Match literal pattern parse failed unexpectedly.\n")
+        return false
+    }
+    if literal_pattern_program.statements.len() < 3 || literal_pattern_program.statements[1].kind != STMT_VAR_DECL() {
+        print("Match literal pattern AST kind mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(literal_pattern_program.statements[1]), "(var y = (match x {\"ok\" => 1, \"no\" => 0, _ => 2}))") {
+        print("Match literal pattern AST shape mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(literal_pattern_program.statements[2]), "(var z = (match null {null => 1, _ => 0}))") {
+        print("Match null literal pattern AST shape mismatch.\n")
+        return false
+    }
 
     var bad_match_source = read_match_case_or_empty("tests/example/parser/match_missing_arrow_bad.lcy")
     if bad_match_source == "" {
@@ -195,6 +217,15 @@ bool run_match_and_enum_payload_tests() {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_enum_flow_grouped_callee_chain_mismatch_bad(), "enum flow grouped-callee chain mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_non_enum_match_literal_ok(), "non-enum match literal positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_literal_type_mismatch_bad(), "non-enum match literal type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_identifier_pattern_bad(), "non-enum match identifier pattern negative") {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_enum_flow_assignment_mismatch_bad(), "enum flow assignment mismatch negative") {

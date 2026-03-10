@@ -1,0 +1,13 @@
+// Parser regression: literal patterns (number/string/null) with wildcard fallback.
+
+var x = "ok"
+var y = match (x) {
+  "ok" => 1,
+  "no" => 0,
+  _ => 2
+}
+var z = match (null) {
+  null => 1,
+  _ => 0
+}
+return y + z

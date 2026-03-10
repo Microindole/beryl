@@ -24,7 +24,7 @@
   - Lency：当前为最小语义约束（name resolution、基础类型一致性、函数签名与 arity、impl/struct 最小校验）。
   - 已完成：nullable 类型匹配已接入 `type_name` 约束，自定义类型与 `Type?` 不再走 `unknown` 兼容放行。
   - 已完成：`match` 嵌套模式解构语义第一版（支持 enum payload 递归 variant 模式，如 `Wrap(Text(v))`）。
-  - TODO: 复杂模式仍未覆盖 literal/guard 等高级形态（当前聚焦 enum payload 递归解构）。
+  - TODO: 复杂模式仍未覆盖 guard 等高级形态（literal pattern 已接入非 enum match 语义校验）。
   - TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）。
   - 已完成：`std.*` 采用模块文件自动签名导入（递归 `import std.*`），并在导入路径启用 `signature_only` + `suppress_error_output` 提取声明签名。
 - 后端：
@@ -59,6 +59,8 @@
 - 文档治理：`assets/Lency.txt` 已完成语气规范化改写，规则与约束语义保持不变（无放宽、无删减）。
 - 工具链增量：`xtask auto-check` 已支持 docs-only 快速模式（仅文档变更时不再回退全量 `check-lency`）。
 - 工具链增量：新增 `scripts/check_dir_density.py`，并接入 `check-rust/check-lency`（warning 级预警，超大目录 error 失败）。
+- 工具链增量：新增 `xtask bootstrap-check`，用于 stage 链路收敛验证（`stage1 -> stage2 -> stage3`），当前默认校验 `stage2/stage3` 的 LIR 产物一致性；严格二进制一致性比较通过 `LENCY_BOOTSTRAP_STRICT_BINARY=1` 显式开启。
+- CI 增量：新增 `.github/workflows/bootstrap.yml`，仅在 `workflow_dispatch` 或 `bootstrap-check/**` tag 触发，避免把重型自举收敛验证塞进常规 PR 门禁。
 - 语义兜底增强：`stmt_to_decl` 新增 `has_decl_payload_mismatch` 防御判定；parser 在声明 payload kind 不一致时即时报错且不将异常声明注入 `Program.decls`。
 - 自举回归增强：`tests/example/selfhost/driver/test_entry.lcy` 增加声明 payload mismatch 防御用例，验证 mismatch 检测与 `DECL_UNKNOWN` 回退行为。
 - 签名查找一致性：resolver 对函数签名与 enum constructor 签名改为“后写优先”查找，避免历史 `unknown` 预载覆盖后续精确签名；并补充签名优先级回归用例。
@@ -106,6 +108,7 @@
 - enum 类型流已继续增强到“赋值链作为 match 目标”的场景（`match (s = make_status())`），并补齐穷尽性正/负例回归。
 - enum 类型流回归已扩展到多层调用组合（`id(id(make_status()))`）正/负例，覆盖跨函数链路的 enum 参数/返回约束。
 - enum 类型流与调用签名校验已扩展到“分组 callee”场景（如 `(id)(id(make_status()))`）：调用链可继续命中用户函数签名与 enum 返回推断，并补齐跨 enum 负例拦截。
+- `match` literal pattern 语义已接入：非 enum 目标仅允许字面量或 `_`，并校验 pattern 与目标类型一致性（含 `null`）；非法标识符 pattern 现在会显式报错。
 - 函数签名的 enum 返回名查找已改为“后写优先”（`lookup_user_function_return_enum_name`），避免历史签名覆盖新签名。
 - import 语义第一版已接入：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）。
 - `std.*` 导入已升级为“递归模块签名自动导入”：对 std 模块源码做 ASCII sanitize + `signature_only` 解析，仅提取声明签名并递归处理 `import std.*`，并已移除旧的 minimal 预加载分支。
