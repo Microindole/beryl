@@ -143,6 +143,10 @@ var code = match (m) {
   - arm guard 条件类型（`if (cond)` 的 `cond` 必须是 `bool`）
   - 重复 pattern 的语义形状归一化（如 `Text(v)` 与 `Text(msg)` 会被识别为同一模式）
   - 赋值链目标（如 `match (s = make_status())`）同样执行未知 variant/穷尽性校验
+  - enum 类型参数与参数透传链（如 `code_of(Status s)` / `var next = id(s)`）同样保留 enum 类型流并参与 `match`
+  - 从 enum 参数或其他 enum 表达式派生出的局部变量（如 `var current = s`）也会继承 enum 类型流
+  - `if/while` 中对外层 enum 变量的写回也会继续参与后续 `match`/赋值约束
+  - block 作用域内的同名遮蔽不会污染外层 enum 类型流；对外层 enum 值的跨块错误写回仍会被拦截
   - 嵌套 payload 模式（如 `Wrap(Text(msg))` / `Wrap(Num(1))`）的 variant 存在性、arity、字面量类型与 guard binder 解析
 - 非 enum 目标的 `match` 目前只允许 literal pattern 或 `_`，并校验 literal 类型与目标类型一致
 - enum variant 构造调用检查：
@@ -155,17 +159,13 @@ var code = match (m) {
   - 非 enum literal pattern：`number/string/bool/null/char`
   - wildcard：`_`
   - guard：`pattern if (cond)`
-  - enum payload 基础模式：如 `Text(msg)`、`Pair(a, b)`、`Triple(a, b, c)`、`Wrap(Text(msg))`
+  - 递归 enum payload mixed pattern：如 `Text(msg)`、`Pair(a, b)`、`Triple(a, b, c)`、`Quad(a, b, c, d)`、`Quint(a, b, c, d, Text(msg))`、`Hold(Pair(1, Text(msg)))`
 - runtime 已提供 enum ABI：
   - `lency_enum_new0`
-  - `lency_enum_new1`
-  - `lency_enum_new2`
-  - `lency_enum_new3`
+  - `lency_enum_push`
   - `lency_enum_tag`
   - `lency_enum_payload`
 - 已有 runtime 回归：
   - `tests/example/runtime/lencyc_run_match_enum_payload.lcy`
 
-> TODO: `match` 的嵌套/复杂模式（例如更深层结构解构）尚未接入。
 > FIXME: 自举链路仍存在 `TYPE_UNKNOWN` 兼容路径，复杂组合场景可能把类型错误降级为弱诊断。
-> TODO: selfhost LIR 后端虽已支持 enum payload 基础 pattern lowering 与 3 payload constructor/runtime ABI，但更完整的 mixed pattern lowering 仍待扩展。

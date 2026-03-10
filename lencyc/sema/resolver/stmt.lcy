@@ -17,6 +17,9 @@ impl Resolver {
                 var value_ty_name = this.infer_expr_type_name(stmt.expr, value_ty)
                 this.define_typed_symbol(stmt.name.lexeme, value_ty, value_ty_name)
                 var enum_name = this.infer_expr_enum_name(stmt.expr)
+                if enum_name == "" && this.is_enum_type_name(value_ty_name) {
+                    enum_name = value_ty_name
+                }
                 if enum_name != "" {
                     this.define_enum_value_symbol(stmt.name.lexeme, enum_name)
                 }

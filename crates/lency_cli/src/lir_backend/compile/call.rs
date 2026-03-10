@@ -53,7 +53,7 @@ pub(super) fn emit_call_assignment(
                 }
                 ValueType::Ptr => {
                     emitter.push(format!(
-                        "  {} = getelementptr i8, ptr {}, i64 0",
+                        "  {} = getelementptr i8, i8* {}, i64 0",
                         dst, callee_value
                     ));
                     emitter.mark_temp(dst, ValueType::Ptr);

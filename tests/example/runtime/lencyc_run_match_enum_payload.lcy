@@ -10,7 +10,9 @@ enum Message {
   Quit,
   Wrap(Payload),
   Pair(int, int),
-  Triple(int, int, Payload)
+  Triple(int, int, Payload),
+  Quad(int, int, Payload, int),
+  Quint(int, int, int, int, Payload)
 }
 
 var p = Pair(5, 6)
@@ -44,6 +46,62 @@ var nested = match (t) {
 
 if nested != 9 {
   return nested
+}
+
+var q = Quad(3, 4, Text("ok"), 8)
+var quad = match (q) {
+  Quad(3, x, Text(msg), tail) if (msg == "ok") => x + tail,
+  Quad(a, b, Num(v), tail) => a + b + v + tail,
+  _ => 11
+}
+
+if quad != 12 {
+  return quad
+}
+
+var z = Quint(1, 2, 3, 4, Text("push"))
+var quint = match (z) {
+  Quint(1, 2, 3, 4, Text(msg)) if (msg == "push") => 0,
+  Quint(a, b, c, d, Num(v)) => a + b + c + d + v,
+  _ => 12
+}
+
+if quint != 0 {
+  return quint
+}
+
+enum Mid {
+  WrapMid(Payload),
+  Pack(int, Payload)
+}
+
+enum Outer {
+  Hold(Mid),
+  Mix(int, Mid, string)
+}
+
+var outer_a = Hold(Pack(1, Text("ok")))
+var outer_code_a = match (outer_a) {
+  Hold(Pack(1, Text(msg))) if (msg == "ok") => 0,
+  Hold(Pack(_, Num(v))) => v,
+  Hold(WrapMid(Num(v))) => v + 10,
+  Mix(_, _, _) => 13
+}
+
+if outer_code_a != 0 {
+  return outer_code_a
+}
+
+var outer_b = Mix(4, Pack(3, Num(5)), "go")
+var outer_code_b = match (outer_b) {
+  Hold(Pack(_, Text(msg))) => 9,
+  Hold(WrapMid(Num(v))) => 8,
+  Mix(head, Pack(left, Num(v)), tail) if (tail == "go") => head + left + v,
+  Mix(_, _, _) => 14
+}
+
+if outer_code_b != 12 {
+  return outer_code_b
 }
 
 return 0

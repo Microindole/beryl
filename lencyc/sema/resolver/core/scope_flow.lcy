@@ -119,6 +119,9 @@ impl Resolver {
                     param_ty_name = param_ty_names[i]
                 }
                 this.define_typed_symbol(params[i], param_ty, param_ty_name)
+                if this.is_enum_type_name(param_ty_name) {
+                    this.define_enum_value_symbol(params[i], param_ty_name)
+                }
             }
             i = i + 1
         }

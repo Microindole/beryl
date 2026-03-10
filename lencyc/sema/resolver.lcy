@@ -12,6 +12,7 @@ import lencyc.sema.resolver.decl_extra
 import lencyc.sema.resolver.decl_std_auto
 import lencyc.sema.resolver.decl_stmt
 import lencyc.sema.resolver.program
+import lencyc.sema.resolver.expr.visitor
 import lencyc.sema.resolver.expr.core
 import lencyc.sema.resolver.expr.call
 import lencyc.sema.resolver.expr.match_pattern

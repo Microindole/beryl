@@ -153,7 +153,7 @@ impl Emitter {
             }
             ValueType::Ptr => {
                 let casted = self.next_tmp("ptrtoint");
-                self.push(format!("  {} = ptrtoint ptr {} to i64", casted, repr));
+                self.push(format!("  {} = ptrtoint i8* {} to i64", casted, repr));
                 (casted, ValueType::I64)
             }
         }
@@ -169,7 +169,7 @@ impl Emitter {
             }
             ValueType::Ptr => {
                 let narrowed = self.next_tmp("ptr_to_bool");
-                self.push(format!("  {} = icmp ne ptr {}, null", narrowed, repr));
+                self.push(format!("  {} = icmp ne i8* {}, null", narrowed, repr));
                 (narrowed, ValueType::I1)
             }
         }
@@ -180,13 +180,13 @@ impl Emitter {
             ValueType::Ptr => (repr, ValueType::Ptr),
             ValueType::I64 => {
                 let casted = self.next_tmp("inttoptr");
-                self.push(format!("  {} = inttoptr i64 {} to ptr", casted, repr));
+                self.push(format!("  {} = inttoptr i64 {} to i8*", casted, repr));
                 (casted, ValueType::Ptr)
             }
             ValueType::I1 => {
                 let (as_i64, _) = self.ensure_i64(repr, ValueType::I1);
                 let casted = self.next_tmp("inttoptr");
-                self.push(format!("  {} = inttoptr i64 {} to ptr", casted, as_i64));
+                self.push(format!("  {} = inttoptr i64 {} to i8*", casted, as_i64));
                 (casted, ValueType::Ptr)
             }
         }
@@ -212,8 +212,8 @@ impl Emitter {
         if let Some((global_name, global_len)) = self.ensure_string_global(op) {
             let gep = self.next_tmp("str");
             self.push(format!(
-                "  {} = getelementptr inbounds [{} x i8], ptr {}, i64 0, i64 0",
-                gep, global_len, global_name
+                "  {} = getelementptr inbounds [{} x i8], [{} x i8]* {}, i64 0, i64 0",
+                gep, global_len, global_len, global_name
             ));
             self.mark_temp(&gep, ValueType::Ptr);
             return Ok((gep, ValueType::Ptr));
@@ -317,7 +317,7 @@ impl Emitter {
                 )?;
                 let call_tmp = self.next_tmp("str_eq");
                 self.push(format!(
-                    "  {} = call i64 @lency_string_eq(ptr {}, ptr {})",
+                    "  {} = call i64 @lency_string_eq(i8* {}, i8* {})",
                     call_tmp, lhs_ptr, rhs_ptr
                 ));
                 self.push(format!("  {} = icmp ne i64 {}, 0", dst, call_tmp));
@@ -358,6 +358,6 @@ pub(super) fn llvm_type_str(ty: ValueType) -> &'static str {
     match ty {
         ValueType::I64 => "i64",
         ValueType::I1 => "i1",
-        ValueType::Ptr => "ptr",
+        ValueType::Ptr => "i8*",
     }
 }

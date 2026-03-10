@@ -196,9 +196,8 @@ bool run_match_and_enum_payload_tests() {
         return false
     }
     var runtime_enum_lir = emit_lir_program(runtime_enum_program.statements)
-    if !contains(runtime_enum_lir, "call %lency_enum_new1(") ||
-       !contains(runtime_enum_lir, "call %lency_enum_new2(") ||
-       !contains(runtime_enum_lir, "call %lency_enum_new3(") ||
+    if !contains(runtime_enum_lir, "call %lency_enum_new0(") ||
+       !contains(runtime_enum_lir, "call %lency_enum_push(") ||
        !contains(runtime_enum_lir, "call %lency_enum_tag(") ||
        !contains(runtime_enum_lir, "call %lency_enum_payload(") {
         print("Match enum payload lowering LIR shape mismatch.\n")

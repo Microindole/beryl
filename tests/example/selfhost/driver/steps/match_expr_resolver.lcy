@@ -57,6 +57,12 @@ bool run_match_resolver_semantic_tests(string match_source) {
     if !expect_shared_resolve_error(src_resolver_enum_payload_match_nested_literal_type_bad(), "enum payload nested literal pattern type negative") {
         return false
     }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_match_deep_mixed_ok(), "enum payload deep mixed pattern positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_deep_duplicate_bad(), "enum payload deep mixed duplicate negative") {
+        return false
+    }
     if !expect_shared_resolve_success(src_resolver_enum_flow_function_return_ok(), "enum flow function return positive") {
         return false
     }
@@ -79,6 +85,36 @@ bool run_match_resolver_semantic_tests(string match_source) {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_enum_flow_grouped_callee_chain_mismatch_bad(), "enum flow grouped-callee chain mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_if_branch_writeback_ok(), "enum flow if-branch writeback positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_if_branch_writeback_mismatch_bad(), "enum flow if-branch writeback mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_param_match_ok(), "enum flow parameter match positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_param_chain_match_ok(), "enum flow parameter chain positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_param_assign_mismatch_bad(), "enum flow parameter assignment mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_block_shadow_preserve_ok(), "enum flow block shadow preserve positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_block_shadow_assign_bad(), "enum flow block shadow assignment mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_var_from_param_match_ok(), "enum flow var-from-param match positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_while_writeback_ok(), "enum flow while writeback positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_while_writeback_mismatch_bad(), "enum flow while writeback mismatch negative") {
         return false
     }
     if !expect_shared_resolve_success(src_resolver_non_enum_match_literal_ok(), "non-enum match literal positive") {

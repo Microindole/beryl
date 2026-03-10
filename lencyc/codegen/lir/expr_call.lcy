@@ -18,29 +18,13 @@ impl LirBuilder {
         if enum_ctor_owner != "" {
             var ctor_dst = this.new_temp()
             var ctor_tag = this.lookup_enum_tag_in(enum_ctor_owner, enum_ctor_name)
-            if expr.children.len() == 1 {
-                this.emit_line("  " + ctor_dst + " = call %lency_enum_new0(" + int_to_string(ctor_tag) + ")")
-            } else {
-                if expr.children.len() == 2 {
-                    var arg0 = this.emit_expr(expr.children[1])
-                    this.emit_line("  " + ctor_dst + " = call %lency_enum_new1(" + int_to_string(ctor_tag) + ", " + arg0 + ")")
-                } else {
-                    if expr.children.len() == 3 {
-                        var arg0 = this.emit_expr(expr.children[1])
-                        var arg1 = this.emit_expr(expr.children[2])
-                        this.emit_line("  " + ctor_dst + " = call %lency_enum_new2(" + int_to_string(ctor_tag) + ", " + arg0 + ", " + arg1 + ")")
-                    } else {
-                        if expr.children.len() == 4 {
-                            var arg0 = this.emit_expr(expr.children[1])
-                            var arg1 = this.emit_expr(expr.children[2])
-                            var arg2 = this.emit_expr(expr.children[3])
-                            this.emit_line("  " + ctor_dst + " = call %lency_enum_new3(" + int_to_string(ctor_tag) + ", " + arg0 + ", " + arg1 + ", " + arg2 + ")")
-                        } else {
-                            // TODO: Extend EnumConstructor lowering beyond 3 payload values.
-                            this.emit_line("  " + ctor_dst + " = expr_unknown")
-                        }
-                    }
-                }
+            this.emit_line("  " + ctor_dst + " = call %lency_enum_new0(" + int_to_string(ctor_tag) + ")")
+            var arg_id = 1
+            while arg_id < expr.children.len() {
+                var push_tmp = this.new_temp()
+                var arg_val = this.emit_expr(expr.children[arg_id])
+                this.emit_line("  " + push_tmp + " = call %lency_enum_push(" + ctor_dst + ", " + arg_val + ")")
+                arg_id = arg_id + 1
             }
             return ctor_dst
         }

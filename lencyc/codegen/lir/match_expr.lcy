@@ -93,7 +93,6 @@ impl LirBuilder {
             }
             return cond
         }
-        // TODO: Extend match lowering beyond current enum/literal subset for more mixed pattern forms.
         return "0"
     }
 

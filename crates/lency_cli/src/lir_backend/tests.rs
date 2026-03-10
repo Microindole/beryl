@@ -75,8 +75,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_arg_at(i64)"));
-    assert!(ir.contains("call ptr @lency_arg_at(i64 0)"));
+    assert!(ir.contains("declare i8* @lency_arg_at(i64)"));
+    assert!(ir.contains("call i8* @lency_arg_at(i64 0)"));
 }
 
 #[test]
@@ -92,8 +92,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_int_to_string(i64)"));
-    assert!(ir.contains("call ptr @lency_int_to_string(i64 7)"));
+    assert!(ir.contains("declare i8* @lency_int_to_string(i64)"));
+    assert!(ir.contains("call i8* @lency_int_to_string(i64 7)"));
 }
 
 #[test]
@@ -111,8 +111,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_int_to_string(i64)"));
-    assert!(ir.contains("call ptr @lency_int_to_string(i64"));
+    assert!(ir.contains("declare i8* @lency_int_to_string(i64)"));
+    assert!(ir.contains("call i8* @lency_int_to_string(i64"));
 }
 
 #[test]
@@ -130,8 +130,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_int_to_string(i64)"));
-    assert!(ir.contains("call ptr @lency_int_to_string(i64"));
+    assert!(ir.contains("declare i8* @lency_int_to_string(i64)"));
+    assert!(ir.contains("call i8* @lency_int_to_string(i64"));
     assert!(!ir.contains("call i64 @t0("));
 }
 
@@ -150,8 +150,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare i64 @lency_string_len(ptr)"));
-    assert!(ir.contains("call i64 @lency_string_len(ptr"));
+    assert!(ir.contains("declare i64 @lency_string_len(i8*)"));
+    assert!(ir.contains("call i64 @lency_string_len(i8*"));
 }
 
 #[test]
@@ -169,8 +169,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_string_substr(ptr, i64, i64)"));
-    assert!(ir.contains("call ptr @lency_string_substr(ptr"));
+    assert!(ir.contains("declare i8* @lency_string_substr(i8*, i64, i64)"));
+    assert!(ir.contains("call i8* @lency_string_substr(i8*"));
 }
 
 #[test]
@@ -189,8 +189,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_string_split(ptr, ptr)"));
-    assert!(ir.contains("call ptr @lency_string_split(ptr"));
+    assert!(ir.contains("declare i8* @lency_string_split(i8*, i8*)"));
+    assert!(ir.contains("call i8* @lency_string_split(i8*"));
 }
 
 #[test]
@@ -209,8 +209,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare ptr @lency_string_join(ptr, ptr)"));
-    assert!(ir.contains("call ptr @lency_string_join(ptr"));
+    assert!(ir.contains("declare i8* @lency_string_join(i8*, i8*)"));
+    assert!(ir.contains("call i8* @lency_string_join(i8*"));
 }
 
 #[test]
@@ -229,8 +229,8 @@ entry:
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare i1 @contains(ptr, ptr)"));
-    assert!(ir.contains("call i1 @contains(ptr"));
+    assert!(ir.contains("declare i1 @contains(i8*, i8*)"));
+    assert!(ir.contains("call i1 @contains(i8*"));
 }
 
 #[test]
@@ -248,8 +248,8 @@ entry:
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
     assert!(ir.contains("@.str.0 = private unnamed_addr constant [3 x i8] c\"42\\00\""));
-    assert!(ir.contains("declare i64 @lency_string_eq(ptr, ptr)"));
-    assert!(ir.contains("call i64 @lency_string_eq(ptr"));
+    assert!(ir.contains("declare i64 @lency_string_eq(i8*, i8*)"));
+    assert!(ir.contains("call i64 @lency_string_eq(i8*"));
 }
 
 #[test]
@@ -258,37 +258,45 @@ fn test_compile_lir_enum_runtime_calls() {
 ; lencyc-lir v0
 func main {
 entry:
-  %t0 = call %lency_enum_new1(2, 9)
-  %t1 = call %lency_enum_tag(%t0)
-  %t2 = call %lency_enum_payload(%t0, 0)
-  %t3 = add %t1, %t2
-  ret %t3
+  %t0 = call %lency_enum_new0(2)
+  %t1 = call %lency_enum_push(%t0, 9)
+  %t2 = call %lency_enum_tag(%t0)
+  %t3 = call %lency_enum_payload(%t0, 0)
+  %t4 = add %t2, %t3
+  ret %t4
 }
 "#;
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare i64 @lency_enum_new1(i64, i64)"));
+    assert!(ir.contains("declare i64 @lency_enum_new0(i64)"));
+    assert!(ir.contains("declare i64 @lency_enum_push(i64, i64)"));
     assert!(ir.contains("declare i64 @lency_enum_tag(i64)"));
     assert!(ir.contains("declare i64 @lency_enum_payload(i64, i64)"));
-    assert!(ir.contains("call i64 @lency_enum_new1(i64 2, i64 9)"));
+    assert!(ir.contains("call i64 @lency_enum_new0(i64 2)"));
+    assert!(ir.contains("call i64 @lency_enum_push(i64 %t0, i64 9)"));
 }
 
 #[test]
-fn test_compile_lir_enum_runtime_calls_three_payloads() {
+fn test_compile_lir_enum_runtime_calls_multi_push() {
     let src = r#"
 ; lencyc-lir v0
 func main {
 entry:
-  %t0 = call %lency_enum_new3(4, 1, 2, 3)
-  %t1 = call %lency_enum_payload(%t0, 2)
-  ret %t1
+  %t0 = call %lency_enum_new0(5)
+  %t1 = call %lency_enum_push(%t0, 1)
+  %t2 = call %lency_enum_push(%t0, 2)
+  %t3 = call %lency_enum_push(%t0, 3)
+  %t4 = call %lency_enum_push(%t0, 4)
+  %t5 = call %lency_enum_payload(%t0, 3)
+  ret %t5
 }
 "#;
     let result = compile_lir_to_llvm_ir(src);
     assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
     let ir = result.unwrap_or_default();
-    assert!(ir.contains("declare i64 @lency_enum_new3(i64, i64, i64, i64)"));
-    assert!(ir.contains("call i64 @lency_enum_new3(i64 4, i64 1, i64 2, i64 3)"));
+    assert!(ir.contains("declare i64 @lency_enum_new0(i64)"));
+    assert!(ir.contains("declare i64 @lency_enum_push(i64, i64)"));
+    assert!(ir.contains("call i64 @lency_enum_push(i64 %t0, i64 4)"));
     assert!(ir.contains("call i64 @lency_enum_payload(i64"));
 }

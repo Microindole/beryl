@@ -113,7 +113,7 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                 }
                 ValueType::Ptr => {
                     let widened = emitter.next_tmp("ptrtoint");
-                    emitter.push(format!("  {} = ptrtoint ptr {} to i64", widened, repr));
+                    emitter.push(format!("  {} = ptrtoint i8* {} to i64", widened, repr));
                     let code = emitter.next_tmp("ret_i32");
                     emitter.push(format!("  {} = trunc i64 {} to i32", code, widened));
                     emitter.push(format!("  ret i32 {}", code));
@@ -147,7 +147,7 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                 let member_name = member_name.trim();
                 let (obj_repr, obj_ty) = emitter.emit_operand(obj_name)?;
                 // Generic member reference placeholder for subsequent `call %tX(...)`.
-                emitter.push(format!("  {} = inttoptr i64 0 to ptr", dst));
+                emitter.push(format!("  {} = inttoptr i64 0 to i8*", dst));
                 emitter.mark_temp(dst, ValueType::Ptr);
                 member_call_targets
                     .insert(dst.to_string(), (obj_repr, obj_ty, member_name.to_string()));

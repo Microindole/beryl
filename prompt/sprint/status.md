@@ -106,6 +106,10 @@
 - [x] enum 类型流已增强到“赋值链作为 match 目标”场景（`match (s = make_status())`），并补充穷尽性正/负例
 - [x] enum 类型流回归已扩展到多层调用组合（`id(id(make_status()))`）正/负例，覆盖跨函数链路约束
 - [x] enum 类型流与调用签名校验已扩展到“分组 callee”调用链（如 `(id)(...)`），修复分组调用下的签名/返回推断漏检
+- [x] enum 类型参数已接入 `enum_value_symbol` 跟踪，函数参数与参数透传链中的 `match`/赋值不再丢失 enum 类型流
+- [x] enum 值在 block 作用域中的同名遮蔽已补回归，外层 enum 类型流不会被内层局部变量污染
+- [x] enum 参数派生出的局部变量会继承 enum 类型流，后续 `match` 不再依赖原表达式形状
+- [x] enum 类型流回归已补到 `while` 写回场景，循环体内对外层 enum 变量的合法/非法写回都会被稳定识别
 - [x] 函数签名 `return_enum_name` 查找已改为“后写优先”，并补充签名优先级回归断言
 - [x] `match` 嵌套 payload 模式解构语义第一版：支持 `Wrap(Text(v))` 递归模式，接入未知 variant/arity 校验与绑定类型传播
 - [x] parser 已支持递归模式 AST（`MatchPattern(children + has_group)`），并新增 `Num` vs `Num()` 语义区分回归
@@ -119,8 +123,9 @@
 - [x] enum 类型流已扩展到 grouped constructor + grouped callee 组合调用，并补 resolver 正例
 - [x] selfhost runtime 已补 `match_guard_combo` 回归，覆盖多 guard arm 顺序与回退路径
 - [x] selfhost `match` lowering 已扩展到 `string literal`，并补 Rust LIR 编译层与 runtime 回归
-- [x] selfhost `match` lowering 已接入 enum payload 基础 pattern lowering，覆盖 constructor lowering、tag/payload runtime ABI 与 `match_enum_payload` runtime 回归
-- [x] selfhost enum runtime ABI 与 constructor lowering 已扩展到 3 payload（`lency_enum_new3`），并补充 nested payload runtime 回归与 Rust LIR 编译层测试
+- [x] selfhost `match` lowering 已接入递归 enum payload mixed pattern lowering，覆盖 constructor lowering、tag/payload runtime ABI、5 payload constructor 与更深 nested payload runtime 回归
+- [x] selfhost enum constructor lowering 与 payload metadata 已收口为 `lency_enum_new0 + lency_enum_push` 扁平模型，移除固定 4 payload 槽位硬编码，并补充 Rust LIR 编译层测试
+- [x] Rust LIR backend 已修复 LLVM 15 typed pointer 兼容问题，字符串相关 selfhost `.lir -> llc` 构建路径不再因 opaque `ptr` 语法失败
 - [x] `xtask` 已在 Windows 运行自举产物时自动注入 `lency_runtime.dll` 所在目录，修复 selfhost runtime case DLL 装载失败
 - [x] Step 29 已补 non-enum `char literal` pattern 语义正例回归（resolver 路径）
 - [x] 新增 `xtask bootstrap-check`（stage1→stage2→stage3 收敛验证）并接入独立 CI 工作流（仅手动或 `bootstrap-check/**` tag 触发）
@@ -132,9 +137,8 @@
 - [x] nullable 签名语义已接入（`int?/string?/bool?/float?` + 自定义 `Type?`），且自定义可空类型不再走 `TYPE_UNKNOWN` 兼容放行
 
 未完成：
-- [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）
-- [ ] TODO: `match` 复杂模式仍未覆盖更深层混合模式与后端 pattern lowering（当前已支持 guard 组合、嵌套 payload guard、enum payload 基础 lowering、3 payload constructor/runtime ABI 与 binder 语义判重）
-- [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
+- [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式、赋值链、grouped callee/constructor、参数透传、派生局部变量、block 遮蔽与 if/while 写回）
+- [x] resolver expr 已切到 visitor 风格分派骨架：`resolve_expr` 仅保留入口，具体 kind 逻辑下沉到 `visit_expr_*`
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）
 - 前端语法能力：约 35%

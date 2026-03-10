@@ -71,8 +71,6 @@ impl Resolver {
                 )
                 return
             }
-            // TODO: Extend nested pattern matching beyond current recursive branch-pattern coverage
-            // (e.g. richer guard forms and deeper mixed literal-variant conditions) in Phase 3+.
             this.bind_match_pattern_nested_enum(expected_ty_name, leaf, seen_binders)
             return
         }
