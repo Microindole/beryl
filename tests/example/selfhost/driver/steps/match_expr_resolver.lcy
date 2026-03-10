@@ -1,0 +1,139 @@
+// tests/example/selfhost/driver/steps/match_expr_resolver.lcy
+// Match resolver semantic regressions split from parser/AST checks.
+
+import std.core
+import tests.example.selfhost.driver.test_cases
+import tests.example.selfhost.driver.test_support
+
+bool run_match_resolver_semantic_tests(string match_source) {
+    if !expect_shared_resolve_success(match_source, "match resolver smoke positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_match_exhaustive_ok(), "enum match exhaustive positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_non_exhaustive_bad(), "enum match non-exhaustive negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_duplicate_pattern_bad(), "enum match duplicate pattern negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_unknown_variant_bad(), "enum match unknown variant negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_ctor_type_ok(), "enum payload constructor type positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_ctor_type_bad(), "enum payload constructor type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_ctor_arity_bad(), "enum payload constructor arity mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_match_bind_ok(), "enum payload match binder positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_arity_bad(), "enum payload match binder arity mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_type_bad(), "enum payload match binder type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_bind_duplicate_bad(), "enum payload match binder duplicate negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_match_nested_ok(), "enum payload nested pattern positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_payload_match_nested_literal_ok(), "enum payload nested literal pattern positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_nested_unknown_variant_bad(), "enum payload nested pattern unknown variant negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_nested_arity_bad(), "enum payload nested pattern arity negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_payload_match_nested_literal_type_bad(), "enum payload nested literal pattern type negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_function_return_ok(), "enum flow function return positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_match_result_ok(), "enum flow match result positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_match_assign_target_ok(), "enum flow match assign-target positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_match_assign_target_non_exhaustive_bad(), "enum flow match assign-target non-exhaustive negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_multi_call_chain_ok(), "enum flow multi-call chain positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_multi_call_chain_mismatch_bad(), "enum flow multi-call chain mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_grouped_callee_chain_ok(), "enum flow grouped-callee chain positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_grouped_callee_chain_mismatch_bad(), "enum flow grouped-callee chain mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_non_enum_match_literal_ok(), "non-enum match literal positive") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_non_enum_match_char_literal_ok(), "non-enum match char literal positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_literal_type_mismatch_bad(), "non-enum match literal type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_identifier_pattern_bad(), "non-enum match identifier pattern negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_duplicate_wildcard_bad(), "non-enum match duplicate wildcard negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_non_enum_match_unreachable_after_wildcard_bad(), "non-enum match unreachable after wildcard negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_match_guard_bool_ok(), "match guard bool positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_match_guard_non_bool_bad(), "match guard non-bool negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_match_guard_binder_ok(), "enum match guard binder positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_duplicate_binder_rename_bad(), "enum match duplicate binder rename negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_match_nested_guard_binder_ok(), "enum match nested guard binder positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_nested_duplicate_binder_rename_bad(), "enum match nested duplicate binder rename negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_guard_non_exhaustive_bad(), "enum match guard non-exhaustive negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_guard_non_bool_bad(), "enum match guard non-bool negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_duplicate_wildcard_bad(), "enum match duplicate wildcard negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_match_unreachable_after_wildcard_bad(), "enum match unreachable after wildcard negative") {
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_enum_flow_grouped_ctor_match_ok(), "enum flow grouped constructor match positive") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_enum_flow_assignment_mismatch_bad(), "enum flow assignment mismatch negative") {
+        return false
+    }
+    return true
+}

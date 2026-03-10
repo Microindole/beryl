@@ -1,0 +1,157 @@
+// lencyc/sema/resolver/expr_match_pattern.lcy
+// Match-pattern helpers split from match_expr to keep file size bounded.
+
+import std.core
+import lencyc.syntax.ast
+import lencyc.sema.resolver
+
+impl Resolver {
+    string match_arm_key(Expr expr, int arm_index, MatchPattern pattern) {
+        var key = this.match_pattern_to_string(pattern)
+        if this.has_match_arm_guard(expr, arm_index) {
+            if arm_index < expr.arm_guards.len() {
+                key = key + " if " + expr_to_string(expr.arm_guards[arm_index])
+            } else {
+                key = key + " if ?"
+            }
+        }
+        return key
+    }
+
+    string match_arm_semantic_key(Expr expr, int arm_index, MatchPattern pattern, string target_enum_name) {
+        var key = this.match_pattern_to_string(pattern)
+        if target_enum_name != "" {
+            key = this.match_enum_pattern_shape_key(target_enum_name, pattern)
+        }
+        if this.has_match_arm_guard(expr, arm_index) {
+            if arm_index < expr.arm_guards.len() {
+                key = key + " if " + expr_to_string(expr.arm_guards[arm_index])
+            } else {
+                key = key + " if ?"
+            }
+        }
+        return key
+    }
+
+    int infer_literal_pattern_type(MatchPattern pattern) {
+        if pattern.tag.kind == T_NUMBER() {
+            if contains(pattern.tag.lexeme, ".") || contains(pattern.tag.lexeme, "e") || contains(pattern.tag.lexeme, "E") {
+                return TYPE_FLOAT()
+            }
+            return TYPE_INT()
+        }
+        if pattern.tag.kind == T_STRING_LITERAL() {
+            return TYPE_STRING()
+        }
+        if pattern.tag.kind == T_CHAR_LITERAL() {
+            return TYPE_INT()
+        }
+        if pattern.tag.kind == T_TRUE() || pattern.tag.kind == T_FALSE() {
+            return TYPE_BOOL()
+        }
+        if pattern.tag.kind == T_NULL() {
+            return TYPE_NULL()
+        }
+        return TYPE_UNKNOWN()
+    }
+
+    void bind_match_pattern_leaf(string variant_name, MatchPattern leaf, int expected_ty, string expected_ty_name, Vec<string> seen_binders) {
+        if this.is_wildcard_pattern(leaf) {
+            if leaf.children.len() > 0 {
+                this.error("Wildcard pattern '_' cannot bind payload.")
+            }
+            return
+        }
+
+        if leaf.children.len() > 0 || leaf.has_group {
+            if expected_ty_name == "" || !this.is_enum_type_name(expected_ty_name) {
+                this.error(
+                    "nested payload pattern requires enum-typed payload, got " +
+                    this.match_pattern_to_string(leaf)
+                )
+                return
+            }
+            // TODO: Extend nested pattern matching beyond current recursive branch-pattern coverage
+            // (e.g. richer guard forms and deeper mixed literal-variant conditions) in Phase 3+.
+            this.bind_match_pattern_nested_enum(expected_ty_name, leaf, seen_binders)
+            return
+        }
+
+        var literal_ty = this.infer_literal_pattern_type(leaf)
+        if literal_ty != TYPE_UNKNOWN() {
+            var literal_ty_name = this.type_to_string(literal_ty)
+            if !this.types_match_or_unknown_by_name(expected_ty, expected_ty_name, literal_ty, literal_ty_name) {
+                var expected_name = expected_ty_name
+                if expected_name == "" {
+                    expected_name = this.type_to_string(expected_ty)
+                }
+                this.error(
+                    "payload literal pattern type mismatch for " + variant_name +
+                    ": expected " + expected_name +
+                    ", got " + literal_ty_name
+                )
+            }
+            return
+        }
+
+        if leaf.tag.kind != T_IDENTIFIER() {
+            this.error("payload pattern must be identifier/wildcard or nested variant pattern")
+            return
+        }
+
+        if !leaf.has_group && expected_ty_name != "" && this.is_enum_type_name(expected_ty_name) && this.is_enum_variant(expected_ty_name, leaf.tag.lexeme) {
+            // Backward-compatible: variant name without children means "ignore payload".
+            return
+        }
+
+        var binder_name = leaf.tag.lexeme
+        if this.contains_name(seen_binders, binder_name) {
+            this.error("duplicate payload binder in pattern " + variant_name + ": " + binder_name)
+            return
+        }
+        seen_binders.push(binder_name)
+        if this.table.is_defined_in_current_scope(binder_name) {
+            this.error("duplicate payload binder in match arm scope: " + binder_name)
+            return
+        }
+        this.table.define(binder_name)
+        var binder_ty_name = expected_ty_name
+        if binder_ty_name == "" {
+            binder_ty_name = this.type_to_string(expected_ty)
+        }
+        this.define_typed_symbol(binder_name, expected_ty, binder_ty_name)
+    }
+
+    void bind_match_pattern_nested_enum(string enum_name, MatchPattern pattern, Vec<string> seen_binders) {
+        if pattern.tag.kind != T_IDENTIFIER() {
+            this.error("EnumMatch nested pattern must use variant identifier")
+            return
+        }
+        if !this.is_enum_variant(enum_name, pattern.tag.lexeme) {
+            this.error(
+                "unknown EnumVariant in nested pattern for " + enum_name +
+                ": " + pattern.tag.lexeme
+            )
+            return
+        }
+        var expected_payload_arity = this.lookup_enum_constructor_arity_in(enum_name, pattern.tag.lexeme)
+        if expected_payload_arity != pattern.children.len() {
+            this.error(
+                "EnumMatch payload binder arity mismatch for " + pattern.tag.lexeme +
+                ": expected " + int_to_string(expected_payload_arity) +
+                ", got " + int_to_string(pattern.children.len())
+            )
+            return
+        }
+        var b = 0
+        while b < pattern.children.len() {
+            var binder_ty = this.lookup_enum_constructor_param_type_in(enum_name, pattern.tag.lexeme, b)
+            var binder_ty_name = this.lookup_enum_constructor_param_type_name_in(enum_name, pattern.tag.lexeme, b)
+            if binder_ty_name == "" {
+                binder_ty_name = this.type_to_string(binder_ty)
+            }
+            this.bind_match_pattern_leaf(pattern.tag.lexeme, pattern.children[b], binder_ty, binder_ty_name, seen_binders)
+            b = b + 1
+        }
+    }
+}

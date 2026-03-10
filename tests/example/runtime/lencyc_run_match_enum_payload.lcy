@@ -1,0 +1,33 @@
+// Runtime smoke case: match lowering supports enum payload and nested enum payload patterns.
+// @expect-exit: 0
+
+enum Payload {
+  Num(int),
+  Text(string)
+}
+
+enum Message {
+  Quit,
+  Wrap(Payload),
+  Pair(int, int)
+}
+
+var p = Pair(5, 6)
+var first = match (p) {
+  Pair(n, _) => n,
+  _ => 0
+}
+
+if first != 5 {
+  return 8
+}
+
+var m = Wrap(Num(7))
+var code = match (m) {
+  Quit => 9,
+  Wrap(Num(v)) if (v == 7) => 0,
+  Wrap(Text(msg)) => 6,
+  _ => 5
+}
+
+return code

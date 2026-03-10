@@ -66,8 +66,8 @@ impl Resolver {
         }
         if expr.kind == EXPR_CALL() {
             if expr.children.len() > 0 {
-                if expr.children[0].kind == EXPR_VARIABLE() {
-                    var callee_name = expr.children[0].literal_value.lexeme
+                var callee_name = this.extract_callee_name(expr.children[0])
+                if callee_name != "" {
                     var ctor_enum_name = this.lookup_enum_constructor_name(callee_name)
                     if ctor_enum_name != "" {
                         return ctor_enum_name

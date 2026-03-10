@@ -1,0 +1,158 @@
+// lencyc/codegen/lir/enum_support.lcy
+// Enum metadata and constructor/type tracking for self-host LIR emission.
+
+import std.core
+import lencyc.syntax.ast
+import lencyc.codegen.lir
+
+impl LirBuilder {
+    void preload_enum_metadata(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            var stmt = statements[i]
+            if stmt.kind == STMT_ENUM() {
+                var decl = stmt_to_decl(stmt)
+                var tag_id = 0
+                while tag_id < decl.enum_variants.len() {
+                    var payload0 = ""
+                    var payload1 = ""
+                    if decl.enum_variants[tag_id].payload_types.len() > 0 {
+                        payload0 = decl.enum_variants[tag_id].payload_types[0].name
+                    }
+                    if decl.enum_variants[tag_id].payload_types.len() > 1 {
+                        payload1 = decl.enum_variants[tag_id].payload_types[1].name
+                    }
+                    this.enum_variant_enum_names.push(decl.name.lexeme)
+                    this.enum_variant_names.push(decl.enum_variants[tag_id].name)
+                    this.enum_variant_tags.push(tag_id)
+                    this.enum_variant_payload0_types.push(payload0)
+                    this.enum_variant_payload1_types.push(payload1)
+                    tag_id = tag_id + 1
+                }
+            }
+            i = i + 1
+        }
+    }
+
+    int lookup_enum_variant_index(string variant_name) {
+        var i = this.enum_variant_names.len() - 1
+        while i >= 0 {
+            if this.enum_variant_names[i] == variant_name {
+                return i
+            }
+            i = i - 1
+        }
+        return -1
+    }
+
+    string lookup_enum_name_by_variant(string variant_name) {
+        var idx = this.lookup_enum_variant_index(variant_name)
+        if idx < 0 {
+            return ""
+        }
+        return this.enum_variant_enum_names[idx]
+    }
+
+    bool is_enum_type_name(string type_name) {
+        if type_name == "" {
+            return false
+        }
+        var i = this.enum_variant_enum_names.len() - 1
+        while i >= 0 {
+            if this.enum_variant_enum_names[i] == type_name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+
+    bool is_enum_variant_in(string enum_name, string variant_name) {
+        var i = this.enum_variant_names.len() - 1
+        while i >= 0 {
+            if this.enum_variant_enum_names[i] == enum_name && this.enum_variant_names[i] == variant_name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+
+    int lookup_enum_tag_in(string enum_name, string variant_name) {
+        var i = this.enum_variant_names.len() - 1
+        while i >= 0 {
+            if this.enum_variant_enum_names[i] == enum_name && this.enum_variant_names[i] == variant_name {
+                return this.enum_variant_tags[i]
+            }
+            i = i - 1
+        }
+        return -1
+    }
+
+    string lookup_enum_payload_type_name_in(string enum_name, string variant_name, int payload_index) {
+        var i = this.enum_variant_names.len() - 1
+        while i >= 0 {
+            if this.enum_variant_enum_names[i] == enum_name && this.enum_variant_names[i] == variant_name {
+                if payload_index == 0 {
+                    return this.enum_variant_payload0_types[i]
+                }
+                if payload_index == 1 {
+                    return this.enum_variant_payload1_types[i]
+                }
+                return ""
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    void track_enum_variable(string name, string enum_name) {
+        this.enum_var_names.push(name)
+        this.enum_var_types.push(enum_name)
+    }
+
+    void clear_enum_variable(string name) {
+        this.enum_var_names.push(name)
+        this.enum_var_types.push("")
+    }
+
+    string lookup_enum_variable(string name) {
+        var i = this.enum_var_names.len() - 1
+        while i >= 0 {
+            if this.enum_var_names[i] == name {
+                return this.enum_var_types[i]
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    string expr_callee_name(Expr expr) {
+        if expr.kind == EXPR_VARIABLE() {
+            return expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_GROUPING() && expr.children.len() > 0 {
+            return this.expr_callee_name(expr.children[0])
+        }
+        return ""
+    }
+
+    string infer_expr_enum_name(Expr expr) {
+        if expr.kind == EXPR_VARIABLE() {
+            return this.lookup_enum_variable(expr.literal_value.lexeme)
+        }
+        if expr.kind == EXPR_GROUPING() && expr.children.len() > 0 {
+            return this.infer_expr_enum_name(expr.children[0])
+        }
+        if expr.kind == EXPR_ASSIGN() && expr.children.len() > 0 {
+            return this.infer_expr_enum_name(expr.children[0])
+        }
+        if expr.kind == EXPR_CALL() && expr.children.len() > 0 {
+            var callee_name = this.expr_callee_name(expr.children[0])
+            if callee_name != "" {
+                return this.lookup_enum_name_by_variant(callee_name)
+            }
+        }
+        return ""
+    }
+}

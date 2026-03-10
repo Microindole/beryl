@@ -58,9 +58,11 @@ Lency 当前是双链路并行：
 - Sema: 已支持 `match` payload 绑定第一版（`Text(v)` / `Pair(a,b)`），绑定变量参与 arm 内类型检查。
 - Sema: 已支持非 enum `match` 的 literal pattern 语义校验（仅允许字面量/`_`，并校验 pattern 与目标类型一致性）。
 - Sema: 已支持 `match` arm guard 第一版（`pattern if (cond) => ...`），并校验 guard 条件为 `bool`。
+- Sema: `match` 重复 pattern 判定已按语义形状归一化，binder 改名不再绕过重复检查；嵌套 payload guard 也已纳入回归。
+- Sema: 嵌套 payload 模式已支持字面量 leaf（如 `Wrap(Num(1))`），并会校验 leaf 字面量与 payload 类型一致。
 - Sema: 已支持 `Result` builtin enum（`Ok/Err`）的构造与 `match` 校验。
 - Sema: 已支持 `null` 最小语义（字面量 + 基础类型约束检查）。
-- Sema: 已支持 enum 类型流扩展到函数返回、`match` 中间表达式与赋值链路。
+- Sema: 已支持 enum 类型流扩展到函数返回、`match` 中间表达式、赋值链路与 grouped callee/constructor 组合调用。
 - Sema: import 语义第一版已支持非 `std.*` 模块文件加载与声明符号导入。
 - Sema: `std.*` 已切到“模块源码签名自动导入”（递归 `import std.*`），不再依赖模块白名单最小符号预加载。
 - Sema: 已支持 `import std.*` 全量标准模块签名自动预加载；非 `std.*` 的通配导入会报错，避免静默误解语义。
@@ -69,9 +71,9 @@ Lency 当前是双链路并行：
 - Sema: 对 `arg_at/int_to_string/float_to_string/bool_to_string` 暂按 `unknown` 返回类型处理，以兼容现有 self-host runtime pointer-as-value 回归。
 - Sema: 已支持 nullable 签名语义（`int?/string?/bool?/float?` + 自定义 `Type?`），自定义可空类型不再走 `TYPE_UNKNOWN` 兼容放行。
 - Backend: Rust LIR backend member lowering 已改为“intrinsic 映射 + 通用 fallback”统一路径（含 `to_string/len/trim/substr/split/format/join`）。
-- Backend: selfhost LIR 发射器已接入 `match` 最小 lowering（number/bool/null/char literal + `_` + guard），并新增 runtime 端到端回归。
+- Backend: selfhost LIR 发射器已接入 `match` lowering（number/string/bool/null/char literal + `_` + guard），并已支持 enum payload 基础 pattern lowering；runtime 回归已覆盖 guard 组合、string literal 与 enum payload。
 - Pipeline: 已打通 `Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
-- Tooling: 规范入口统一为 `cargo run -p xtask -- check-rust` 与 `cargo run -p xtask -- check-lency`（平台脚本仅为包装）。
+- Tooling: 规范入口统一为 `cargo run -p xtask -- auto-check`（按范围派发 `check-rust/check-lency`）；Windows 下 `xtask` 会自动补齐 `lency_runtime.dll` 搜索路径，避免自举 runtime case 因 DLL 装载失败假红。
 
 ### 自举编译器内部结构快照（2026-03-08）
 
@@ -81,4 +83,4 @@ Lency 当前是双链路并行：
 
 ### 当前主线
 
-当前开发优先级是语义增量（类型一致性与调用语义扩展），Parser 处于收尾阶段。
+当前开发优先级是继续提升语义拦截密度，并逐步扩展 selfhost `match` lowering 到更深 mixed pattern；不是继续打磨 parser 外形。

@@ -7,6 +7,25 @@ use std::os::raw::c_char;
 
 use crate::LencyVec;
 
+/// 比较两个字符串是否内容相等
+///
+/// # Safety
+/// `lhs` and `rhs` must be valid null-terminated C string pointers unless null
+#[no_mangle]
+pub unsafe extern "C" fn lency_string_eq(lhs: *const c_char, rhs: *const c_char) -> i64 {
+    if lhs.is_null() || rhs.is_null() {
+        return if lhs == rhs { 1 } else { 0 };
+    }
+
+    let lhs_str = unsafe { CStr::from_ptr(lhs) };
+    let rhs_str = unsafe { CStr::from_ptr(rhs) };
+    if lhs_str.to_bytes() == rhs_str.to_bytes() {
+        1
+    } else {
+        0
+    }
+}
+
 /// 获取字符串长度
 ///
 /// # Safety
@@ -417,6 +436,20 @@ mod tests {
         let substr2 = unsafe { CStr::from_ptr(result2) }.to_str().unwrap();
         assert_eq!(substr2, "world");
         unsafe { libc::free(result2 as *mut libc::c_void) };
+    }
+
+    #[test]
+    fn test_string_eq() {
+        let lhs = CString::new("hello").unwrap();
+        let rhs = CString::new("hello").unwrap();
+        let other = CString::new("world").unwrap();
+
+        assert_eq!(unsafe { lency_string_eq(lhs.as_ptr(), rhs.as_ptr()) }, 1);
+        assert_eq!(unsafe { lency_string_eq(lhs.as_ptr(), other.as_ptr()) }, 0);
+        assert_eq!(
+            unsafe { lency_string_eq(std::ptr::null(), std::ptr::null()) },
+            1
+        );
     }
 
     #[test]

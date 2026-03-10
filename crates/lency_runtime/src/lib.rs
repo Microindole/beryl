@@ -2,6 +2,7 @@
 //!
 //! 提供 Lency 语言的运行时支持，包括动态数组、哈希表、文件 I/O 和字符串处理
 
+pub mod enum_value;
 pub mod file;
 pub mod hashmap;
 pub mod hashmap_string;

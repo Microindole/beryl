@@ -5,7 +5,7 @@
 ## 0. 当前结论（先看）
 - `lencyc` 已完成最小自举闭环：`Read -> Lex -> Parse -> Resolve -> Emit(AST/LIR)`。
 - 与 Rust 主链路仍有显著差距，不能再使用“~98% 准备度”这类失真数字。
-- 当前主线：先收尾 Parser/Decl 可用性，再补 Sema 深度，最后扩后端能力。
+- 当前主线：继续补 Sema 拦截密度，并扩 selfhost `match` lowering 覆盖；不要再回头把 parser 当主战场。
 
 ## 1. 双链路现状基线
 - Rust 主链路：
@@ -14,7 +14,7 @@
   - 能力层级：语法/语义/单态化/LLVM codegen/CLI 已成体系
 - Lency 自举链路：
   - `lencyc/` `.lcy` 文件：34
-  - `tests/example/` 文件：38（已按 `lir/runtime/parser/modules/selfhost` 分层）
+  - `tests/example/` 文件：40（已按 `lir/runtime/parser/modules/selfhost` 分层）
   - 能力层级：最小语法与最小语义可运行，后端与类型系统仍是子集
   - 统计口径：递归文件计数（Windows `Get-ChildItem -Recurse -File`；`lencyc` 按 `*.lcy` 计）
 
@@ -112,7 +112,15 @@
 - [x] 非 enum `match` 已接入 literal pattern 语义校验：仅允许字面量/`_`，并校验 pattern 与目标类型一致性（含 `null`）
 - [x] `match` arm guard 第一版已接入：支持 `pattern if (cond)` 解析与 `bool` 条件校验，guard 分支按保守策略不计入 enum 穷尽覆盖
 - [x] guard 语法负例回归已补：`if` 后缺失括号会在 parser 阶段稳定报错（防止 guard 语法约束回退）
-- [x] selfhost LIR 后端已接入 `match` 最小 lowering（number/bool/null/char literal + `_` + guard 子集），并新增 runtime 端到端回归
+- [x] selfhost LIR 后端已接入 `match` 最小 lowering（number/string/bool/null/char literal + `_` + guard 子集），并新增 runtime 端到端回归
+- [x] `match` 重复 pattern 判定已改为语义形状归一化，binder 改名不再绕过重复检查，并新增嵌套 payload duplicate 负例
+- [x] `match` 嵌套 payload guard binder 回归已补，覆盖 `Wrap(Text(msg)) if (...)` 路径
+- [x] `match` 嵌套 payload 模式已支持字面量 leaf（如 `Wrap(Num(1))`），并补充类型负例
+- [x] enum 类型流已扩展到 grouped constructor + grouped callee 组合调用，并补 resolver 正例
+- [x] selfhost runtime 已补 `match_guard_combo` 回归，覆盖多 guard arm 顺序与回退路径
+- [x] selfhost `match` lowering 已扩展到 `string literal`，并补 Rust LIR 编译层与 runtime 回归
+- [x] selfhost `match` lowering 已接入 enum payload 基础 pattern lowering，覆盖 constructor lowering、tag/payload runtime ABI 与 `match_enum_payload` runtime 回归
+- [x] `xtask` 已在 Windows 运行自举产物时自动注入 `lency_runtime.dll` 所在目录，修复 selfhost runtime case DLL 装载失败
 - [x] Step 29 已补 non-enum `char literal` pattern 语义正例回归（resolver 路径）
 - [x] 新增 `xtask bootstrap-check`（stage1→stage2→stage3 收敛验证）并接入独立 CI 工作流（仅手动或 `bootstrap-check/**` tag 触发）
 - [x] import 语义第一版：非 `std.*` 模块支持文件加载 + 声明符号导入（函数/类型/enum 构造器）
@@ -124,7 +132,7 @@
 
 未完成：
 - [ ] TODO: enum 类型流在更复杂控制流/多层调用组合场景继续增强（当前已覆盖函数返回、match 中间表达式与赋值链）
-- [ ] TODO: `match` 复杂模式仍未覆盖更高级 guard 形态（当前已支持基础 `pattern if (cond)`）
+- [ ] TODO: `match` 复杂模式仍未覆盖更深层混合模式与后端 pattern lowering（当前已支持 guard 组合、嵌套 payload guard、enum payload 基础 lowering 与 binder 语义判重）
 - [ ] TODO: Visitor 是否扩展到 resolver expr 分派，待后续以复杂度收益评估后决定（暂不全量迁移）
 
 ## 3. 与 Rust 使用水平的差距评估（2026-03-07）

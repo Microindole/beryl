@@ -1,0 +1,15 @@
+// Runtime smoke case: match lowering supports multiple guarded arms on the same target.
+// @expect-exit: 0
+
+var x = 3
+var y = match (x) {
+  1 if (x > 10) => 11,
+  3 if (x < 0) => 12,
+  3 if (x > 2 && x < 5) => 13,
+  _ => 14
+}
+
+if y == 13 {
+  return 0
+}
+return 9

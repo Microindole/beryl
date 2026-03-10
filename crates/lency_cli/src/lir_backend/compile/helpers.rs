@@ -44,6 +44,16 @@ pub(super) fn resolve_builtin_call(
 
 pub(super) fn build_output_ir(emitter: Emitter) -> String {
     let mut out_lines = Vec::new();
+    let mut string_globals = emitter
+        .string_globals
+        .values()
+        .map(|(_, _, decl)| decl.clone())
+        .collect::<Vec<_>>();
+    string_globals.sort();
+    out_lines.extend(string_globals);
+    if !out_lines.is_empty() {
+        out_lines.push(String::new());
+    }
     let mut extern_names = emitter.extern_funcs.keys().cloned().collect::<Vec<_>>();
     extern_names.sort();
 

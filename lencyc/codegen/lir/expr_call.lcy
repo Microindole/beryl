@@ -1,0 +1,51 @@
+// lencyc/codegen/lir/expr_call.lcy
+// Call-expression lowering helpers for self-host LIR emitter.
+
+import std.core
+import std.convert
+import lencyc.syntax.ast
+import lencyc.codegen.lir
+
+impl LirBuilder {
+    string emit_expr_call(Expr expr) {
+        if expr.children.len() == 0 {
+            var dst0 = this.new_temp()
+            this.emit_line("  " + dst0 + " = call ?()")
+            return dst0
+        }
+        var enum_ctor_name = this.expr_callee_name(expr.children[0])
+        var enum_ctor_owner = this.lookup_enum_name_by_variant(enum_ctor_name)
+        if enum_ctor_owner != "" {
+            var ctor_dst = this.new_temp()
+            var ctor_tag = this.lookup_enum_tag_in(enum_ctor_owner, enum_ctor_name)
+            if expr.children.len() == 1 {
+                this.emit_line("  " + ctor_dst + " = call %lency_enum_new0(" + int_to_string(ctor_tag) + ")")
+            } else {
+                if expr.children.len() == 2 {
+                    var arg0 = this.emit_expr(expr.children[1])
+                    this.emit_line("  " + ctor_dst + " = call %lency_enum_new1(" + int_to_string(ctor_tag) + ", " + arg0 + ")")
+                } else {
+                    if expr.children.len() == 3 {
+                        var arg0 = this.emit_expr(expr.children[1])
+                        var arg1 = this.emit_expr(expr.children[2])
+                        this.emit_line("  " + ctor_dst + " = call %lency_enum_new2(" + int_to_string(ctor_tag) + ", " + arg0 + ", " + arg1 + ")")
+                    } else {
+                        // TODO: Extend EnumConstructor lowering beyond 2 payload values.
+                        this.emit_line("  " + ctor_dst + " = expr_unknown")
+                    }
+                }
+            }
+            return ctor_dst
+        }
+        var callee = this.emit_expr(expr.children[0])
+        var args = vec![]
+        var i = 1
+        while i < expr.children.len() {
+            args.push(this.emit_expr(expr.children[i]))
+            i = i + 1
+        }
+        var dst = this.new_temp()
+        this.emit_line("  " + dst + " = call " + callee + "(" + this.join_args(args) + ")")
+        return dst
+    }
+}

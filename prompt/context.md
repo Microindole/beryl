@@ -14,9 +14,9 @@
   - 已有 CI：`.github/workflows/bootstrap.yml`（仅手动或 `bootstrap-check/**` tag 触发）
   - 现状判定：具备“最小可用自举闭环”，但未达到“接近 Rust 主链路使用水平”。
 - 下一步唯一优先级（按顺序，不要跳）：
-  1. `match` 复杂模式语义继续补齐：优先 guard 组合/嵌套模式边界，新增 resolver 正负例。
-  2. enum 类型流继续补齐：复杂控制流与多层调用组合，新增可复现负例，禁止静默放行。
-  3. 后端 `match` lowering 扩展：在现有 `number/bool/null/char + _ + 基础 guard` 之上继续扩展，并新增 runtime 回归。
+  1. 后端 `match` lowering 继续向更深层 mixed pattern 扩展：当前已支持 enum payload 基础解构，但仍未覆盖更复杂混合模式，并继续新增 runtime 回归。
+  2. enum 类型流继续补齐：向更复杂控制流继续扩展，禁止静默放行。
+  3. Visitor 是否继续向 resolver expr 分派推进，按复杂度收益评估后决定。
 - 每次改动的硬验收（必须同时满足）：
   - 新增或更新对应 `tests/example/selfhost/driver/steps/*` 的语义回归（不是只改 runtime）。
   - 新增或更新对应 `tests/example/runtime/*` 的端到端回归（涉及 lowering 时）。
@@ -31,7 +31,7 @@
 - Rust 主编译器（`crates/`）文件数：178。
 - Lency 自举编译器（`lencyc/`）`.lcy` 文件数：34。
 - Rust 集成测试文件数（`tests/integration/`）：75。
-- Lency 示例测试文件数（`tests/example/`）：38（已按 `lir/runtime/parser/modules/selfhost` 分层）。
+- Lency 示例测试文件数（`tests/example/`）：40（已按 `lir/runtime/parser/modules/selfhost` 分层）。
 - 统计口径：递归文件计数（Windows `Get-ChildItem -Recurse -File`；`lencyc` 按 `*.lcy` 计）。
 - 当前判断：`lencyc` 已打通最小闭环，但能力远未接近 Rust 主链路；此前“~98% 准备度”判定失真，已废弃。
 
@@ -43,9 +43,9 @@
 
 ## 2. 能力对照（Rust vs Lency 自举）
 - 一句话：Lency 已具备最小自举闭环，但与 Rust 主链路仍有代差，当前应优先补语义密度与 lowering 覆盖，而不是继续打磨 parser 外形。
-- 前端：`match/enum payload/import/extern/null/泛型入口` 已接入；复杂模式与更高阶 guard 仍有缺口。
-- 语义：已覆盖 name resolution、基础 type check、函数签名、enum/match 第一版、`std.*` 自动签名导入；复杂控制流类型流仍需增强。
-- 后端：selfhost LIR 已覆盖 `match(number/bool/null/char + _ + 基础 guard)` 子集；复杂 pattern lowering 仍是待办。
+- 前端：`match/enum payload/import/extern/null/泛型入口` 已接入；parser 侧当前不是主瓶颈。
+- 语义：已覆盖 name resolution、基础 type check、函数签名、enum/match、guard 组合边界、grouped callee/constructor 类型流、binder 改名去重与嵌套 payload 字面量模式；复杂控制流类型流仍需增强。
+- 后端：selfhost LIR 已覆盖 `match(number/string/bool/null/char + _ + guard 组合)`，并已接入 enum payload 基础 pattern lowering；更深层 mixed pattern lowering 仍是待办。
 - 工具链：`auto-check` 与 `bootstrap-check` 已落地，手动/tag 触发的重型收敛验证已具备。
 
 ## 3. 已落地的自举关键增量
@@ -57,11 +57,14 @@
   - `const/import/extern/enum/match/null` 语义第一版可用。
   - `enum payload` 构造与匹配、`match guard`（`if (cond)` 且 `bool`）已接入。
   - 非 enum `match` literal pattern 已覆盖 `number/string/bool/null/char` 与 `_`，并有 resolver 正负例。
-  - enum 类型流已覆盖函数返回、match 中间表达式、赋值链、分组 callee 调用链等主路径。
+  - `match` 重复模式已按语义形状判重，binder 改名不再绕过检查；嵌套 payload guard 已有正负例覆盖。
+  - 嵌套 payload 模式已支持字面量 leaf（如 `Wrap(Num(1))`），并会校验 leaf 字面量与 payload 类型一致。
+  - enum 类型流已覆盖函数返回、match 中间表达式、赋值链、分组 callee/constructor 调用链等主路径。
 - 后端与运行时基线（可跑）：
-  - selfhost `match lowering` 当前覆盖 `number/bool/null/char + _ + 基础 guard` 子集。
-  - runtime 回归已覆盖 `match_guard`、`match_bool_null`、`match_char`。
-  - `match` 更复杂 pattern lowering 仍是后续增量（见 TODO）。
+  - selfhost `match lowering` 当前覆盖 `number/string/bool/null/char + _ + guard 组合`，并支持 enum payload 基础 pattern lowering。
+  - runtime 回归已覆盖 `match_guard`、`match_guard_combo`、`match_bool_null`、`match_char`、`match_string`、`match_enum_payload`。
+  - `xtask` 已在 Windows 运行自举产物时自动注入 `lency_runtime.dll` 所在目录，修复 runtime case DLL 装载失败。
+  - `match` 更复杂 mixed pattern lowering 仍是后续增量（见 TODO）。
 - 工具链与收敛验证：
   - `cargo run -p xtask -- auto-check` 为唯一日常主入口（支持 docs-only 快速模式）。
   - `cargo run -p xtask -- bootstrap-check` 已落地；`bootstrap.yml` 仅手动或 `bootstrap-check/**` tag 触发。

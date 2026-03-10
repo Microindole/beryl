@@ -2,6 +2,7 @@
 // Match-expression lowering helpers for self-host LIR emitter.
 
 import std.core
+import std.convert
 import lencyc.syntax.ast
 import lencyc.codegen.lir
 
@@ -20,23 +21,126 @@ impl LirBuilder {
         if pattern.children.len() != 0 || pattern.has_group {
             return false
         }
-        if pattern.tag.kind == T_NUMBER() {
+        if pattern.tag.kind == T_NUMBER() || pattern.tag.kind == T_STRING_LITERAL() {
             return true
         }
         if pattern.tag.kind == T_TRUE() || pattern.tag.kind == T_FALSE() || pattern.tag.kind == T_NULL() {
             return true
         }
-        if pattern.tag.kind == T_CHAR_LITERAL() {
-            return true
+        return pattern.tag.kind == T_CHAR_LITERAL()
+    }
+
+    bool is_enum_variant_pattern(string enum_name, MatchPattern pattern) {
+        return pattern.tag.kind == T_IDENTIFIER() && this.is_enum_variant_in(enum_name, pattern.tag.lexeme)
+    }
+
+    bool is_binder_pattern(string expected_ty_name, MatchPattern pattern) {
+        if pattern.tag.kind != T_IDENTIFIER() || pattern.tag.lexeme == "_" {
+            return false
         }
-        return false
+        if expected_ty_name != "" && this.is_enum_variant_in(expected_ty_name, pattern.tag.lexeme) {
+            return false
+        }
+        return pattern.children.len() == 0
+    }
+
+    string emit_match_bool_and(string lhs, string rhs) {
+        var out = this.new_temp()
+        this.emit_line("  " + out + " = and " + lhs + ", " + rhs)
+        return out
+    }
+
+    string emit_match_literal_compare(string value, MatchPattern pattern) {
+        var cond = this.new_temp()
+        var cmp_op = "cmp_eq"
+        if pattern.tag.kind == T_STRING_LITERAL() {
+            cmp_op = "cmp_str_eq"
+        }
+        this.emit_line("  " + cond + " = " + cmp_op + " " + value + ", " + pattern.tag.lexeme)
+        return cond
+    }
+
+    string emit_enum_tag_load(string value) {
+        var out = this.new_temp()
+        this.emit_line("  " + out + " = call %lency_enum_tag(" + value + ")")
+        return out
+    }
+
+    string emit_enum_payload_load(string value, int payload_index) {
+        var out = this.new_temp()
+        this.emit_line("  " + out + " = call %lency_enum_payload(" + value + ", " + int_to_string(payload_index) + ")")
+        return out
+    }
+
+    string emit_match_pattern_check(string value, MatchPattern pattern, string expected_ty_name) {
+        if this.is_wildcard_pattern(pattern) || this.is_binder_pattern(expected_ty_name, pattern) {
+            return "1"
+        }
+        if this.is_lowerable_literal_pattern(pattern) {
+            return this.emit_match_literal_compare(value, pattern)
+        }
+        if expected_ty_name != "" && this.is_enum_variant_pattern(expected_ty_name, pattern) {
+            var tag_val = this.emit_enum_tag_load(value)
+            var cond = this.new_temp()
+            var tag_id = this.lookup_enum_tag_in(expected_ty_name, pattern.tag.lexeme)
+            this.emit_line("  " + cond + " = cmp_eq " + tag_val + ", " + int_to_string(tag_id))
+            var i = 0
+            while i < pattern.children.len() {
+                var payload_ty_name = this.lookup_enum_payload_type_name_in(expected_ty_name, pattern.tag.lexeme, i)
+                var payload_val = this.emit_enum_payload_load(value, i)
+                cond = this.emit_match_bool_and(cond, this.emit_match_pattern_check(payload_val, pattern.children[i], payload_ty_name))
+                i = i + 1
+            }
+            return cond
+        }
+        // TODO: Extend match lowering beyond current enum/literal subset for more mixed pattern forms.
+        return "0"
+    }
+
+    void emit_match_pattern_bindings(string value, MatchPattern pattern, string expected_ty_name) {
+        if this.is_wildcard_pattern(pattern) || this.is_lowerable_literal_pattern(pattern) {
+            return
+        }
+        if this.is_binder_pattern(expected_ty_name, pattern) {
+            this.emit_line("  var %" + pattern.tag.lexeme + " = " + value)
+            return
+        }
+        if expected_ty_name != "" && this.is_enum_variant_pattern(expected_ty_name, pattern) {
+            var i = 0
+            while i < pattern.children.len() {
+                var payload_ty_name = this.lookup_enum_payload_type_name_in(expected_ty_name, pattern.tag.lexeme, i)
+                var payload_val = this.emit_enum_payload_load(value, i)
+                this.emit_match_pattern_bindings(payload_val, pattern.children[i], payload_ty_name)
+                i = i + 1
+            }
+        }
+    }
+
+    string resolve_match_target_enum_name(Expr target_expr, Vec<MatchPattern> arm_patterns) {
+        var inferred = this.infer_expr_enum_name(target_expr)
+        if inferred != "" {
+            return inferred
+        }
+        var i = 0
+        while i < arm_patterns.len() {
+            if arm_patterns[i].tag.kind == T_IDENTIFIER() {
+                var by_variant = this.lookup_enum_name_by_variant(arm_patterns[i].tag.lexeme)
+                if by_variant != "" {
+                    return by_variant
+                }
+            }
+            i = i + 1
+        }
+        return ""
     }
 
     string emit_expr_match(Expr expr) {
         if expr.children.len() == 0 || expr.arm_patterns.len() == 0 {
             return "0"
         }
-        var target = this.emit_expr(expr.children[0])
+        var target_expr = expr.children[0]
+        var target = this.emit_expr(target_expr)
+        var target_enum_name = this.resolve_match_target_enum_name(target_expr, expr.arm_patterns)
         var result_var = this.new_match_var()
         this.emit_line("  var " + result_var + " = 0")
         var end_label = this.new_label("match_end")
@@ -52,23 +156,25 @@ impl LirBuilder {
             if this.is_wildcard_pattern(pattern) {
                 this.emit_line("  jmp " + arm_value_label)
             } else {
-                if this.is_lowerable_literal_pattern(pattern) {
-                    var cond = this.new_temp()
-                    this.emit_line("  " + cond + " = cmp_eq " + target + ", " + pattern.tag.lexeme)
-                    this.emit_line("  br " + cond + ", " + arm_value_label + ", " + next_label)
+                var cond = "0"
+                if target_enum_name != "" {
+                    cond = this.emit_match_pattern_check(target, pattern, target_enum_name)
                 } else {
-                    // TODO: Extend match lowering beyond literal(bool/null/number/char) + wildcard subset.
-                    this.emit_line("  jmp " + next_label)
+                    if this.is_lowerable_literal_pattern(pattern) {
+                        cond = this.emit_match_literal_compare(target, pattern)
+                    }
                 }
+                this.emit_line("  br " + cond + ", " + arm_value_label + ", " + next_label)
             }
             this.emit_line(arm_value_label + ":")
-            if i < expr.arm_has_guards.len() && expr.arm_has_guards[i] {
-                if i < expr.arm_guards.len() {
-                    var guard_val = this.emit_expr(expr.arm_guards[i])
-                    var guard_ok_label = this.new_label("match_guard_ok")
-                    this.emit_line("  br " + guard_val + ", " + guard_ok_label + ", " + next_label)
-                    this.emit_line(guard_ok_label + ":")
-                }
+            if target_enum_name != "" {
+                this.emit_match_pattern_bindings(target, pattern, target_enum_name)
+            }
+            if i < expr.arm_has_guards.len() && expr.arm_has_guards[i] && i < expr.arm_guards.len() {
+                var guard_val = this.emit_expr(expr.arm_guards[i])
+                var guard_ok_label = this.new_label("match_guard_ok")
+                this.emit_line("  br " + guard_val + ", " + guard_ok_label + ", " + next_label)
+                this.emit_line(guard_ok_label + ":")
             }
             var arm_val = this.emit_expr(expr.children[i + 1])
             this.emit_line("  store " + result_var + ", " + arm_val)

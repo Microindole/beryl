@@ -22,10 +22,7 @@ pub(crate) fn run_cmd<P: AsRef<Path>>(
 ) -> Result<()> {
     let program = program.as_ref();
     let mut cmd = Command::new(program);
-    cmd.args(args);
-    for (k, v) in envs {
-        cmd.env(k, v);
-    }
+    prepare_command(&mut cmd, args, envs);
     if quiet {
         cmd.stdout(Stdio::null()).stderr(Stdio::null());
     }
@@ -56,7 +53,7 @@ pub(crate) fn run_cmd_exit_code<P: AsRef<Path>>(
 ) -> Result<i32> {
     let program = program.as_ref();
     let mut cmd = Command::new(program);
-    cmd.args(args);
+    prepare_command(&mut cmd, args, &[]);
     if quiet {
         cmd.stdout(Stdio::null()).stderr(Stdio::null());
     }
@@ -71,7 +68,9 @@ pub(crate) fn run_cmd_exit_code<P: AsRef<Path>>(
 }
 
 pub(crate) fn run_cmd_capture(program: &Path, args: &[&str]) -> Result<String> {
-    let output = Command::new(program).args(args).output().with_context(|| {
+    let mut cmd = Command::new(program);
+    prepare_command(&mut cmd, args, &[]);
+    let output = cmd.output().with_context(|| {
         format!(
             "failed to run command: {} {}",
             program.display(),
@@ -87,6 +86,53 @@ pub(crate) fn run_cmd_capture(program: &Path, args: &[&str]) -> Result<String> {
         );
     }
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+fn prepare_command(cmd: &mut Command, args: &[&str], envs: &[(&str, &str)]) {
+    cmd.args(args);
+    for (k, v) in envs {
+        cmd.env(k, v);
+    }
+    inject_runtime_path(cmd);
+}
+
+fn inject_runtime_path(cmd: &mut Command) {
+    if !cfg!(windows) {
+        return;
+    }
+
+    let Some(runtime_dir) = find_runtime_dir() else {
+        return;
+    };
+    let existing = std::env::var_os("PATH").unwrap_or_default();
+    let mut paths = vec![runtime_dir];
+    paths.extend(std::env::split_paths(&existing));
+    if let Ok(joined) = std::env::join_paths(paths) {
+        cmd.env("PATH", joined);
+    }
+}
+
+fn find_runtime_dir() -> Option<PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+    let dirs = ["target/release", "target/debug"];
+    let libs = [
+        "lency_runtime.dll",
+        "lency_runtime.dll.lib",
+        "lency_runtime.lib",
+        "liblency_runtime.so",
+        "liblency_runtime.dylib",
+        "liblency_runtime.a",
+    ];
+
+    for dir in dirs {
+        let runtime_dir = cwd.join(dir);
+        for lib in libs {
+            if runtime_dir.join(lib).exists() {
+                return Some(runtime_dir);
+            }
+        }
+    }
+    None
 }
 
 pub(crate) fn resolve_exec(base: &Path) -> Result<PathBuf> {

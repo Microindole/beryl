@@ -4,6 +4,8 @@
 import std.core
 import std.convert
 import lencyc.syntax.ast
+import lencyc.codegen.lir.enum_support
+import lencyc.codegen.lir.expr_call
 import lencyc.codegen.lir.match_expr
 
 struct LirBuilder {
@@ -13,6 +15,13 @@ struct LirBuilder {
     Vec<string> break_targets
     Vec<string> continue_targets
     int loop_depth
+    Vec<string> enum_variant_enum_names
+    Vec<string> enum_variant_names
+    Vec<int> enum_variant_tags
+    Vec<string> enum_variant_payload0_types
+    Vec<string> enum_variant_payload1_types
+    Vec<string> enum_var_names
+    Vec<string> enum_var_types
 }
 
 LirBuilder make_lir_builder() {
@@ -22,12 +31,19 @@ LirBuilder make_lir_builder() {
         label_counter: 0,
         break_targets: vec![],
         continue_targets: vec![],
-        loop_depth: 0
+        loop_depth: 0,
+        enum_variant_enum_names: vec![],
+        enum_variant_names: vec![],
+        enum_variant_tags: vec![],
+        enum_variant_payload0_types: vec![],
+        enum_variant_payload1_types: vec![],
+        enum_var_names: vec![],
+        enum_var_types: vec![]
     }
 }
-
 string emit_lir_program(Vec<Stmt> statements) {
     var builder = make_lir_builder()
+    builder.preload_enum_metadata(statements)
     builder.emit_line("; lencyc-lir v0")
     builder.emit_line("func main {")
     builder.emit_line("entry:")
@@ -53,7 +69,6 @@ impl LirBuilder {
         this.label_counter = this.label_counter + 1
         return label
     }
-
     void push_loop_targets(string break_label, string continue_label) {
         this.break_targets.push(break_label)
         this.continue_targets.push(continue_label)
@@ -122,11 +137,16 @@ impl LirBuilder {
             i = i + 1
         }
     }
-
     void emit_stmt(Stmt stmt) {
         if stmt.kind == STMT_VAR_DECL() {
             var init_val = this.emit_expr(stmt.expr)
             this.emit_line("  var %" + stmt.name.lexeme + " = " + init_val)
+            var enum_name = this.infer_expr_enum_name(stmt.expr)
+            if enum_name != "" {
+                this.track_enum_variable(stmt.name.lexeme, enum_name)
+            } else {
+                this.clear_enum_variable(stmt.name.lexeme)
+            }
             return
         }
         if stmt.kind == STMT_EXPR() {
@@ -197,10 +217,8 @@ impl LirBuilder {
             }
             return
         }
-
         this.emit_line("  ; unsupported stmt kind " + int_to_string(stmt.kind))
     }
-
     string emit_expr(Expr expr) {
         if expr.kind == EXPR_LITERAL() {
             return expr.literal_value.lexeme
@@ -220,6 +238,15 @@ impl LirBuilder {
                 val = this.emit_expr(expr.children[0])
             }
             this.emit_line("  store %" + expr.literal_value.lexeme + ", " + val)
+            var enum_name = ""
+            if expr.children.len() > 0 {
+                enum_name = this.infer_expr_enum_name(expr.children[0])
+            }
+            if enum_name != "" {
+                this.track_enum_variable(expr.literal_value.lexeme, enum_name)
+            } else {
+                this.clear_enum_variable(expr.literal_value.lexeme)
+            }
             return val
         }
         if expr.kind == EXPR_UNARY() {
@@ -254,28 +281,11 @@ impl LirBuilder {
             return dst
         }
         if expr.kind == EXPR_CALL() {
-            if expr.children.len() == 0 {
-                var dst0 = this.new_temp()
-                this.emit_line("  " + dst0 + " = call ?()")
-                return dst0
-            }
-
-            var callee = this.emit_expr(expr.children[0])
-            var args = vec![]
-            var i = 1
-            while i < expr.children.len() {
-                args.push(this.emit_expr(expr.children[i]))
-                i = i + 1
-            }
-
-            var dst = this.new_temp()
-            this.emit_line("  " + dst + " = call " + callee + "(" + this.join_args(args) + ")")
-            return dst
+            return this.emit_expr_call(expr)
         }
         if expr.kind == EXPR_MATCH() {
             return this.emit_expr_match(expr)
         }
-
         var fallback = this.new_temp()
         this.emit_line("  " + fallback + " = expr_unknown")
         return fallback

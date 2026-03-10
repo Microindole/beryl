@@ -153,6 +153,57 @@ impl Resolver {
         return out
     }
 
+    string match_payload_pattern_shape_key(MatchPattern pattern, int expected_ty, string expected_ty_name) {
+        if this.is_wildcard_pattern(pattern) {
+            return "_"
+        }
+        if pattern.children.len() > 0 || pattern.has_group {
+            if expected_ty_name != "" && this.is_enum_type_name(expected_ty_name) {
+                return this.match_enum_pattern_shape_key(expected_ty_name, pattern)
+            }
+            return this.match_pattern_to_string(pattern)
+        }
+        if pattern.tag.kind != T_IDENTIFIER() {
+            return pattern.tag.lexeme
+        }
+        if expected_ty_name != "" && this.is_enum_type_name(expected_ty_name) && this.is_enum_variant(expected_ty_name, pattern.tag.lexeme) {
+            return pattern.tag.lexeme
+        }
+        if expected_ty != TYPE_UNKNOWN() && expected_ty_name == "" {
+            return "$"
+        }
+        return "$"
+    }
+
+    string match_enum_pattern_shape_key(string enum_name, MatchPattern pattern) {
+        if this.is_wildcard_pattern(pattern) {
+            return "_"
+        }
+        if pattern.tag.kind != T_IDENTIFIER() {
+            return pattern.tag.lexeme
+        }
+        var out = pattern.tag.lexeme
+        if pattern.children.len() == 0 {
+            if pattern.has_group {
+                return out + "()"
+            }
+            return out
+        }
+        out = out + "("
+        var i = 0
+        while i < pattern.children.len() {
+            var child_ty = this.lookup_enum_constructor_param_type_in(enum_name, pattern.tag.lexeme, i)
+            var child_ty_name = this.lookup_enum_constructor_param_type_name_in(enum_name, pattern.tag.lexeme, i)
+            out = out + this.match_payload_pattern_shape_key(pattern.children[i], child_ty, child_ty_name)
+            if i + 1 < pattern.children.len() {
+                out = out + ", "
+            }
+            i = i + 1
+        }
+        out = out + ")"
+        return out
+    }
+
     Vec<string> collect_missing_enum_variants(string enum_name, Vec<string> seen_variants) {
         var missing = vec![]
         var i = 0

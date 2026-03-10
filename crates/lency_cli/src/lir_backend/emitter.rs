@@ -19,6 +19,7 @@ pub(super) struct Emitter {
     temp_counter: usize,
     vars: HashSet<String>,
     temps: HashMap<String, ValueType>,
+    pub(super) string_globals: HashMap<String, (String, usize, String)>,
     pub(super) extern_funcs: HashMap<String, ExternSig>,
     pub(super) terminated: bool,
 }
@@ -30,6 +31,7 @@ impl Emitter {
             temp_counter: 0,
             vars,
             temps: HashMap::new(),
+            string_globals: HashMap::new(),
             extern_funcs: HashMap::new(),
             terminated: false,
         }
@@ -56,6 +58,63 @@ impl Emitter {
             return Some(v);
         }
         op.parse::<i64>().ok()
+    }
+
+    fn parse_string_literal(op: &str) -> Option<Vec<u8>> {
+        if op.len() < 2 || !op.starts_with('"') || !op.ends_with('"') {
+            return None;
+        }
+        let inner = &op[1..op.len() - 1];
+        let mut out = Vec::new();
+        let mut chars = inner.chars();
+        while let Some(ch) = chars.next() {
+            if ch != '\\' {
+                out.extend_from_slice(ch.to_string().as_bytes());
+                continue;
+            }
+            let escaped = chars.next()?;
+            match escaped {
+                'n' => out.push(b'\n'),
+                'r' => out.push(b'\r'),
+                't' => out.push(b'\t'),
+                '0' => out.push(0),
+                '"' => out.push(b'"'),
+                '\\' => out.push(b'\\'),
+                _ => return None,
+            }
+        }
+        Some(out)
+    }
+
+    fn llvm_c_string(bytes: &[u8]) -> String {
+        let mut out = String::new();
+        for byte in bytes {
+            if (32..=126).contains(byte) && *byte != b'\\' && *byte != b'"' {
+                out.push(*byte as char);
+            } else {
+                out.push_str(&format!("\\{:02X}", byte));
+            }
+        }
+        out.push_str("\\00");
+        out
+    }
+
+    fn ensure_string_global(&mut self, literal: &str) -> Option<(String, usize)> {
+        if let Some((name, len, _)) = self.string_globals.get(literal) {
+            return Some((name.clone(), *len));
+        }
+        let bytes = Self::parse_string_literal(literal)?;
+        let global_name = format!("@.str.{}", self.string_globals.len());
+        let global_len = bytes.len() + 1;
+        let decl = format!(
+            "{} = private unnamed_addr constant [{} x i8] c\"{}\"",
+            global_name,
+            global_len,
+            Self::llvm_c_string(&bytes)
+        );
+        self.string_globals
+            .insert(literal.to_string(), (global_name.clone(), global_len, decl));
+        Some((global_name, global_len))
     }
 
     fn parse_char_literal(op: &str) -> Option<i64> {
@@ -150,6 +209,15 @@ impl Emitter {
         if let Some(v) = Self::parse_i64_literal(op) {
             return Ok((v.to_string(), ValueType::I64));
         }
+        if let Some((global_name, global_len)) = self.ensure_string_global(op) {
+            let gep = self.next_tmp("str");
+            self.push(format!(
+                "  {} = getelementptr inbounds [{} x i8], ptr {}, i64 0, i64 0",
+                gep, global_len, global_name
+            ));
+            self.mark_temp(&gep, ValueType::Ptr);
+            return Ok((gep, ValueType::Ptr));
+        }
         if !op.starts_with('%') {
             bail!("unsupported operand: {}", op);
         }
@@ -237,6 +305,22 @@ impl Emitter {
                     "  {} = icmp {} i64 {}, {}",
                     dst, pred, lhs_i64, rhs_i64
                 ));
+                self.mark_temp(dst, ValueType::I1);
+            }
+            "cmp_str_eq" => {
+                let (lhs_ptr, _) = self.ensure_ptr(lhs_repr, lhs_ty);
+                let (rhs_ptr, _) = self.ensure_ptr(rhs_repr, rhs_ty);
+                self.note_extern_func(
+                    "lency_string_eq",
+                    vec![ValueType::Ptr, ValueType::Ptr],
+                    ValueType::I64,
+                )?;
+                let call_tmp = self.next_tmp("str_eq");
+                self.push(format!(
+                    "  {} = call i64 @lency_string_eq(ptr {}, ptr {})",
+                    call_tmp, lhs_ptr, rhs_ptr
+                ));
+                self.push(format!("  {} = icmp ne i64 {}, 0", dst, call_tmp));
                 self.mark_temp(dst, ValueType::I1);
             }
             "and" | "or" => {

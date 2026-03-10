@@ -232,3 +232,44 @@ entry:
     assert!(ir.contains("declare i1 @contains(ptr, ptr)"));
     assert!(ir.contains("call i1 @contains(ptr"));
 }
+
+#[test]
+fn test_compile_lir_string_match_compare() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  var %x = 0
+  %t0 = cmp_str_eq %x, "42"
+  ret %t0
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("@.str.0 = private unnamed_addr constant [3 x i8] c\"42\\00\""));
+    assert!(ir.contains("declare i64 @lency_string_eq(ptr, ptr)"));
+    assert!(ir.contains("call i64 @lency_string_eq(ptr"));
+}
+
+#[test]
+fn test_compile_lir_enum_runtime_calls() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %lency_enum_new1(2, 9)
+  %t1 = call %lency_enum_tag(%t0)
+  %t2 = call %lency_enum_payload(%t0, 0)
+  %t3 = add %t1, %t2
+  ret %t3
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare i64 @lency_enum_new1(i64, i64)"));
+    assert!(ir.contains("declare i64 @lency_enum_tag(i64)"));
+    assert!(ir.contains("declare i64 @lency_enum_payload(i64, i64)"));
+    assert!(ir.contains("call i64 @lency_enum_new1(i64 2, i64 9)"));
+}

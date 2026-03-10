@@ -1,0 +1,11 @@
+// Runtime smoke case: match lowering supports string literal patterns.
+// @expect-exit: 0
+
+var s = int_to_string(42)
+var code = match (s) {
+  "7" => 7,
+  "42" if (true) => 0,
+  _ => 9
+}
+
+return code
