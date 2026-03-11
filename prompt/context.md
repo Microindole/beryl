@@ -31,6 +31,8 @@
   - 2026-03-11：已补齐 selfhost string `!=` -> `cmp_str_ne` lowering，且 enum 多 payload 构造会持续转发 `lency_enum_push` 返回句柄，修复 `match_enum_payload` 在自举 runtime 链路上的崩溃风险。
   - 2026-03-11：`check-lency` 的 Step 10 已输出 runtime case / selfhost LIR / 生成可执行路径，避免 Linux CI 再次只剩 `exit code -1` 的垃圾日志。
   - 2026-03-11：runtime `lency_string_eq` 新增低地址指针防护，拦截 selfhost Linux 链路中“把标量 payload 当字符串句柄”时的直接崩溃；当前仍保留 FIXME，说明这是止血而非根因级审计完结。
+  - 2026-03-11：已修复 selfhost `match` lowering 对 enum payload 子模式的非短路求值；旧实现会在父 variant 已不匹配时继续对错误 payload 调 `lency_enum_tag`，导致 Linux `match_enum_payload` runtime case 段错误。
+  - 2026-03-11：PR 标题校验 workflow 已把 `\S+` 替换为 POSIX 空白类写法，避免 bash 正则对中文 subject 误判不通过。
   - runtime 回归已覆盖 `match_guard`、`match_guard_combo`、`match_bool_null`、`match_char`、`match_string`、`match_enum_payload`。
 
 ## 3. 当前硬约束

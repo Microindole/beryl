@@ -464,20 +464,18 @@ mod tests {
 
     #[test]
     fn test_string_eq_rejects_obviously_invalid_small_pointers() {
-        assert!(is_obviously_invalid_c_string_ptr(1usize as *const c_char));
-        assert!(is_obviously_invalid_c_string_ptr(
-            4095usize as *const c_char
-        ));
+        let ptr1 = std::ptr::with_exposed_provenance::<c_char>(1usize);
+        let ptr4095 = std::ptr::with_exposed_provenance::<c_char>(4095usize);
+        let ptr4096 = std::ptr::with_exposed_provenance::<c_char>(4096usize);
+        let ptr8 = std::ptr::with_exposed_provenance::<c_char>(8usize);
+
+        assert!(is_obviously_invalid_c_string_ptr(ptr1));
+        assert!(is_obviously_invalid_c_string_ptr(ptr4095));
         assert!(!is_obviously_invalid_c_string_ptr(std::ptr::null()));
-        assert!(!is_obviously_invalid_c_string_ptr(
-            4096usize as *const c_char
-        ));
+        assert!(!is_obviously_invalid_c_string_ptr(ptr4096));
 
         let rhs = CString::new("hello").unwrap();
-        assert_eq!(
-            unsafe { lency_string_eq(8usize as *const c_char, rhs.as_ptr()) },
-            0
-        );
+        assert_eq!(unsafe { lency_string_eq(ptr8, rhs.as_ptr()) }, 0);
     }
 
     #[test]

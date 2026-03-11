@@ -81,16 +81,29 @@ impl LirBuilder {
         }
         if expected_ty_name != "" && this.is_enum_variant_pattern(expected_ty_name, pattern) {
             var tag_val = this.emit_enum_tag_load(value)
-            var cond = this.new_temp()
+            var tag_cond = this.new_temp()
             var tag_id = this.lookup_enum_tag_in(expected_ty_name, pattern.tag.lexeme)
-            this.emit_line("  " + cond + " = cmp_eq " + tag_val + ", " + int_to_string(tag_id))
+            this.emit_line("  " + tag_cond + " = cmp_eq " + tag_val + ", " + int_to_string(tag_id))
+            if pattern.children.len() == 0 {
+                return tag_cond
+            }
+            var cond = this.new_match_var()
+            var payload_label = this.new_label("match_pat_payload")
+            var end_label = this.new_label("match_pat_end")
+            this.emit_line("  var " + cond + " = 0")
+            this.emit_line("  br " + tag_cond + ", " + payload_label + ", " + end_label)
+            this.emit_line(payload_label + ":")
+            var nested_cond = "1"
             var i = 0
             while i < pattern.children.len() {
                 var payload_ty_name = this.lookup_enum_payload_type_name_in(expected_ty_name, pattern.tag.lexeme, i)
                 var payload_val = this.emit_enum_payload_load(value, i)
-                cond = this.emit_match_bool_and(cond, this.emit_match_pattern_check(payload_val, pattern.children[i], payload_ty_name))
+                nested_cond = this.emit_match_bool_and(nested_cond, this.emit_match_pattern_check(payload_val, pattern.children[i], payload_ty_name))
                 i = i + 1
             }
+            this.emit_line("  store " + cond + ", " + nested_cond)
+            this.emit_line("  jmp " + end_label)
+            this.emit_line(end_label + ":")
             return cond
         }
         return "0"

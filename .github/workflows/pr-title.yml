@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           title='${{ github.event.pull_request.title }}'
-          re='^(feat|fix|style|refactor|build|ci|docs|perf|test|chore)(\([a-z0-9][a-z0-9._/-]*\))?[：:][[:space:]]*\S+([[:space:]]+\(#([0-9]+)\))?$'
+          re='^(feat|fix|style|refactor|build|ci|docs|perf|test|chore)(\([a-z0-9][a-z0-9._/-]*\))?[：:][[:space:]]*[^[:space:]].*([[:space:]]+\(#([0-9]+)\))?$'
           if [[ ! "$title" =~ $re ]]; then
             echo "PR 标题不符合约定式提交格式: $title"
             echo "允许格式: <type>: <subject> 或 <type>(scope): <subject>，可选尾缀 (#123)"
