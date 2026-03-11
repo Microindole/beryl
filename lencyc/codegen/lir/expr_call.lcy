@@ -24,6 +24,7 @@ impl LirBuilder {
                 var push_tmp = this.new_temp()
                 var arg_val = this.emit_expr(expr.children[arg_id])
                 this.emit_line("  " + push_tmp + " = call %lency_enum_push(" + ctor_dst + ", " + arg_val + ")")
+                ctor_dst = push_tmp
                 arg_id = arg_id + 1
             }
             return ctor_dst

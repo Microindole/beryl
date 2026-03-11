@@ -121,6 +121,27 @@ impl LirBuilder {
         return ""
     }
 
+    void track_typed_variable(string name, string type_name) {
+        this.typed_var_names.push(name)
+        this.typed_var_types.push(type_name)
+    }
+
+    void clear_typed_variable(string name) {
+        this.typed_var_names.push(name)
+        this.typed_var_types.push("")
+    }
+
+    string lookup_typed_variable(string name) {
+        var i = this.typed_var_names.len() - 1
+        while i >= 0 {
+            if this.typed_var_names[i] == name {
+                return this.typed_var_types[i]
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
     string expr_callee_name(Expr expr) {
         if expr.kind == EXPR_VARIABLE() {
             return expr.literal_value.lexeme
@@ -145,6 +166,47 @@ impl LirBuilder {
             var callee_name = this.expr_callee_name(expr.children[0])
             if callee_name != "" {
                 return this.lookup_enum_name_by_variant(callee_name)
+            }
+        }
+        return ""
+    }
+
+    string infer_expr_type_name(Expr expr) {
+        if expr.kind == EXPR_LITERAL() {
+            if expr.literal_value.kind == T_STRING_LITERAL() {
+                return "string"
+            }
+            if expr.literal_value.kind == T_NUMBER() {
+                return "int"
+            }
+            if expr.literal_value.kind == T_TRUE() || expr.literal_value.kind == T_FALSE() {
+                return "bool"
+            }
+            if expr.literal_value.kind == T_CHAR_LITERAL() {
+                return "char"
+            }
+            if expr.literal_value.kind == T_NULL() {
+                return "null"
+            }
+            return ""
+        }
+        if expr.kind == EXPR_VARIABLE() {
+            var enum_name = this.lookup_enum_variable(expr.literal_value.lexeme)
+            if enum_name != "" {
+                return enum_name
+            }
+            return this.lookup_typed_variable(expr.literal_value.lexeme)
+        }
+        if expr.kind == EXPR_GROUPING() && expr.children.len() > 0 {
+            return this.infer_expr_type_name(expr.children[0])
+        }
+        if expr.kind == EXPR_ASSIGN() && expr.children.len() > 0 {
+            return this.infer_expr_type_name(expr.children[0])
+        }
+        if expr.kind == EXPR_CALL() && expr.children.len() > 0 {
+            var enum_name2 = this.infer_expr_enum_name(expr)
+            if enum_name2 != "" {
+                return enum_name2
             }
         }
         return ""

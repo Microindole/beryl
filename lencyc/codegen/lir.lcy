@@ -24,6 +24,8 @@ struct LirBuilder {
     Vec<string> enum_payload_type_names
     Vec<string> enum_var_names
     Vec<string> enum_var_types
+    Vec<string> typed_var_names
+    Vec<string> typed_var_types
 }
 
 LirBuilder make_lir_builder() {
@@ -42,7 +44,9 @@ LirBuilder make_lir_builder() {
         enum_payload_indices: vec![],
         enum_payload_type_names: vec![],
         enum_var_names: vec![],
-        enum_var_types: vec![]
+        enum_var_types: vec![],
+        typed_var_names: vec![],
+        typed_var_types: vec![]
     }
 }
 string emit_lir_program(Vec<Stmt> statements) {
@@ -115,6 +119,27 @@ impl LirBuilder {
         return "op_unknown"
     }
 
+    string binary_opcode_for_expr(Expr expr) {
+        var op = expr.operator.lexeme
+        if op == "==" || op == "!=" {
+            var lhs_ty = ""
+            var rhs_ty = ""
+            if expr.children.len() > 0 {
+                lhs_ty = this.infer_expr_type_name(expr.children[0])
+            }
+            if expr.children.len() > 1 {
+                rhs_ty = this.infer_expr_type_name(expr.children[1])
+            }
+            if lhs_ty == "string" || rhs_ty == "string" {
+                if op == "==" {
+                    return "cmp_str_eq"
+                }
+                return "cmp_str_ne"
+            }
+        }
+        return this.binary_opcode(op)
+    }
+
     string unary_opcode(string op) {
         if op == "-" { return "neg" }
         if op == "!" { return "not" }
@@ -146,10 +171,16 @@ impl LirBuilder {
             var init_val = this.emit_expr(stmt.expr)
             this.emit_line("  var %" + stmt.name.lexeme + " = " + init_val)
             var enum_name = this.infer_expr_enum_name(stmt.expr)
+            var type_name = this.infer_expr_type_name(stmt.expr)
             if enum_name != "" {
                 this.track_enum_variable(stmt.name.lexeme, enum_name)
             } else {
                 this.clear_enum_variable(stmt.name.lexeme)
+            }
+            if type_name != "" {
+                this.track_typed_variable(stmt.name.lexeme, type_name)
+            } else {
+                this.clear_typed_variable(stmt.name.lexeme)
             }
             return
         }
@@ -243,13 +274,20 @@ impl LirBuilder {
             }
             this.emit_line("  store %" + expr.literal_value.lexeme + ", " + val)
             var enum_name = ""
+            var type_name = ""
             if expr.children.len() > 0 {
                 enum_name = this.infer_expr_enum_name(expr.children[0])
+                type_name = this.infer_expr_type_name(expr.children[0])
             }
             if enum_name != "" {
                 this.track_enum_variable(expr.literal_value.lexeme, enum_name)
             } else {
                 this.clear_enum_variable(expr.literal_value.lexeme)
+            }
+            if type_name != "" {
+                this.track_typed_variable(expr.literal_value.lexeme, type_name)
+            } else {
+                this.clear_typed_variable(expr.literal_value.lexeme)
             }
             return val
         }
@@ -272,7 +310,7 @@ impl LirBuilder {
                 rhs = this.emit_expr(expr.children[1])
             }
             var dst = this.new_temp()
-            this.emit_line("  " + dst + " = " + this.binary_opcode(expr.operator.lexeme) + " " + lhs + ", " + rhs)
+            this.emit_line("  " + dst + " = " + this.binary_opcode_for_expr(expr) + " " + lhs + ", " + rhs)
             return dst
         }
         if expr.kind == EXPR_GET() {

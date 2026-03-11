@@ -307,7 +307,7 @@ impl Emitter {
                 ));
                 self.mark_temp(dst, ValueType::I1);
             }
-            "cmp_str_eq" => {
+            "cmp_str_eq" | "cmp_str_ne" => {
                 let (lhs_ptr, _) = self.ensure_ptr(lhs_repr, lhs_ty);
                 let (rhs_ptr, _) = self.ensure_ptr(rhs_repr, rhs_ty);
                 self.note_extern_func(
@@ -320,7 +320,8 @@ impl Emitter {
                     "  {} = call i64 @lency_string_eq(i8* {}, i8* {})",
                     call_tmp, lhs_ptr, rhs_ptr
                 ));
-                self.push(format!("  {} = icmp ne i64 {}, 0", dst, call_tmp));
+                let pred = if op == "cmp_str_eq" { "ne" } else { "eq" };
+                self.push(format!("  {} = icmp {} i64 {}, 0", dst, pred, call_tmp));
                 self.mark_temp(dst, ValueType::I1);
             }
             "and" | "or" => {

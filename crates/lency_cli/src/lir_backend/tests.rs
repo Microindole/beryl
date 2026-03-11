@@ -253,6 +253,25 @@ entry:
 }
 
 #[test]
+fn test_compile_lir_string_not_equal_compare() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  var %x = 0
+  %t0 = cmp_str_ne %x, "42"
+  ret %t0
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare i64 @lency_string_eq(i8*, i8*)"));
+    assert!(ir.contains("call i64 @lency_string_eq(i8*"));
+    assert!(ir.contains("icmp eq i64"));
+}
+
+#[test]
 fn test_compile_lir_enum_runtime_calls() {
     let src = r#"
 ; lencyc-lir v0

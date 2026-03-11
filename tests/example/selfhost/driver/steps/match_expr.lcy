@@ -203,6 +203,10 @@ bool run_match_and_enum_payload_tests() {
         print("Match enum payload lowering LIR shape mismatch.\n")
         return false
     }
+    if !contains(runtime_enum_lir, "cmp_str_eq") {
+        print("Match enum payload string guard lowering mismatch.\n")
+        return false
+    }
     if !run_match_resolver_semantic_tests(match_source) {
         return false
     }
