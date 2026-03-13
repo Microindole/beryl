@@ -17,7 +17,6 @@ void! write_string(string path, string content) {
     return write_file(path, content)
 }
 
-// TODO: 需要编译器 intrinsic 支持以下功能
-// bool exists(string path)   - 检查路径是否存在
-// bool is_dir(string path)   - 检查是否为目录
+// 当前 `file_exists(string)` / `is_dir(string)` 已由编译器 builtin + runtime 直接支持。
+// TODO: 若后续确认标准库 API 需要统一别名，再评估是否提供 `exists(string)` 包装。
 // bool mkdir(string path)    - 创建目录

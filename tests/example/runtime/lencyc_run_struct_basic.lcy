@@ -1,0 +1,13 @@
+// Runtime smoke case: selfhost struct literal/member get/set lowering via vec-backed record model.
+// @expect-exit: 0
+
+struct Pair {
+  int left
+  int right
+}
+
+var p = Pair { left: 1, right: 2 }
+var total = p.left + p.right
+p.right = 3
+
+return total - p.right

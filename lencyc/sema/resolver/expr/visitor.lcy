@@ -74,11 +74,109 @@ impl Resolver {
         return TYPE_UNKNOWN()
     }
 
+    int visit_expr_set(Expr expr) {
+        if expr.children.len() < 2 {
+            return TYPE_UNKNOWN()
+        }
+        var object_ty = this.resolve_expr(expr.children[0])
+        var object_ty_name = this.infer_expr_type_name(expr.children[0], object_ty)
+        if object_ty_name == "" {
+            this.error("member assignment target is not a known struct: " + expr.literal_value.lexeme)
+            return this.resolve_expr(expr.children[1])
+        }
+        if object_ty != TYPE_NAMED() && object_ty != TYPE_NULLABLE_NAMED() {
+            this.error("member assignment target is not a struct-value: " + object_ty_name)
+            return this.resolve_expr(expr.children[1])
+        }
+        if !this.is_struct_field(object_ty_name, expr.literal_value.lexeme) {
+            this.error("unknown struct-field in assignment for " + object_ty_name + ": " + expr.literal_value.lexeme)
+            return this.resolve_expr(expr.children[1])
+        }
+        var value_ty = this.resolve_expr(expr.children[1])
+        var value_ty_name = this.infer_expr_type_name(expr.children[1], value_ty)
+        var expected_ty = this.lookup_struct_field_type(object_ty_name, expr.literal_value.lexeme)
+        var expected_ty_name = this.lookup_struct_field_type_name(object_ty_name, expr.literal_value.lexeme)
+        if expected_ty_name == "" {
+            expected_ty_name = this.type_to_string(expected_ty)
+        }
+        if value_ty_name == "" {
+            value_ty_name = this.type_to_string(value_ty)
+        }
+        if !this.types_match_or_unknown_by_name(expected_ty, expected_ty_name, value_ty, value_ty_name) {
+            this.error(
+                "struct-field assignment type mismatch for " + object_ty_name + "." + expr.literal_value.lexeme +
+                ": expected " + expected_ty_name + ", got " + value_ty_name
+            )
+        }
+        return value_ty
+    }
+
     int visit_expr_get(Expr expr) {
         if expr.children.len() > 0 {
-            this.resolve_expr(expr.children[0])
+            var object_ty = this.resolve_expr(expr.children[0])
+            var object_ty_name = this.infer_expr_type_name(expr.children[0], object_ty)
+            if object_ty_name == "" {
+                return TYPE_UNKNOWN()
+            }
+            if this.is_struct_field(object_ty_name, expr.literal_value.lexeme) {
+                return this.lookup_struct_field_type(object_ty_name, expr.literal_value.lexeme)
+            }
+            if object_ty == TYPE_NAMED() || object_ty == TYPE_NULLABLE_NAMED() {
+                this.error("unknown struct-field in access for " + object_ty_name + ": " + expr.literal_value.lexeme)
+            }
+            return TYPE_UNKNOWN()
         }
         return TYPE_UNKNOWN()
+    }
+
+    int visit_expr_struct(Expr expr) {
+        var struct_name = expr.literal_value.lexeme
+        if !this.table.resolve(struct_name) {
+            this.error("unknown struct-literal type: " + struct_name)
+            return TYPE_UNKNOWN()
+        }
+        var seen_fields = vec![]
+        var i = 0
+        while i < expr.field_names.len() && i < expr.children.len() {
+            var field_name = expr.field_names[i]
+            if this.contains_name(seen_fields, field_name) {
+                this.error("duplicate struct-literal field in " + struct_name + ": " + field_name)
+                i = i + 1
+                continue
+            }
+            seen_fields.push(field_name)
+            if !this.is_struct_field(struct_name, field_name) {
+                this.error("unknown struct-literal field in " + struct_name + ": " + field_name)
+                i = i + 1
+                continue
+            }
+            var value_ty = this.resolve_expr(expr.children[i])
+            var value_ty_name = this.infer_expr_type_name(expr.children[i], value_ty)
+            var expected_ty = this.lookup_struct_field_type(struct_name, field_name)
+            var expected_ty_name = this.lookup_struct_field_type_name(struct_name, field_name)
+            if expected_ty_name == "" {
+                expected_ty_name = this.type_to_string(expected_ty)
+            }
+            if value_ty_name == "" {
+                value_ty_name = this.type_to_string(value_ty)
+            }
+            if !this.types_match_or_unknown_by_name(expected_ty, expected_ty_name, value_ty, value_ty_name) {
+                this.error(
+                    "struct-literal field type mismatch for " + struct_name + "." + field_name +
+                    ": expected " + expected_ty_name + ", got " + value_ty_name
+                )
+            }
+            i = i + 1
+        }
+        var j = 0
+        while j < this.struct_field_signatures.len() {
+            var sig = this.struct_field_signatures[j]
+            if sig.struct_name == struct_name && !this.contains_name(seen_fields, sig.field_name) {
+                this.error("missing struct-literal field in " + struct_name + ": " + sig.field_name)
+            }
+            j = j + 1
+        }
+        return TYPE_NAMED()
     }
 
     int visit_expr_unary(Expr expr) {
@@ -180,8 +278,14 @@ impl Resolver {
         if expr.kind == EXPR_ASSIGN() {
             return this.visit_expr_assign(expr)
         }
+        if expr.kind == EXPR_SET() {
+            return this.visit_expr_set(expr)
+        }
         if expr.kind == EXPR_GET() {
             return this.visit_expr_get(expr)
+        }
+        if expr.kind == EXPR_STRUCT() {
+            return this.visit_expr_struct(expr)
         }
         if expr.kind == EXPR_UNARY() {
             return this.visit_expr_unary(expr)

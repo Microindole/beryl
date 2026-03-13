@@ -4,6 +4,7 @@
 import std.core
 import std.convert
 import lencyc.syntax.ast
+import lencyc.codegen.lir.functions
 import lencyc.codegen.lir.enum_support
 import lencyc.codegen.lir.expr_call
 import lencyc.codegen.lir.match_expr
@@ -12,6 +13,8 @@ struct LirBuilder {
     string out
     int temp_counter
     int label_counter
+    bool current_function_returns
+    string current_function_name
     Vec<string> break_targets
     Vec<string> continue_targets
     int loop_depth
@@ -26,6 +29,15 @@ struct LirBuilder {
     Vec<string> enum_var_types
     Vec<string> typed_var_names
     Vec<string> typed_var_types
+    Vec<string> struct_field_struct_names
+    Vec<string> struct_field_names
+    Vec<int> struct_field_indices
+    Vec<string> struct_field_type_names
+    Vec<string> function_names
+    Vec<string> function_return_type_names
+    Vec<int> function_param_counts
+    Vec<string> function_param_names
+    Vec<string> function_param_type_names
 }
 
 LirBuilder make_lir_builder() {
@@ -33,6 +45,8 @@ LirBuilder make_lir_builder() {
         out: "",
         temp_counter: 0,
         label_counter: 0,
+        current_function_returns: false,
+        current_function_name: "",
         break_targets: vec![],
         continue_targets: vec![],
         loop_depth: 0,
@@ -46,18 +60,26 @@ LirBuilder make_lir_builder() {
         enum_var_names: vec![],
         enum_var_types: vec![],
         typed_var_names: vec![],
-        typed_var_types: vec![]
+        typed_var_types: vec![],
+        struct_field_struct_names: vec![],
+        struct_field_names: vec![],
+        struct_field_indices: vec![],
+        struct_field_type_names: vec![],
+        function_names: vec![],
+        function_return_type_names: vec![],
+        function_param_counts: vec![],
+        function_param_names: vec![],
+        function_param_type_names: vec![]
     }
 }
 string emit_lir_program(Vec<Stmt> statements) {
     var builder = make_lir_builder()
     builder.preload_enum_metadata(statements)
+    builder.preload_struct_metadata(statements)
+    builder.preload_function_metadata(statements)
     builder.emit_line("; lencyc-lir v0")
-    builder.emit_line("func main {")
-    builder.emit_line("entry:")
-    builder.emit_stmt_list(statements)
-    builder.emit_line("  ret 0")
-    builder.emit_line("}")
+    builder.emit_main_function(statements)
+    builder.emit_user_functions(statements)
     return builder.out
 }
 
@@ -77,6 +99,7 @@ impl LirBuilder {
         this.label_counter = this.label_counter + 1
         return label
     }
+
     void push_loop_targets(string break_label, string continue_label) {
         this.break_targets.push(break_label)
         this.continue_targets.push(continue_label)
@@ -191,10 +214,12 @@ impl LirBuilder {
         if stmt.kind == STMT_RETURN() {
             var val = this.emit_expr(stmt.expr)
             this.emit_line("  ret " + val)
+            this.current_function_returns = true
             return
         }
         if stmt.kind == STMT_RETURN_VOID() {
             this.emit_line("  ret")
+            this.current_function_returns = true
             return
         }
         if stmt.kind == STMT_BLOCK() {
@@ -252,6 +277,9 @@ impl LirBuilder {
             }
             return
         }
+        if stmt.kind == STMT_STRUCT() || stmt.kind == STMT_FUNCTION() || stmt.kind == STMT_IMPL() || stmt.kind == STMT_IMPORT() || stmt.kind == STMT_EXTERN() || stmt.kind == STMT_ENUM() {
+            return
+        }
         this.emit_line("  ; unsupported stmt kind " + int_to_string(stmt.kind))
     }
     string emit_expr(Expr expr) {
@@ -291,6 +319,17 @@ impl LirBuilder {
             }
             return val
         }
+        if expr.kind == EXPR_SET() {
+            if expr.children.len() < 2 {
+                return "0"
+            }
+            var object_val = this.emit_expr(expr.children[0])
+            var value_val = this.emit_expr(expr.children[1])
+            var struct_name = this.infer_expr_type_name(expr.children[0])
+            var field_index = this.lookup_struct_field_index(struct_name, expr.literal_value.lexeme)
+            this.emit_line("  call %lency_vec_set(" + object_val + ", " + int_to_string(field_index) + ", " + value_val + ")")
+            return value_val
+        }
         if expr.kind == EXPR_UNARY() {
             var rhs = "0"
             if expr.children.len() > 0 {
@@ -314,6 +353,16 @@ impl LirBuilder {
             return dst
         }
         if expr.kind == EXPR_GET() {
+            if expr.children.len() > 0 {
+                var object_ty = this.infer_expr_type_name(expr.children[0])
+                var field_index = this.lookup_struct_field_index(object_ty, expr.literal_value.lexeme)
+                if field_index >= 0 {
+                    var obj = this.emit_expr(expr.children[0])
+                    var dst_struct = this.new_temp()
+                    this.emit_line("  " + dst_struct + " = call %lency_vec_get(" + obj + ", " + int_to_string(field_index) + ")")
+                    return dst_struct
+                }
+            }
             var obj = "?"
             if expr.children.len() > 0 {
                 obj = this.emit_expr(expr.children[0])
@@ -321,6 +370,18 @@ impl LirBuilder {
             var dst = this.new_temp()
             this.emit_line("  " + dst + " = get " + obj + "." + expr.literal_value.lexeme)
             return dst
+        }
+        if expr.kind == EXPR_STRUCT() {
+            var dst_struct_new = this.new_temp()
+            this.emit_line("  " + dst_struct_new + " = call %lency_vec_new(" + int_to_string(expr.field_names.len()) + ")")
+            var current = dst_struct_new
+            var i = 0
+            while i < expr.field_names.len() && i < expr.children.len() {
+                var field_value = this.emit_expr(expr.children[i])
+                this.emit_line("  call %lency_vec_push(" + current + ", " + field_value + ")")
+                i = i + 1
+            }
+            return current
         }
         if expr.kind == EXPR_CALL() {
             return this.emit_expr_call(expr)

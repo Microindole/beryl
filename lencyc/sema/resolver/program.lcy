@@ -26,6 +26,21 @@ impl Resolver {
         var e = 0
         while e < decls.len() {
             var decl = decls[e]
+            if decl.kind == DECL_STRUCT() {
+                var sf = 0
+                while sf < decl.struct_fields.len() {
+                    var field = decl.struct_fields[sf]
+                    this.struct_field_signatures.push(
+                        make_struct_field_signature(
+                            decl.name.lexeme,
+                            field.name.lexeme,
+                            this.resolve_signature_type_or_error(field.type_ref),
+                            this.resolve_signature_type_name(field.type_ref)
+                        )
+                    )
+                    sf = sf + 1
+                }
+            }
             if decl.kind == DECL_ENUM() {
                 var v = 0
                 while v < decl.enum_variants.len() {

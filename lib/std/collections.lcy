@@ -172,7 +172,8 @@ int vec_min(Vec<int> v) {
 
 // ============== HashMap ==============
 // HashMap 通过运行时 FFI 实现。
-// TODO: struct 包装暂不可用（返回 struct 的 codegen 问题），请直接使用函数形式：
+// TODO: selfhost 最小 non-generic struct 跨函数 codegen 已打通，但这里的 generic struct 包装/方法链仍未可用；
+// 请继续直接使用函数形式：
 //
 // Int 键 HashMap:
 //   var map = hashmap_int_new()

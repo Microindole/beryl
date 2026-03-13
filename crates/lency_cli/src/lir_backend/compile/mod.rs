@@ -3,28 +3,53 @@ mod helpers;
 mod member_call;
 
 use anyhow::{anyhow, bail, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::emitter::{Emitter, ValueType};
-use call::emit_call_assignment;
-use helpers::{build_output_ir, collect_vars};
+use call::{emit_call_assignment, emit_call_statement};
+use helpers::{
+    build_function_signatures, build_output_ir, collect_vars, llvm_function_ret_ty,
+    parse_functions, LirFunction,
+};
 
-/// Compile LIR text emitted by lencyc `--emit-lir` into LLVM IR.
-pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
-    let vars = collect_vars(source)?;
+fn compile_function(
+    func: &LirFunction,
+    function_sigs: &HashMap<String, (Vec<ValueType>, ValueType)>,
+) -> Result<Emitter> {
+    let mut vars = collect_vars(&func.body_lines)?;
+    for (param_name, _) in &func.params {
+        vars.insert(param_name.clone());
+    }
     let mut emitter = Emitter::new(vars.clone());
     let mut member_call_targets: HashMap<String, (String, ValueType, String)> = HashMap::new();
 
-    emitter.push("define i32 @main() {");
+    let header_ret_ty = llvm_function_ret_ty(&func.name, func.ret_ty);
+    let header_params = func
+        .params
+        .iter()
+        .map(|(name, ty)| format!("{} {}", super::emitter::llvm_type_str(*ty), name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    emitter.push(format!(
+        "define {} @{}({}) {{",
+        header_ret_ty, func.name, header_params
+    ));
     emitter.push("entry:");
 
     for var in &vars {
         emitter.push(format!("  {}.addr = alloca i64", var));
     }
+    for (param_name, param_ty) in &func.params {
+        let (stored_repr, _) = emitter.ensure_i64(param_name.clone(), *param_ty);
+        emitter.push(format!(
+            "  store i64 {}, i64* {}.addr",
+            stored_repr, param_name
+        ));
+    }
 
-    for raw in source.lines() {
+    for raw in &func.body_lines {
         let line = raw.trim();
-        if line.is_empty() || line.starts_with(';') || line == "func main {" || line == "}" {
+        if line.is_empty() || line.starts_with(';') {
             continue;
         }
         if line.ends_with(':') {
@@ -70,6 +95,11 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
             continue;
         }
 
+        if let Some(rest) = line.strip_prefix("call ") {
+            emit_call_statement(&mut emitter, rest, function_sigs)?;
+            continue;
+        }
+
         if line.starts_with("br ") {
             let rest = line
                 .trim_start_matches("br ")
@@ -92,7 +122,11 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
         }
 
         if line == "ret" {
-            emitter.push("  ret i32 0");
+            if func.name == "main" {
+                emitter.push("  ret i32 0");
+            } else {
+                emitter.push("  ret void");
+            }
             emitter.terminated = true;
             continue;
         }
@@ -100,23 +134,40 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
         if line.starts_with("ret ") {
             let val = line.trim_start_matches("ret ").trim();
             let (repr, ty) = emitter.emit_operand(val)?;
-            match ty {
+            let target_ty = if func.name == "main" {
+                ValueType::I64
+            } else {
+                func.ret_ty
+            };
+            match target_ty {
                 ValueType::I64 => {
-                    let code = emitter.next_tmp("ret_i32");
-                    emitter.push(format!("  {} = trunc i64 {} to i32", code, repr));
-                    emitter.push(format!("  ret i32 {}", code));
+                    let (repr_i64, _) = emitter.ensure_i64(repr, ty);
+                    if func.name == "main" {
+                        let code = emitter.next_tmp("ret_i32");
+                        emitter.push(format!("  {} = trunc i64 {} to i32", code, repr_i64));
+                        emitter.push(format!("  ret i32 {}", code));
+                    } else {
+                        emitter.push(format!("  ret i64 {}", repr_i64));
+                    }
                 }
                 ValueType::I1 => {
-                    let code = emitter.next_tmp("ret_i32");
-                    emitter.push(format!("  {} = zext i1 {} to i32", code, repr));
-                    emitter.push(format!("  ret i32 {}", code));
+                    let (repr_i1, _) = emitter.ensure_i1(repr, ty);
+                    emitter.push(format!("  ret i1 {}", repr_i1));
                 }
                 ValueType::Ptr => {
-                    let widened = emitter.next_tmp("ptrtoint");
-                    emitter.push(format!("  {} = ptrtoint i8* {} to i64", widened, repr));
-                    let code = emitter.next_tmp("ret_i32");
-                    emitter.push(format!("  {} = trunc i64 {} to i32", code, widened));
-                    emitter.push(format!("  ret i32 {}", code));
+                    let (repr_ptr, _) = emitter.ensure_ptr(repr, ty);
+                    if func.name == "main" {
+                        let widened = emitter.next_tmp("ptrtoint");
+                        emitter.push(format!("  {} = ptrtoint i8* {} to i64", widened, repr_ptr));
+                        let code = emitter.next_tmp("ret_i32");
+                        emitter.push(format!("  {} = trunc i64 {} to i32", code, widened));
+                        emitter.push(format!("  ret i32 {}", code));
+                    } else {
+                        emitter.push(format!("  ret i8* {}", repr_ptr));
+                    }
+                }
+                ValueType::Void => {
+                    bail!("cannot return value from void function '{}'", func.name);
                 }
             }
             emitter.terminated = true;
@@ -135,7 +186,7 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
             }
 
             if let Some(rest) = rhs.strip_prefix("call ") {
-                emit_call_assignment(&mut emitter, dst, rest, &member_call_targets)?;
+                emit_call_assignment(&mut emitter, dst, rest, &member_call_targets, function_sigs)?;
                 continue;
             }
 
@@ -146,7 +197,6 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
                 let obj_name = obj_raw.trim();
                 let member_name = member_name.trim();
                 let (obj_repr, obj_ty) = emitter.emit_operand(obj_name)?;
-                // Generic member reference placeholder for subsequent `call %tX(...)`.
                 emitter.push(format!("  {} = inttoptr i64 0 to i8*", dst));
                 emitter.mark_temp(dst, ValueType::Ptr);
                 member_call_targets
@@ -179,9 +229,50 @@ pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
     }
 
     if !emitter.terminated {
-        emitter.push("  ret i32 0");
+        if func.name == "main" {
+            emitter.push("  ret i32 0");
+        } else {
+            match func.ret_ty {
+                ValueType::Void => emitter.push("  ret void"),
+                ValueType::I64 => emitter.push("  ret i64 0"),
+                ValueType::I1 => emitter.push("  ret i1 false"),
+                ValueType::Ptr => emitter.push("  ret i8* null"),
+            }
+        }
     }
     emitter.push("}");
+    Ok(emitter)
+}
+
+/// Compile LIR text emitted by lencyc `--emit-lir` into LLVM IR.
+pub fn compile_lir_to_llvm_ir(source: &str) -> Result<String> {
+    let functions = parse_functions(source)?;
+    let function_sigs = build_function_signatures(&functions);
+    let mut all_lines = Vec::new();
+    let mut all_string_globals = HashMap::new();
+    let mut all_extern_funcs = HashMap::new();
+
+    for func in &functions {
+        let emitter = compile_function(func, &function_sigs)?;
+        let Emitter {
+            lines,
+            string_globals,
+            extern_funcs,
+            ..
+        } = emitter;
+        all_lines.extend(lines);
+        for (literal, tuple) in string_globals {
+            all_string_globals.entry(literal).or_insert(tuple);
+        }
+        for (name, sig) in extern_funcs {
+            all_extern_funcs.entry(name).or_insert(sig);
+        }
+    }
+
+    let mut emitter = Emitter::new(HashSet::new());
+    emitter.lines = all_lines;
+    emitter.string_globals = all_string_globals;
+    emitter.extern_funcs = all_extern_funcs;
 
     Ok(build_output_ir(emitter))
 }

@@ -1,0 +1,18 @@
+// Runtime smoke case: selfhost struct return/param/member set chain via user functions.
+// @expect-exit: 0
+
+struct Pair {
+  int left
+  int right
+}
+
+return bump_right(make_pair(1, 2)) - 4
+
+Pair make_pair(int left, int right) {
+  return Pair { left: left, right: right }
+}
+
+int bump_right(Pair p) {
+  p.right = p.right + 1
+  return p.left + p.right
+}

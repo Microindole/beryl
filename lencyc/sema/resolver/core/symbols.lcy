@@ -195,4 +195,40 @@ impl Resolver {
         }
         return false
     }
+
+    bool is_struct_field(string struct_name, string field_name) {
+        var i = this.struct_field_signatures.len() - 1
+        while i >= 0 {
+            if this.struct_field_signatures[i].struct_name == struct_name &&
+               this.struct_field_signatures[i].field_name == field_name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+
+    int lookup_struct_field_type(string struct_name, string field_name) {
+        var i = this.struct_field_signatures.len() - 1
+        while i >= 0 {
+            if this.struct_field_signatures[i].struct_name == struct_name &&
+               this.struct_field_signatures[i].field_name == field_name {
+                return this.struct_field_signatures[i].field_ty
+            }
+            i = i - 1
+        }
+        return TYPE_UNKNOWN()
+    }
+
+    string lookup_struct_field_type_name(string struct_name, string field_name) {
+        var i = this.struct_field_signatures.len() - 1
+        while i >= 0 {
+            if this.struct_field_signatures[i].struct_name == struct_name &&
+               this.struct_field_signatures[i].field_name == field_name {
+                return this.struct_field_signatures[i].field_ty_name
+            }
+            i = i - 1
+        }
+        return ""
+    }
 }

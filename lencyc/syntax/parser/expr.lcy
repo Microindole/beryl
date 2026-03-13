@@ -97,9 +97,71 @@ impl Parser {
             if expr.kind == EXPR_VARIABLE() {
                 return make_expr_assign(expr.literal_value, value)
             }
+            if expr.kind == EXPR_GET() && expr.children.len() > 0 {
+                return make_expr_set(expr.children[0], expr.literal_value, value)
+            }
             this.error("Invalid assignment target.")
         }
         return expr
+    }
+
+    Expr parse_struct_literal_after_name(Token type_name) {
+        var field_names = vec![]
+        var field_values = vec![]
+        this.consume(T_LEFT_BRACE(), "Expect '{' in struct-literal.")
+        if !this.check(T_RIGHT_BRACE()) {
+            while true {
+                this.consume(T_IDENTIFIER(), "Expect field name in struct-literal.")
+                var field_name = this.previous.lexeme
+                this.consume(T_COLON(), "Expect ':' after struct-literal field name.")
+                field_names.push(field_name)
+                field_values.push(this.expression())
+                if !this.match_token(T_COMMA()) {
+                    break
+                }
+            }
+        }
+        this.consume(T_RIGHT_BRACE(), "Expect '}' after struct-literal.")
+        return make_expr_struct(type_name, field_names, field_values)
+    }
+
+    bool is_struct_literal_body_ahead() {
+        if !this.check(T_LEFT_BRACE()) {
+            return false
+        }
+        var src = this.lexer.source
+        var idx = this.lexer.current
+        while idx < len(src) {
+            var b = src[idx]
+            if b == 32 || b == 9 || b == 10 || b == 13 {
+                idx = idx + 1
+                continue
+            }
+            if b == 125 {
+                return false
+            }
+            if !is_alpha(b) && b != 95 {
+                return false
+            }
+            while idx < len(src) {
+                var head = src[idx]
+                if is_alphanumeric(head) || head == 95 {
+                    idx = idx + 1
+                    continue
+                }
+                break
+            }
+            while idx < len(src) {
+                var ws = src[idx]
+                if ws == 32 || ws == 9 || ws == 10 || ws == 13 {
+                    idx = idx + 1
+                    continue
+                }
+                return ws == 58
+            }
+            return false
+        }
+        return false
     }
 
     Expr or() {
@@ -240,7 +302,11 @@ impl Parser {
             return make_expr_literal(this.previous)
         }
         if this.match_token(T_IDENTIFIER()) {
-            return make_expr_variable(this.previous)
+            var name = this.previous
+            if this.check(T_LEFT_BRACE()) && this.is_struct_literal_body_ahead() {
+                return this.parse_struct_literal_after_name(name)
+            }
+            return make_expr_variable(name)
         }
         
         if this.match_token(T_LEFT_PAREN()) {

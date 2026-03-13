@@ -6,6 +6,56 @@ import lencyc.syntax.ast
 import lencyc.codegen.lir
 
 impl LirBuilder {
+    void preload_function_metadata(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            var stmt = statements[i]
+            if stmt.kind == STMT_FUNCTION() {
+                var decl = stmt_to_decl(stmt)
+                this.function_names.push(decl.name.lexeme)
+                this.function_return_type_names.push(decl.return_type.name)
+                this.function_param_counts.push(decl.params.len())
+                var p = 0
+                while p < decl.params.len() {
+                    this.function_param_names.push(decl.params[p])
+                    this.function_param_type_names.push(decl.param_types[p].name)
+                    p = p + 1
+                }
+            }
+            i = i + 1
+        }
+    }
+
+    string lookup_function_return_type_name(string name) {
+        var i = this.function_names.len() - 1
+        while i >= 0 {
+            if this.function_names[i] == name {
+                return this.function_return_type_names[i]
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
+    void preload_struct_metadata(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            var stmt = statements[i]
+            if stmt.kind == STMT_STRUCT() {
+                var decl = stmt_to_decl(stmt)
+                var f = 0
+                while f < decl.struct_fields.len() {
+                    this.struct_field_struct_names.push(decl.name.lexeme)
+                    this.struct_field_names.push(decl.struct_fields[f].name.lexeme)
+                    this.struct_field_indices.push(f)
+                    this.struct_field_type_names.push(decl.struct_fields[f].type_ref.name)
+                    f = f + 1
+                }
+            }
+            i = i + 1
+        }
+    }
+
     void preload_enum_metadata(Vec<Stmt> statements) {
         var i = 0
         while i < statements.len() {
@@ -142,6 +192,30 @@ impl LirBuilder {
         return ""
     }
 
+    int lookup_struct_field_index(string struct_name, string field_name) {
+        var i = this.struct_field_names.len() - 1
+        while i >= 0 {
+            if this.struct_field_struct_names[i] == struct_name &&
+               this.struct_field_names[i] == field_name {
+                return this.struct_field_indices[i]
+            }
+            i = i - 1
+        }
+        return -1
+    }
+
+    string lookup_struct_field_type_name(string struct_name, string field_name) {
+        var i = this.struct_field_names.len() - 1
+        while i >= 0 {
+            if this.struct_field_struct_names[i] == struct_name &&
+               this.struct_field_names[i] == field_name {
+                return this.struct_field_type_names[i]
+            }
+            i = i - 1
+        }
+        return ""
+    }
+
     string expr_callee_name(Expr expr) {
         if expr.kind == EXPR_VARIABLE() {
             return expr.literal_value.lexeme
@@ -207,6 +281,22 @@ impl LirBuilder {
             var enum_name2 = this.infer_expr_enum_name(expr)
             if enum_name2 != "" {
                 return enum_name2
+            }
+            var callee_name = this.expr_callee_name(expr.children[0])
+            if callee_name != "" {
+                return this.lookup_function_return_type_name(callee_name)
+            }
+        }
+        if expr.kind == EXPR_STRUCT() {
+            return expr.literal_value.lexeme
+        }
+        if expr.kind == EXPR_SET() && expr.children.len() >= 2 {
+            return this.infer_expr_type_name(expr.children[1])
+        }
+        if expr.kind == EXPR_GET() && expr.children.len() > 0 {
+            var object_ty = this.infer_expr_type_name(expr.children[0])
+            if object_ty != "" {
+                return this.lookup_struct_field_type_name(object_ty, expr.literal_value.lexeme)
             }
         }
         return ""

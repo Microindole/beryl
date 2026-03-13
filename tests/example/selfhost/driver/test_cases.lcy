@@ -100,6 +100,11 @@ string src_parser_function_nullable_typeref_program() { return "int? maybe_id(in
 string src_parser_struct_fields_program() { return "struct Boxed {\n  int id\n  string name\n  float score\n}"; }
 string src_resolver_struct_duplicate_field_bad() { return "struct Boxed {\n  int id\n  string id\n}\nvar x = 1\nreturn x"; }
 string src_resolver_struct_unknown_field_type_bad() { return "struct Boxed {\n  Mystery id\n}\nvar x = 1\nreturn x"; }
+string src_parser_struct_literal_program() { return "struct Pair {\n  int left\n  int right\n}\nvar p = Pair { left: 1, right: 2 }\nreturn p.left"; }
+string src_resolver_struct_literal_ok() { return "struct Pair {\n  int left\n  int right\n}\nvar p = Pair { left: 1, right: 2 }\nvar total = p.left + p.right\np.right = 3\nreturn total + p.right"; }
+string src_resolver_struct_literal_missing_field_bad() { return "struct Pair {\n  int left\n  int right\n}\nvar p = Pair { left: 1 }\nreturn 0"; }
+string src_resolver_struct_literal_type_bad() { return "struct Pair {\n  int left\n  int right\n}\nvar p = Pair { left: 1, right: \"x\" }\nreturn 0"; }
+string src_resolver_struct_field_assign_type_bad() { return "struct Pair {\n  int left\n  int right\n}\nvar p = Pair { left: 1, right: 2 }\np.right = \"x\"\nreturn 0"; }
 string src_parser_const_decl_program() { return "const answer = 42\nvar x = answer\nreturn x"; }
 string src_resolver_const_assignment_bad() { return "const answer = 42\nanswer = 7\nreturn answer"; }
 string src_resolver_const_shadowing_ok() { return "const answer = 42\n{ var answer = 7\n  answer = answer + 1\n}\nreturn answer"; }

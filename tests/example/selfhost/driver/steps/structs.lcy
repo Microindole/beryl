@@ -44,10 +44,37 @@ bool run_struct_field_declaration_tests() {
         print("Struct field declaration AST shape mismatch.\n")
         return false
     }
+    var literal_source = src_parser_struct_literal_program()
+    var literal_parser = make_parser(literal_source)
+    var literal_program = literal_parser.parse_program()
+    if literal_parser.has_error {
+        print("Struct literal parse failed unexpectedly.\n")
+        return false
+    }
+    if literal_program.statements.len() < 2 || literal_program.statements[1].kind != STMT_VAR_DECL() {
+        print("Struct literal AST kind mismatch.\n")
+        return false
+    }
+    if !contains(stmt_to_string(literal_program.statements[1]), "(var p = (struct Pair {left: 1, right: 2}))") {
+        print("Struct literal AST shape mismatch.\n")
+        return false
+    }
+    if !expect_shared_resolve_success(src_resolver_struct_literal_ok(), "struct literal/member access positive") {
+        return false
+    }
     if !expect_shared_resolve_error(src_resolver_struct_duplicate_field_bad(), "type duplicate field negative") {
         return false
     }
     if !expect_shared_resolve_error(src_resolver_struct_unknown_field_type_bad(), "type unknown field type negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_struct_literal_missing_field_bad(), "struct literal missing field negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_struct_literal_type_bad(), "struct literal type mismatch negative") {
+        return false
+    }
+    if !expect_shared_resolve_error(src_resolver_struct_field_assign_type_bad(), "struct field assignment type mismatch negative") {
         return false
     }
     return true

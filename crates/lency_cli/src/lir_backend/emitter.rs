@@ -6,6 +6,7 @@ pub(super) enum ValueType {
     I64,
     I1,
     Ptr,
+    Void,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -156,6 +157,7 @@ impl Emitter {
                 self.push(format!("  {} = ptrtoint i8* {} to i64", casted, repr));
                 (casted, ValueType::I64)
             }
+            ValueType::Void => (String::from("0"), ValueType::I64),
         }
     }
 
@@ -172,6 +174,7 @@ impl Emitter {
                 self.push(format!("  {} = icmp ne i8* {}, null", narrowed, repr));
                 (narrowed, ValueType::I1)
             }
+            ValueType::Void => (String::from("false"), ValueType::I1),
         }
     }
 
@@ -189,6 +192,11 @@ impl Emitter {
                 self.push(format!("  {} = inttoptr i64 {} to i8*", casted, as_i64));
                 (casted, ValueType::Ptr)
             }
+            ValueType::Void => {
+                let casted = self.next_tmp("inttoptr");
+                self.push(format!("  {} = inttoptr i64 0 to i8*", casted));
+                (casted, ValueType::Ptr)
+            }
         }
     }
 
@@ -202,6 +210,7 @@ impl Emitter {
             ValueType::I64 => self.ensure_i64(repr, from_ty),
             ValueType::I1 => self.ensure_i1(repr, from_ty),
             ValueType::Ptr => self.ensure_ptr(repr, from_ty),
+            ValueType::Void => (String::new(), ValueType::Void),
         }
     }
 
@@ -360,5 +369,6 @@ pub(super) fn llvm_type_str(ty: ValueType) -> &'static str {
         ValueType::I64 => "i64",
         ValueType::I1 => "i1",
         ValueType::Ptr => "i8*",
+        ValueType::Void => "void",
     }
 }

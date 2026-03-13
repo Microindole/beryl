@@ -319,3 +319,65 @@ entry:
     assert!(ir.contains("call i64 @lency_enum_push(i64 %t0, i64 4)"));
     assert!(ir.contains("call i64 @lency_enum_payload(i64"));
 }
+
+#[test]
+fn test_compile_lir_void_vec_runtime_calls() {
+    let src = r#"
+; lencyc-lir v0
+func main {
+entry:
+  %t0 = call %lency_vec_new(2)
+  call %lency_vec_push(%t0, 1)
+  call %lency_vec_push(%t0, 2)
+  %t1 = call %lency_vec_get(%t0, 1)
+  call %lency_vec_set(%t0, 1, 3)
+  ret %t1
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("declare i8* @lency_vec_new(i64)"));
+    assert!(ir.contains("declare void @lency_vec_push(i8*, i64)"));
+    assert!(ir.contains("declare i64 @lency_vec_get(i8*, i64)"));
+    assert!(ir.contains("declare void @lency_vec_set(i8*, i64, i64)"));
+    assert!(ir.contains("call void @lency_vec_push(i8*"));
+    assert!(ir.contains("call void @lency_vec_set(i8*"));
+}
+
+#[test]
+fn test_compile_lir_multi_function_ptr_signature() {
+    let src = r#"
+; lencyc-lir v0
+func main() -> i64 {
+entry:
+  %t0 = call %make_pair(1, 2)
+  %t1 = call %bump_right(%t0)
+  ret %t1
+}
+func make_pair(%left: i64, %right: i64) -> ptr {
+entry:
+  %t0 = call %lency_vec_new(2)
+  call %lency_vec_push(%t0, %left)
+  call %lency_vec_push(%t0, %right)
+  ret %t0
+}
+func bump_right(%p: ptr) -> i64 {
+entry:
+  %t0 = call %lency_vec_get(%p, 1)
+  %t1 = add %t0, 1
+  call %lency_vec_set(%p, 1, %t1)
+  %t2 = call %lency_vec_get(%p, 0)
+  %t3 = add %t2, %t1
+  ret %t3
+}
+"#;
+    let result = compile_lir_to_llvm_ir(src);
+    assert!(result.is_ok(), "lir compile failed: {:?}", result.err());
+    let ir = result.unwrap_or_default();
+    assert!(ir.contains("define i32 @main()"));
+    assert!(ir.contains("define i8* @make_pair(i64 %left, i64 %right)"));
+    assert!(ir.contains("define i64 @bump_right(i8* %p)"));
+    assert!(ir.contains("call i8* @make_pair(i64 1, i64 2)"));
+    assert!(ir.contains("call i64 @bump_right(i8*"));
+}

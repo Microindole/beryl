@@ -52,6 +52,11 @@ pub(crate) fn check_lency() -> Result<()> {
         || {
             run_python(
                 &python,
+                &["-m", "unittest", "scripts.check_lencyc_meta_tests"],
+                false,
+            )?;
+            run_python(
+                &python,
                 &["scripts/check_todos.py", "--scope", "lency"],
                 false,
             )?;

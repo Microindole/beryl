@@ -64,6 +64,9 @@ impl Resolver {
         if expr.kind == EXPR_VARIABLE() {
             return this.lookup_typed_symbol_name(expr.literal_value.lexeme)
         }
+        if expr.kind == EXPR_STRUCT() {
+            return expr.literal_value.lexeme
+        }
         if expr.kind == EXPR_CALL() {
             if expr.children.len() > 0 {
                 var callee_name = this.extract_callee_name(expr.children[0])
@@ -87,6 +90,26 @@ impl Resolver {
                 }
             }
             return this.lookup_typed_symbol_name(expr.literal_value.lexeme)
+        }
+        if expr.kind == EXPR_SET() {
+            if expr.children.len() >= 2 {
+                var value_name = this.infer_expr_type_name(expr.children[1], resolved_ty)
+                if value_name != "" {
+                    return value_name
+                }
+            }
+            return ""
+        }
+        if expr.kind == EXPR_GET() {
+            if expr.children.len() > 0 {
+                var object_name = this.infer_expr_type_name(expr.children[0], TYPE_UNKNOWN())
+                if object_name != "" && this.table.resolve(object_name) {
+                    var field_name = this.lookup_struct_field_type_name(object_name, expr.literal_value.lexeme)
+                    if field_name != "" {
+                        return field_name
+                    }
+                }
+            }
         }
         if expr.kind == EXPR_MATCH() {
             if expr.children.len() <= 1 {

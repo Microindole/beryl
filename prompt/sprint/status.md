@@ -123,6 +123,10 @@
 - [x] enum 类型流已扩展到 grouped constructor + grouped callee 组合调用，并补 resolver 正例
 - [x] enum 类型流已扩展到“match 结果作为函数实参”的多层调用链路，并补充跨 enum 负例，修复 `assign/match/grouping` 类型名传播缺口
 - [x] selfhost runtime 已补 `match_guard_combo` 回归，覆盖多 guard arm 顺序与回退路径
+- [x] selfhost runtime 已补 `file_exists/is_dir` builtin 回归，确认文件系统 builtin 已打通 `selfhost LIR -> Rust backend -> runtime FFI`
+- [x] selfhost LIR emitter 已开始发射用户函数；Rust LIR backend 已支持多函数 LIR 解析与用户函数签名调用
+- [x] selfhost 最小 non-generic `struct` 已打通跨函数 return/param/runtime 链路，并新增 `lencyc_run_struct_return_basic` 回归
+- [x] `scripts/check_lencyc_meta.py` 已从返回类型白名单正则重写为结构化词法扫描检查器，并拆分为 `models/lexer/checker/runner` 模块；新增 Python `unittest` 并接入 `check-lency`
 - [x] selfhost `match` lowering 已扩展到 `string literal`，并补 Rust LIR 编译层与 runtime 回归
 - [x] selfhost `match` lowering 已接入递归 enum payload mixed pattern lowering，覆盖 constructor lowering、tag/payload runtime ABI、5 payload constructor 与更深 nested payload runtime 回归
 - [x] selfhost enum constructor lowering 与 payload metadata 已收口为 `lency_enum_new0 + lency_enum_push` 扁平模型，移除固定 4 payload 槽位硬编码，并补充 Rust LIR 编译层测试
@@ -199,9 +203,11 @@
 ## 6. 已知风险
 - FIXME: 文档与实现存在历史错位，若不强制每次同步会继续漂移。
 - FIXME: 自举 resolver 中仍有 `TYPE_UNKNOWN` 兼容路径，会掩盖真实类型错误。
-- FIXME: Rust `.lir` backend 仍有 call/member lowering 子集限制。
+- FIXME: Rust `.lir` backend 虽已接入多函数 LIR，但 generic struct / impl method / 更完整 member lowering 仍是限制项。
 - FIXME: 顶层声明已完成 payload 化与分层，但块内声明仍通过 `Stmt` 路径执行，后续需要评估“声明语句统一中间表示”以进一步收敛双轨分支。
 - FIXME: `stmt_to_decl` 当前对声明 kind 与 payload kind 不一致仍以 `DECL_UNKNOWN` 兜底，后续需补齐诊断上下文并评估 parser 阶段前置拦截。
+- FIXME: Rust 主编译器与 selfhost 顶层语法接受范围仍有差异，runtime case 组织方式暂不能直接当作“双前端一致性”证据。
+- FIXME: Lency 当前未支持 `/* ... */` 块注释；若未来语言扩展到块注释，`check_lencyc_meta.py` 必须同步扩展。
 
 ## 7. 本次重构收尾结论（2026-03-09）
 - [x] 设计模式核心问题已收敛：声明数据不再扩散在 `Stmt` 字段中，改为 `stmt.decl` payload。

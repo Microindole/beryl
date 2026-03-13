@@ -1,0 +1,1 @@
+"""Structured lencyc meta checks."""

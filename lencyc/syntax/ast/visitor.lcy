@@ -58,11 +58,30 @@ impl ExprStringVisitor {
             }
             return "(assign " + expr.literal_value.lexeme + " ?)"
         }
+        if expr.kind == EXPR_SET() {
+            if expr.children.len() >= 2 {
+                return "(set " + this.visit_expr(expr.children[0]) + "." + expr.literal_value.lexeme + " " + this.visit_expr(expr.children[1]) + ")"
+            }
+            return "(set ?." + expr.literal_value.lexeme + " ?)"
+        }
         if expr.kind == EXPR_GET() {
             if expr.children.len() > 0 {
                 return "(get " + this.visit_expr(expr.children[0]) + "." + expr.literal_value.lexeme + ")"
             }
             return "(get ?." + expr.literal_value.lexeme + ")"
+        }
+        if expr.kind == EXPR_STRUCT() {
+            var out = "(struct " + expr.literal_value.lexeme + " {"
+            var i = 0
+            while i < expr.field_names.len() && i < expr.children.len() {
+                out = out + expr.field_names[i] + ": " + this.visit_expr(expr.children[i])
+                if i + 1 < expr.field_names.len() && i + 1 < expr.children.len() {
+                    out = out + ", "
+                }
+                i = i + 1
+            }
+            out = out + "})"
+            return out
         }
         if expr.kind == EXPR_CALL() {
             if expr.children.len() == 0 {

@@ -20,6 +20,7 @@
 - 自举链路已打通：`Rust(v0) -> Lency(stage1) -> Lency(stage2/stage3) -> bootstrap-check(stage2/stage3 LIR 收敛)`。
 - 当前判断：已具备最小可用自举闭环，但离 Rust 主链路使用水平仍有明显代差。
 - 前端现状：`match/enum payload/import/extern/null/泛型入口` 已接入；parser 当前不是主瓶颈。
+- 工具检查现状：`scripts/check_lencyc_meta.py` 已从返回类型白名单正则改为结构化词法扫描，并继续拆分为 `models/lexer/checker/runner` 模块；对应 Python `unittest` 已接入 `check-lency`，`lencyc/**/*.lcy` 的头注释与命名检查不再继续靠土味 regex 拼凑。
 - 语义现状：
   - 已覆盖 name resolution、基础 type check、enum/match、guard 组合边界。
   - enum 类型流已覆盖函数返回、match 中间表达式、match 结果作为函数实参链路、赋值链、grouped callee/constructor、参数透传、派生局部变量、block 遮蔽、`if/while` 写回。
@@ -34,6 +35,9 @@
   - 2026-03-11：已修复 selfhost `match` lowering 对 enum payload 子模式的非短路求值；旧实现会在父 variant 已不匹配时继续对错误 payload 调 `lency_enum_tag`，导致 Linux `match_enum_payload` runtime case 段错误。
   - 2026-03-11：PR 标题校验 workflow 已把 `\S+` 替换为 POSIX 空白类写法，避免 bash 正则对中文 subject 误判不通过。
   - runtime 回归已覆盖 `match_guard`、`match_guard_combo`、`match_bool_null`、`match_char`、`match_string`、`match_enum_payload`。
+  - 2026-03-13：已新增 selfhost runtime 回归覆盖 `file_exists/is_dir` builtin，确认这两条文件系统 builtin 已打通 `selfhost LIR -> Rust backend -> runtime FFI`。
+  - 2026-03-13：selfhost LIR emitter 已开始发射用户函数；Rust LIR backend 已支持多函数 LIR、用户函数签名、`ptr` 返回/参数调用，并新增 `struct return/param` runtime 回归。
+  - 2026-03-13：最小 non-generic `struct` 已打通“字面量 -> 字段 get/set -> 跨函数 return/param -> runtime”链路；`collections` 中 generic wrapper TODO 仍然有效，别自欺欺人地删掉。
   - 当前更明显的主线阻塞已转到 selfhost codegen/runtime 子集能力，而不是 enum 类型流基础拦截。
 
 ## 3. 当前硬约束
@@ -51,6 +55,7 @@
 - TODO: selfhost codegen/runtime 继续补齐真实 stdlib/样例仍受限的 lowering 能力。
 - TODO: parser trait 旧债仍在 `lencyc/syntax/parser/decl.lcy`。
 - FIXME: parser 保守 lookahead 仍在 `lencyc/syntax/parser.lcy`。
+- FIXME: Rust 主编译器与 selfhost 顶层语法接受范围仍未完全对齐；当前 runtime case 继续按 selfhost 入口约束组织，别误以为双前端已完全一致。
 
 ## 5. 回答口径
 - 版本口径：

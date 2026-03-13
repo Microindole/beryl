@@ -1,0 +1,139 @@
+// lencyc/codegen/lir/functions.lcy
+// Function-level LIR emission helpers split out to keep lir.lcy under meta limits.
+
+import std.core
+import lencyc.syntax.ast
+import lencyc.codegen.lir
+
+impl LirBuilder {
+    void reset_function_state() {
+        this.break_targets = vec![]
+        this.continue_targets = vec![]
+        this.loop_depth = 0
+        this.enum_var_names = vec![]
+        this.enum_var_types = vec![]
+        this.typed_var_names = vec![]
+        this.typed_var_types = vec![]
+        this.current_function_returns = false
+        this.current_function_name = ""
+    }
+
+    string abi_type_name(string type_name) {
+        if type_name == "void" {
+            return "void"
+        }
+        if type_name == "string" {
+            return "ptr"
+        }
+        if type_name == "bool" {
+            return "i1"
+        }
+        if type_name == "null" {
+            return "ptr"
+        }
+        if type_name == "int" || type_name == "float" || type_name == "char" {
+            return "i64"
+        }
+        if this.is_enum_type_name(type_name) {
+            return "ptr"
+        }
+        if this.has_struct_type(type_name) {
+            return "ptr"
+        }
+        // FIXME: 未知用户类型暂按指针 ABI 处理，后续应接入统一 lowered type table。
+        if type_name != "" {
+            return "ptr"
+        }
+        return "i64"
+    }
+
+    bool has_struct_type(string struct_name) {
+        var i = this.struct_field_struct_names.len() - 1
+        while i >= 0 {
+            if this.struct_field_struct_names[i] == struct_name {
+                return true
+            }
+            i = i - 1
+        }
+        return false
+    }
+
+    void emit_function_header(string name, Vec<string> params, Vec<string> param_type_names, string return_type_name) {
+        var signature = "func " + name + "("
+        var i = 0
+        while i < params.len() {
+            signature = signature + "%" + params[i] + ": " + this.abi_type_name(param_type_names[i])
+            if i + 1 < params.len() {
+                signature = signature + ", "
+            }
+            i = i + 1
+        }
+        signature = signature + ") -> " + this.abi_type_name(return_type_name) + " {"
+        this.emit_line(signature)
+        this.emit_line("entry:")
+    }
+
+    void emit_main_function(Vec<Stmt> statements) {
+        this.reset_function_state()
+        this.current_function_name = "main"
+        this.emit_line("func main() -> i64 {")
+        this.emit_line("entry:")
+        var i = 0
+        while i < statements.len() {
+            if statements[i].kind != STMT_FUNCTION() {
+                this.emit_stmt(statements[i])
+            }
+            i = i + 1
+        }
+        if !this.current_function_returns {
+            this.emit_line("  ret 0")
+        }
+        this.emit_line("}")
+    }
+
+    void emit_user_functions(Vec<Stmt> statements) {
+        var i = 0
+        while i < statements.len() {
+            if statements[i].kind == STMT_FUNCTION() {
+                this.emit_function_decl(stmt_to_decl(statements[i]))
+            }
+            i = i + 1
+        }
+    }
+
+    void emit_function_decl(Decl decl) {
+        this.reset_function_state()
+        this.current_function_name = decl.name.lexeme
+        this.emit_function_header(
+            decl.name.lexeme,
+            decl.params,
+            this.extract_type_names(decl.param_types),
+            decl.return_type.name
+        )
+        var i = 0
+        while i < decl.params.len() {
+            this.track_typed_variable(decl.params[i], decl.param_types[i].name)
+            i = i + 1
+        }
+        this.emit_stmt_list(decl.body)
+        if !this.current_function_returns {
+            if decl.return_type.name == "void" {
+                this.emit_line("  ret")
+            } else {
+                // TODO: 统一补齐无显式 return 的控制流诊断；当前 codegen 仅保底补一个默认返回。
+                this.emit_line("  ret 0")
+            }
+        }
+        this.emit_line("}")
+    }
+
+    Vec<string> extract_type_names(Vec<TypeRef> type_refs) {
+        var names = vec![]
+        var i = 0
+        while i < type_refs.len() {
+            names.push(type_refs[i].name)
+            i = i + 1
+        }
+        return names
+    }
+}
